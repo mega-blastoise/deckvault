@@ -10,46 +10,46 @@ connections.
 ```
 ┌──────────────────────────────────────────────────────────────────┐
 │                        MCP Clients                               │
-│  (Claude Code, VS Code Copilot, any JSON-RPC 2.0 consumer)      │
+│  (Claude Code, VS Code Copilot, any JSON-RPC 2.0 consumer)       │
 └──────────┬──────────────────────────────────┬────────────────────┘
            │ stdin/stdout (Phase 1)           │ HTTP + SSE (Phase 4)
            ▼                                  ▼
 ┌──────────────────────────────────────────────────────────────────┐
-│                    pokemon-mcp-server                             │
-│                                                                   │
-│  ┌─────────────────┐    ┌──────────────────────────────────────┐ │
-│  │  Transport Layer │    │         Protocol Layer               │ │
-│  │                  │    │                                      │ │
-│  │  ● StdioTransport│───▶│  ● JSON-RPC 2.0 Parser/Serializer  │ │
+│                    pokemon-mcp-server                            │
+│                                                                  │
+│  ┌──────────────────┐    ┌─────────────────────────────────────┐ │
+│  │  Transport Layer │    │         Protocol Layer              │ │
+│  │                  │    │                                     │ │
+│  │  ● StdioTransport│───▶│  ● JSON-RPC 2.0 Parser/Serializer   │ │
 │  │  ● SseTransport  │    │  ● MCP Method Router                │ │
-│  └─────────────────┘    │  ● Request/Response/Notification     │ │
-│                          └──────────────┬───────────────────────┘ │
-│                                         │                         │
-│  ┌──────────────────────────────────────▼───────────────────────┐ │
-│  │                    Tool Registry                              │ │
-│  │                                                               │ │
-│  │  HashMap<String, Box<dyn Tool>>                               │ │
-│  │  ● search_cards        ● get_card_by_id                      │ │
-│  │  ● list_sets           ● compare_cards                       │ │
-│  │  ● get_set_cards       ● get_evolution_chain                 │ │
-│  └──────────────────────────────────────┬───────────────────────┘ │
-│                                         │                         │
-│  ┌──────────────────────────────────────▼───────────────────────┐ │
-│  │                   Domain Layer                                │ │
-│  │                                                               │ │
-│  │  ● PokemonCard, Set, Attack, Ability structs                 │ │
-│  │  ● Database layer (rusqlite, read-only)                      │ │
-│  │  ● Query engine (SQL + domain filtering)                     │ │
-│  │  ● Error hierarchy (thiserror)                               │ │
-│  └──────────────────────────────────────────────────────────────┘ │
-│                                                                   │
-│  ┌──────────────────────────────────────────────────────────────┐ │
-│  │                   Data Source                                 │ │
-│  │                                                               │ │
-│  │  apps/mcp-server/database/pokemon-data.sqlite3.db            │ │
-│  │  (replicated from database/pokemon-data.sqlite3.db)          │ │
-│  │  19,818 cards across 170 sets — read-only access             │ │
-│  └──────────────────────────────────────────────────────────────┘ │
+│  └──────────────────┘    │  ● Request/Response/Notification    │ │
+│                          └──────────────┬──────────────────────┘ │
+│                                         │                        │
+│  ┌──────────────────────────────────────▼──────────────────────┐ │
+│  │                    Tool Registry                            │ │
+│  │                                                             │ │
+│  │  HashMap<String, Box<dyn Tool>>                             │ │
+│  │  ● search_cards        ● get_card_by_id                     │ │
+│  │  ● list_sets           ● compare_cards                      │ │
+│  │  ● get_set_cards       ● get_evolution_chain                │ │
+│  └──────────────────────────────────────┬──────────────────────┘ │
+│                                         │                        │
+│  ┌──────────────────────────────────────▼──────────────────────┐ │
+│  │                   Domain Layer                              │ │
+│  │                                                             │ │
+│  │  ● PokemonCard, Set, Attack, Ability structs                │ │
+│  │  ● Database layer (rusqlite, read-only)                     │ │
+│  │  ● Query engine (SQL + domain filtering)                    │ │
+│  │  ● Error hierarchy (thiserror)                              │ │
+│  └─────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+│  ┌─────────────────────────────────────────────────────────────┐ │
+│  │                   Data Source                               │ │
+│  │                                                             │ │
+│  │  apps/mcp-server/database/pokemon-data.sqlite3.db           │ │
+│  │  (replicated from database/pokemon-data.sqlite3.db)         │ │
+│  │  19,818 cards across 170 sets — read-only access            │ │
+│  └─────────────────────────────────────────────────────────────┘ │
 └──────────────────────────────────────────────────────────────────┘
 ```
 

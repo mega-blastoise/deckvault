@@ -2,12 +2,9 @@
 
 ## Context
 
-MCP (Model Context Protocol) uses JSON-RPC 2.0 as its wire format. The primary transport
-is stdin/stdout — the client spawns the server as a child process and communicates via
-newline-delimited JSON messages on standard I/O.
+MCP (Model Context Protocol) uses JSON-RPC 2.0 as its wire format. The primary transport is stdin/stdout — the client spawns the server as a child process and communicates via newline-delimited JSON messages on standard I/O.
 
-This phase establishes the foundation: parsing JSON-RPC requests, routing to method handlers,
-and serializing responses. Every subsequent phase builds on these types.
+This phase establishes the foundation: parsing JSON-RPC requests, routing to method handlers, and serializing responses. Every subsequent phase builds on these types.
 
 ### What You'll Learn
 
@@ -449,12 +446,12 @@ cargo test --manifest-path apps/mcp-server/Cargo.toml
 
 # Integration: initialize handshake
 echo '{"jsonrpc":"2.0","method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"0.1.0"}},"id":1}' \
-  | cargo run --manifest-path apps/mcp-server/Cargo.toml 2>/dev/null \
+  | cargo run 2>/dev/null \
   | python3 -c "import sys,json; d=json.load(sys.stdin); assert d['result']['protocolVersion']=='2024-11-05'; print('PASS')"
 
 # Integration: ping
 echo '{"jsonrpc":"2.0","method":"ping","id":2}' \
-  | cargo run --manifest-path apps/mcp-server/Cargo.toml 2>/dev/null \
+  | cargo run 2>/dev/null \
   | python3 -c "import sys,json; d=json.load(sys.stdin); assert d['result']=={}; print('PASS')"
 
 # Integration: unknown method
@@ -464,7 +461,7 @@ echo '{"jsonrpc":"2.0","method":"bogus","id":3}' \
 
 # Integration: malformed JSON
 echo 'not json at all' \
-  | cargo run --manifest-path apps/mcp-server/Cargo.toml 2>/dev/null \
+  | cargo run 2>/dev/null \
   | python3 -c "import sys,json; d=json.load(sys.stdin); assert d['error']['code']==-32700; print('PASS')"
 ```
 

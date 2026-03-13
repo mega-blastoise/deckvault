@@ -148,8 +148,7 @@ pub struct ToolInfo {
 ```
 
 Key insight: `register` accepts `impl Tool + 'static` — the `'static` bound means the
-tool cannot borrow short-lived data. Each tool must **own** its data. This is the simplest
-lifetime model and appropriate for tools initialized at startup.
+tool cannot borrow short-lived data. Each tool must **own** its data. This is the simplest lifetime model and appropriate for tools initialized at startup.
 
 ### 4. A Stub Tool for Testing
 
@@ -367,7 +366,7 @@ cargo test --manifest-path apps/mcp-server/Cargo.toml
 
 # Integration: tools/list
 echo '{"jsonrpc":"2.0","method":"tools/list","id":1}' \
-  | cargo run --manifest-path apps/mcp-server/Cargo.toml 2>/dev/null \
+  | cargo run 2>/dev/null \
   | python3 -c "
 import sys, json
 d = json.load(sys.stdin)
@@ -381,7 +380,7 @@ print('PASS: tools/list')
 
 # Integration: tools/call with echo
 echo '{"jsonrpc":"2.0","method":"tools/call","params":{"name":"echo","arguments":{"message":"hello"}},"id":2}' \
-  | cargo run --manifest-path apps/mcp-server/Cargo.toml 2>/dev/null \
+  | cargo run 2>/dev/null \
   | python3 -c "
 import sys, json
 d = json.load(sys.stdin)
