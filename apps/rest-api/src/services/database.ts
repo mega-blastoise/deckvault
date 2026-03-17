@@ -20,6 +20,17 @@ export class DatabaseService implements Service {
       create: false
     });
 
+    /**
+     * Backwards compatability with source db
+     */
+    try {
+      this.db.run(
+        'ALTER TABLE pokemon_cards ADD COLUMN regulation_mark TEXT'
+      );
+    } catch {
+      // Column already exists
+    }
+
     if (this.config.readonly) {
       this.db.run('PRAGMA query_only = ON;');
     }

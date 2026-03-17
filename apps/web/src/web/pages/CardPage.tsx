@@ -158,6 +158,11 @@ function CardPage() {
 
           {/* Badges */}
           <div className="card-page__badges">
+            {(card as Record<string, unknown>).regulationMark && (
+              <Badge variant="regulation">
+                {String((card as Record<string, unknown>).regulationMark)}
+              </Badge>
+            )}
             {card.supertype && <Badge variant="primary">{card.supertype}</Badge>}
             {card.subtypes?.map((s: string) => (
               <Badge key={s} variant="secondary">{s}</Badge>

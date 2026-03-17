@@ -55,6 +55,7 @@ function fullCardRow(): CardRow {
       '{"small":"https://example.com/small.png","large":"https://example.com/large.png"}',
     tcgplayer_url: 'https://tcgplayer.com/card/123',
     cardmarket_url: 'https://cardmarket.com/card/456',
+    regulation_mark: null,
     created_at: '2024-01-01T00:00:00.000Z',
     updated_at: '2024-01-01T00:00:00.000Z'
   };
@@ -88,6 +89,7 @@ function trainerCardRow(): CardRow {
       '{"small":"https://example.com/misty-small.png","large":"https://example.com/misty-large.png"}',
     tcgplayer_url: null,
     cardmarket_url: null,
+    regulation_mark: null,
     created_at: '2024-01-01T00:00:00.000Z',
     updated_at: '2024-01-01T00:00:00.000Z'
   };

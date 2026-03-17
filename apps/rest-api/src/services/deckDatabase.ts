@@ -10,6 +10,8 @@ export interface DeckCardShape {
     supertype: string;
     subtype?: string;
     subtypes?: string[];
+    number?: string;
+    regulationMark?: string;
     images?: { small?: string; large?: string };
     set: { id: string; name: string };
   };

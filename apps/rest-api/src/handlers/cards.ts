@@ -8,10 +8,6 @@ import {
 import { transformCardRow, transformCardRowWithSet } from '../utils/transforms';
 import type { CardRow, SetRow } from '../types';
 
-/**
- * GET /api/v1/cards
- * List all Pokemon cards with pagination
- */
 export const getCards: Handler<Services> = async (ctx) => {
   const db = ctx.services.db;
   const pagination = parsePaginationParams(ctx.query.raw);
@@ -34,10 +30,6 @@ export const getCards: Handler<Services> = async (ctx) => {
   });
 };
 
-/**
- * GET /api/v1/cards/:id
- * Get a single card by ID with full set information
- */
 export const getCardById: Handler<Services> = async (ctx) => {
   const db = ctx.services.db;
   const cardRow = db.findCardById(ctx.params.id) as CardRow | null;
@@ -54,10 +46,40 @@ export const getCardById: Handler<Services> = async (ctx) => {
   return ctx.json({ data: card });
 };
 
-/**
- * GET /api/v1/cards/search
- * Search cards by name, type, rarity, or set
- */
+export const getCardsBatch: Handler<Services> = async (ctx) => {
+  const db = ctx.services.db;
+  const idsParam = ctx.query.get('ids');
+
+  if (!idsParam) {
+    return ctx.badRequest('Missing required query parameter: ids');
+  }
+
+  const ids = idsParam.split(',').filter(Boolean);
+
+  if (ids.length === 0) {
+    return ctx.badRequest('No valid IDs provided');
+  }
+
+  if (ids.length > 100) {
+    return ctx.badRequest('Maximum 100 IDs per batch request');
+  }
+
+  const placeholders = ids.map(() => '?').join(',');
+  const rows = db.query<CardRow>(
+    `SELECT * FROM pokemon_cards WHERE id IN (${placeholders})`,
+    ...ids
+  );
+
+  const cards = rows.map((row) => {
+    const setRow = db.findSetById(row.set_id) as SetRow | null;
+    return setRow
+      ? transformCardRowWithSet(row, setRow)
+      : transformCardRow(row);
+  });
+
+  return ctx.json({ data: cards });
+};
+
 export const searchCards: Handler<Services> = async (ctx) => {
   const db = ctx.services.db;
   const pagination = parsePaginationParams(ctx.query.raw);
@@ -110,7 +132,6 @@ export const searchCards: Handler<Services> = async (ctx) => {
 
   const cards = rows.map(transformCardRow);
 
-  // Build base URL preserving filter params for pagination links
   const searchBase = new URL('/api/v1/cards/search', 'http://localhost');
   if (name) searchBase.searchParams.set('name', name);
   if (type) searchBase.searchParams.set('type', type);

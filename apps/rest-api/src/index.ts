@@ -11,7 +11,12 @@ import { loadConfig } from './config';
 import { DatabaseService } from './services/database';
 import { DeckDatabaseService } from './services/deckDatabase';
 import type { Services } from './types';
-import { getCards, getCardById, searchCards } from './handlers/cards';
+import {
+  getCards,
+  getCardById,
+  getCardsBatch,
+  searchCards
+} from './handlers/cards';
 import {
   getSets,
   getSetById,
@@ -57,6 +62,7 @@ const discovery = createRouter<Services>('/api/v1')
 // Cards — search must be registered before :id so it matches first
 const cards = createRouter<Services>('/api/v1/cards')
   .get('/search', searchCards)
+  .get('/batch', getCardsBatch)
   .get('/:id', getCardById)
   .get('/', getCards);
 

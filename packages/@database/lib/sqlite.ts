@@ -62,6 +62,7 @@ export const initSchema = (db: Database): void => {
       images TEXT,
       tcgplayer_url TEXT,
       cardmarket_url TEXT,
+      regulation_mark TEXT,
       created_at TEXT DEFAULT (datetime('now')),
       updated_at TEXT DEFAULT (datetime('now'))
     );
@@ -233,8 +234,8 @@ export const insertCard = (db: Database) => {
       id, name, supertype, subtypes, hp, types, evolves_from, evolves_to,
       rules, abilities, attacks, weaknesses, retreat_cost, converted_retreat_cost,
       set_id, number, artist, rarity, flavor_text, national_pokedex_numbers,
-      legalities, images, tcgplayer_url, cardmarket_url
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      legalities, images, tcgplayer_url, cardmarket_url, regulation_mark
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
   return (
     id: string,
@@ -260,7 +261,8 @@ export const insertCard = (db: Database) => {
     legalities: string | null,
     images: string | null,
     tcgplayerUrl: string | null,
-    cardmarketUrl: string | null
+    cardmarketUrl: string | null,
+    regulationMark: string | null
   ) =>
     stmt.run(
       id,
@@ -286,7 +288,8 @@ export const insertCard = (db: Database) => {
       legalities,
       images,
       tcgplayerUrl,
-      cardmarketUrl
+      cardmarketUrl,
+      regulationMark
     );
 };
 
@@ -297,8 +300,8 @@ export const updateCard = (db: Database) => {
         evolves_to = ?, rules = ?, abilities = ?, attacks = ?, weaknesses = ?,
         retreat_cost = ?, converted_retreat_cost = ?, set_id = ?, number = ?,
         artist = ?, rarity = ?, flavor_text = ?, national_pokedex_numbers = ?,
-        legalities = ?, images = ?, tcgplayer_url = ?, cardmarket_url = ?, 
-        updated_at = datetime('now')
+        legalities = ?, images = ?, tcgplayer_url = ?, cardmarket_url = ?,
+        regulation_mark = ?, updated_at = datetime('now')
     WHERE id = ?
   `);
   return (
@@ -325,7 +328,8 @@ export const updateCard = (db: Database) => {
     legalities: string | null,
     images: string | null,
     tcgplayerUrl: string | null,
-    cardmarketUrl: string | null
+    cardmarketUrl: string | null,
+    regulationMark: string | null
   ) =>
     stmt.run(
       name,
@@ -351,6 +355,7 @@ export const updateCard = (db: Database) => {
       images,
       tcgplayerUrl,
       cardmarketUrl,
+      regulationMark,
       id
     );
 };

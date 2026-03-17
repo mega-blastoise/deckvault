@@ -27,7 +27,8 @@ export type BadgeVariant =
   | 'error'
   | 'warning'
   | 'type'
-  | 'rarity';
+  | 'rarity'
+  | 'regulation';
 
 export interface BadgeProps {
   children: React.ReactNode;

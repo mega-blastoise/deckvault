@@ -1,10 +1,11 @@
 import React, { useState, useCallback, useMemo, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router';
-import { Layers } from 'lucide-react';
+import { Layers, Printer } from 'lucide-react';
 import { useDecks } from '../contexts/Deck';
 import { Modal } from '../components/Modal';
 import { Badge } from '../components/Badge';
 import { DeckValidation } from '../components/DeckValidation';
+import { DeckPrintView } from '../components/DeckPrintView';
 import { ROUTES } from '../routes';
 import { FORMAT_NAMES } from '../../types/deck';
 import type { DeckCard, DeckValidation as DeckValidationType } from '../../types/deck';
@@ -118,6 +119,7 @@ function DeckDetailPage() {
   const navigate = useNavigate();
   const { getDeck, deleteDeck, isLoading } = useDecks();
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showPrintView, setShowPrintView] = useState(false);
 
   const deck = deckId ? getDeck(deckId) : undefined;
 
@@ -200,6 +202,16 @@ function DeckDetailPage() {
           )}
         </div>
         <div className="page__header-actions">
+          {validation.isValid && (
+            <button
+              type="button"
+              className="button button--secondary"
+              onClick={() => setShowPrintView(true)}
+            >
+              <Printer size={16} aria-hidden="true" />
+              Print Deck List
+            </button>
+          )}
           <Link
             to={ROUTES.DECK_EDIT(deckId!)}
             className="button button--secondary"
@@ -296,6 +308,14 @@ function DeckDetailPage() {
           </div>
         )}
       </div>
+
+      {/* Print View Overlay */}
+      {showPrintView && (
+        <DeckPrintView
+          deck={deck}
+          onClose={() => setShowPrintView(false)}
+        />
+      )}
 
       {/* Delete Confirmation Modal */}
       <Modal

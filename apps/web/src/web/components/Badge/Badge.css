@@ -166,6 +166,24 @@
   color: var(--contrast-text);
 }
 
+/* Regulation mark variant */
+.pokemon-badge--regulation {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #fff;
+  font-weight: 800;
+  font-size: 0.875rem;
+  letter-spacing: 0.05em;
+  padding: 0.25rem 0.625rem;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.35);
+  border: 1.5px solid rgba(255, 255, 255, 0.15);
+}
+
+.pokemon-badge--regulation.pokemon-badge--small {
+  font-size: 0.75rem;
+  padding: 0.125rem 0.5rem;
+}
+
 /* ═══════════════════════════════════════════════════════════════
    NEBULA THEME - Enhanced badge styles
    ═══════════════════════════════════════════════════════════════ */
@@ -179,4 +197,9 @@
 
 [data-theme="nebula"] .pokemon-badge--rarity-rare-secret {
   box-shadow: 0 0 8px rgba(251, 191, 36, 0.3);
+}
+
+[data-theme="nebula"] .pokemon-badge--regulation {
+  background: linear-gradient(135deg, #7c3aed, #6366f1, #818cf8);
+  box-shadow: 0 2px 12px rgba(124, 58, 237, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.08);
 }

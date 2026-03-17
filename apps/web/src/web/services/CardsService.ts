@@ -27,4 +27,10 @@ export class CardsService extends APIModel implements APIModel {
   getCardsInSet(set: string) {
     return this.get<Pokemon.Card[]>(`/sets/${set}/cards`);
   }
+
+  getCardsBatch(ids: string[]) {
+    return this.get<{ data: Pokemon.Card[] }>('/cards/batch', {
+      params: { ids: ids.join(',') }
+    });
+  }
 }

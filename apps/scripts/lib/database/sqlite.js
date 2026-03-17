@@ -20,7 +20,7 @@ const DATABASE_PATH = path.resolve(
 const DATABASE_OPTIONS = { create: true, readwrite: true, readonly: false };
 
 const STATIC_TOTAL_SETS = 171;
-const STATIC_TOTAL_CARDS = 20113;
+const STATIC_TOTAL_CARDS = 20078;
 
 const ENABLED_DB_SEED = process.env.SQLITE3_SEED_DATABASE === 'true';
 
@@ -135,7 +135,8 @@ const seed = async (db, verbose = false) => {
                 JSON.stringify(card?.legalities || {}),
                 JSON.stringify(card?.images || {}),
                 card?.tcgplayer?.url,
-                card?.cardmarket?.url
+                card?.cardmarket?.url,
+                card?.regulationMark || null
               );
             } catch (e) {
               console.error(

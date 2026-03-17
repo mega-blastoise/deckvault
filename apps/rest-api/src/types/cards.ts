@@ -28,6 +28,7 @@ export interface CardRow {
   images: string | null;
   tcgplayer_url: string | null;
   cardmarket_url: string | null;
+  regulation_mark: string | null;
   created_at: string;
   updated_at: string;
 }

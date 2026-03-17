@@ -55,6 +55,7 @@ export function transformCardRow(row: CardRow): Pokemon.Card {
     images: parseJSON(row.images) || { small: '', large: '' },
     tcgplayer: row.tcgplayer_url ? { url: row.tcgplayer_url } : undefined,
     cardmarket: row.cardmarket_url ? { url: row.cardmarket_url } : undefined,
+    regulationMark: row.regulation_mark || undefined,
     set: { id: row.set_id } as Pokemon.Set
   } as Pokemon.Card;
 }
