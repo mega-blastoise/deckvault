@@ -1,0 +1,114 @@
+---
+title: Running the Pipeline
+description: Step-by-step commands to execute a full end-to-end data sync
+---
+
+# Running the Pipeline
+
+All commands run from the **monorepo root** unless noted otherwise.
+
+---
+
+## Full Pipeline
+
+<Steps>
+  <Step title="Pull latest upstream card data">
+
+Advance the submodule to the latest commit on `main`:
+
+```bash
+git submodule update --remote forks/pokemon-tcg-data
+```
+
+  </Step>
+  <Step title="Sync fork → @pokemon-data local package">
+
+```bash
+cd apps/scripts && bun run scripts:fork:sync && cd ../..
+```
+
+This writes transformed card and set JSON into `packages/@pokemon-data/data/`. Uses `DEBUG=*` internally for verbose logging.
+
+  </Step>
+  <Step title="Start Postgres and Neo4j">
+
+```bash
+docker compose -f docker/database/docker-compose.yml up -d --wait
+```
+
+The `--wait` flag blocks until both services pass their healthchecks (`pg_isready` for Postgres, `curl http://localhost:7474` for Neo4j).
+
+  </Step>
+  <Step title="Sync live API → Postgres + Neo4j">
+
+```bash
+bun run docker:scripts:db:sync
+```
+
+Runs `syncSets()` then `syncCards()` against the live Pokemon TCG API v2. Requires `POKEMON_TCG_API_KEY`, `POSTGRES_*`, and `NEO4J_*` env vars. Both stores use insert-on-conflict-do-nothing — safe to re-run.
+
+  </Step>
+  <Step title="Seed the canonical SQLite database">
+
+```bash
+cd apps/scripts && SQLITE3_SEED_DATABASE=true bun run ./bin/index.js db:sqlite:init && cd ../..
+```
+
+Reads from `packages/@pokemon-data/data/` (written in step 2) and populates `database/pokemon-data.sqlite3.db`. Validates against expected set/card counts after seeding.
+
+  </Step>
+  <Step title="Replicate SQLite to all services">
+
+```bash
+bun run db:replicate:force
+```
+
+Serializes the canonical database and overwrites the local SQLite replica in `rest-api`, `graphql-api`, `tcg-api`, and `mcp-server`.
+
+  </Step>
+</Steps>
+
+---
+
+## Required Environment Variables
+
+| Variable | Used by | Description |
+|----------|---------|-------------|
+| `POKEMON_TCG_API_KEY` | Stage 2 | Auth key for `api.pokemontcg.io/v2` |
+| `POSTGRES_USER` | Stage 2 | Postgres username |
+| `POSTGRES_HOST` | Stage 2 | Postgres host (e.g. `localhost`) |
+| `POSTGRES_DB` | Stage 2 | Database name |
+| `POSTGRES_PASSWORD` | Stage 2 | Postgres password |
+| `NEO4J_URL` | Stage 2 | Bolt URI (e.g. `bolt://localhost:7687`) |
+| `NEO4J_USER` | Stage 2 | Neo4j username |
+| `NEO4J_SECRET` | Stage 2 | Neo4j password |
+| `SQLITE3_SEED_DATABASE` | Stage 3 | Must be `"true"` to trigger seeding |
+
+---
+
+## Notes
+
+- **Steps 4 and 5 are independent** — they draw from different sources (live API vs. local JSON) and can run in parallel or in either order.
+- **Step 4 is idempotent** — re-running against a populated database is safe; existing rows are skipped.
+- **Step 6 requires `--force`** after a fresh seed. Without it, existing app-level replicas are not overwritten.
+- **Partial failures in step 4** cause the sync loop to abort. Re-running is safe — previously inserted records are skipped.
+
+---
+
+## Selective Runs
+
+If you only need to refresh a specific layer:
+
+```bash
+# Only update local JSON package from fork (no databases touched)
+cd apps/scripts && bun run scripts:fork:sync
+
+# Only sync Postgres + Neo4j from live API
+bun run docker:scripts:db:sync
+
+# Only rebuild SQLite from local JSON
+cd apps/scripts && SQLITE3_SEED_DATABASE=true bun run ./bin/index.js db:sqlite:init
+
+# Only re-replicate an already-seeded SQLite
+bun run db:replicate:force
+```

@@ -1,0 +1,100 @@
+---
+title: "Stage 3: SQLite & Replication"
+description: Seeding the canonical SQLite database from @pokemon-data and replicating it to all services
+---
+
+# Stage 3: SQLite & Replication
+
+This stage has two parts:
+1. **Seed** — build the canonical `database/pokemon-data.sqlite3.db` from the local `@pokemon-data` package
+2. **Replicate** — copy that database file to each application that maintains a local SQLite read replica
+
+---
+
+## Part A: Seeding the Canonical Database
+
+**Command:** `SQLITE3_SEED_DATABASE=true bun run ./bin/index.js db:sqlite:init` (from `apps/scripts`)
+
+**Source:** `packages/@pokemon-data/data/` (local JSON — must have been populated by Stage 1)
+**Target:** `database/pokemon-data.sqlite3.db`
+
+<Callout variant="warning">
+The seed is gated by the `SQLITE3_SEED_DATABASE=true` environment variable. Without it, the command only runs the post-seed validation and exits — it will fail if the database is empty.
+</Callout>
+
+### What it does
+
+1. **Opens (or creates)** `database/pokemon-data.sqlite3.db` via `bun:sqlite` with `{ create: true, readwrite: true }`.
+2. **Initializes the schema** — calls `sqlite.initSchema(db)` to create tables and indexes before any inserts.
+3. **Iterates all sets** from `@pokemon/data/sets.json` (`{ data: Set[] }`).
+4. For each set:
+   - Validates the set object via `isPokemonCardSet(set)` — throws if invalid
+   - Inserts via `sqlite.insertSet(db)(...)` — 10 parameters; `legalities` and `images` as JSON strings
+   - **Dynamically imports** the card file: `` import(`@pokemon/data/cards/${set.id}`) ``
+   - For each card in `cards_json.data`:
+     - Validates via `isPokemonCard(card)` — throws and continues on invalid
+     - Inserts via `sqlite.insertCard(db)(...)` — 24 parameters
+
+5. **Validates** the final database against hardcoded expected counts:
+
+```js
+const STATIC_TOTAL_SETS = 171;
+const STATIC_TOTAL_CARDS = 20113;
+```
+
+Validation uses `node:assert/strict` — the process throws if counts don't match. **These constants must be updated manually whenever new sets are added to `@pokemon-data`.**
+
+### Per-card error handling
+
+Individual card insert failures are non-fatal: the error is logged, pushed to an `errors[]` array, and the loop continues. Set-level failures are also non-fatal at the card loop level. All errors are collected and logged at the end, but the database will contain whatever was successfully inserted before validation runs.
+
+---
+
+## Part B: Replication
+
+**Command:** `bun run db:replicate` (skip-if-exists) or `bun run db:replicate:force` (overwrite)
+
+**Source:** `database/pokemon-data.sqlite3.db`
+**Targets:**
+```
+apps/rest-api/database/pokemon-data.sqlite3.db
+apps/graphql-api/database/pokemon-data.sqlite3.db
+apps/mcp-server/database/pokemon-data.sqlite3.db
+apps/tcg-api/database/pokemon-data.sqlite3.db
+```
+
+### How it works
+
+The replication script (`scripts/db-replicate.ts`) uses `bun:sqlite`'s `Database.serialize()` to produce an in-memory `Buffer` of the source database, then writes it to each target path via `Bun.write(..., { createPath: true })`.
+
+```
+source DB → db.serialize() → Buffer → Bun.write() → target paths
+```
+
+This is a **full snapshot copy** — not incremental. Every replica is an exact binary duplicate of the source at the time of replication.
+
+### Overwrite flag
+
+By default, existing target databases are **skipped** (`hasExistingDatabase` check). To force-overwrite all replicas (e.g. after a fresh seed):
+
+```bash
+bun run db:replicate:force
+# sets SQLITE_REPLICATE_OVERWRITE_DATABASES=1
+```
+
+<Callout variant="tip">
+Always use `db:replicate:force` after re-seeding the canonical database. Without it, stale replicas in `apps/*/database/` will not be updated.
+</Callout>
+
+---
+
+## Validation Counts
+
+When new sets are released and added to `@pokemon-data`, update the validation constants in `apps/scripts/lib/database/sqlite.js`:
+
+```js
+const STATIC_TOTAL_SETS = 171;   // ← increment when sets are added
+const STATIC_TOTAL_CARDS = 20113; // ← update after counting inserted cards
+```
+
+Failure to update these will cause `db:sqlite:init` to throw after a successful seed, even though the data is correct.

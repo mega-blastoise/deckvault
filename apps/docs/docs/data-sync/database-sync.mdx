@@ -1,0 +1,140 @@
+---
+title: "Stage 2: Live API → Postgres & Neo4j"
+description: How sets and cards are synced from the Pokemon TCG API v2 into Postgres and Neo4j
+---
+
+# Stage 2: Live API → Postgres & Neo4j
+
+**Command:** `oak db:sync` (or `bun run docker:scripts:db:sync` from the monorepo root)
+
+**Source:** Pokemon TCG API v2 (`https://api.pokemontcg.io/v2/`)
+**Targets:** PostgreSQL `pokemon_card_sets` + `pokemon_cards` tables; Neo4j `:PokemonCardSet` + `:PokemonCard` nodes
+
+<Callout variant="warning">
+This stage reads from the **live API**, not from the local `@pokemon-data` package or the fork submodule. It requires `POKEMON_TCG_API_KEY` and running Postgres + Neo4j instances.
+</Callout>
+
+---
+
+## Prerequisites
+
+| Requirement | Variable |
+|-------------|---------|
+| Pokemon TCG API key | `POKEMON_TCG_API_KEY` |
+| Postgres connection | `POSTGRES_USER`, `POSTGRES_HOST`, `POSTGRES_DB`, `POSTGRES_PASSWORD` |
+| Neo4j connection | `NEO4J_URL`, `NEO4J_USER`, `NEO4J_SECRET` |
+
+Start the databases before running:
+
+```bash
+docker compose -f docker/database/docker-compose.yml up -d --wait
+```
+
+---
+
+## The `Pokedex` Client
+
+Both `syncSets` and `syncCards` use `PokemonTCGClient` (exported as `Pokedex` from `@pokemon/clients`). It paginates the API with a page size of 250, yielding records via async generators:
+
+- `getAllSets()` — paginates `GET /v2/sets?page=N&pageSize=250&orderBy=-set.releaseDate`
+- `getAllCardsInSet(setId)` — paginates `GET /v2/cards?q=set.id:<setId>&orderBy=number&page=N&pageSize=250`
+
+The generators terminate when `count >= totalCount` (as returned by the API).
+
+---
+
+## `syncSets()`
+
+Iterates all sets via `pokedex.getAllSets()` and writes each to both stores.
+
+### Postgres
+
+```sql
+INSERT INTO pokemon_card_sets (
+  id, name, series, printed_total, total,
+  legalities, ptcgo_code, release_date, updated_at, images
+) VALUES ($1, ..., $10)
+ON CONFLICT (id) DO NOTHING;
+```
+
+`legalities` and `images` are stored as JSON text.
+
+### Neo4j
+
+```cypher
+MERGE (set:PokemonCardSet { id: $id })
+ON CREATE SET
+  set.name = $name,
+  set.series = $series,
+  ...
+  set.images_symbol = $images_symbol,
+  set.images_logo = $images_logo
+RETURN set;
+```
+
+The nested `images` object is flattened to `images_symbol` and `images_logo` node properties.
+
+---
+
+## `syncCards()`
+
+Re-iterates all sets, then all cards per set. For each card both stores are written before moving to the next.
+
+### Postgres
+
+```sql
+INSERT INTO pokemon_cards (
+  id, name, supertype, subtypes, hp, types,
+  evolves_from, evolves_to, rules, abilities, attacks,
+  weaknesses, retreat_cost, converted_retreat_cost,
+  set_id, number, artist, rarity, flavor_text,
+  national_pokedex_numbers, legalities, images,
+  tcgplayer_url, tcgplayer_updated_at, tcgplayer_prices,
+  cardmarket_url, cardmarket_updated_at, cardmarket_prices
+) VALUES ($1, ..., $28)
+ON CONFLICT (id) DO NOTHING;
+```
+
+Notable column details:
+- Array fields (`subtypes`, `types`, `rules`, etc.) are coerced via `Primitives.coerceToArray` before insertion
+- Complex objects (`abilities`, `attacks`, `weaknesses`, `retreatCost`, `legalities`, `images`) are stored as JSON text
+- `hp` is parsed as `parseInt` — defaults to `0` if absent
+- Pricing columns (`tcgplayer_prices`, `cardmarket_prices`, `tcgplayer_updated_at`, `cardmarket_updated_at`, `cardmarket_url`) are all written as `null` — this stage does not populate pricing
+
+### Neo4j
+
+```cypher
+MERGE (card:PokemonCard { id: $id })
+ON CREATE SET
+  card.name = $name,
+  card.supertype = $supertype,
+  card.subtypes = $subtypes,
+  card.attacks = $attacks,
+  ...
+  card.images_small = $images_small,
+  card.images_large = $images_large
+RETURN card;
+```
+
+The nested `images` object is flattened to `images_small` and `images_large`. Complex fields (`rules`, `attacks`, `weaknesses`, etc.) are stored as JSON-stringified node properties.
+
+---
+
+## Conflict Semantics
+
+Both stores use **insert-only** semantics. A record that already exists under the same `id` is silently skipped — no fields are updated. To force a re-sync of a changed card or set, delete the row/node first.
+
+| Store | Conflict behavior |
+|-------|------------------|
+| Postgres | `ON CONFLICT (id) DO NOTHING` |
+| Neo4j | `MERGE ... ON CREATE SET ...` (no `ON MATCH`) |
+
+---
+
+## Error Handling
+
+<Callout variant="error">
+Any error during `syncSets` or `syncCards` causes an immediate `return` — the loop aborts and no further records are processed. This is a known limitation; partial syncs are possible if a failure occurs mid-run.
+</Callout>
+
+If a sync run fails partway through, re-running is safe — already-inserted records will be skipped by the conflict clause. The run will resume from the first set/card that was not yet inserted (though the API will still paginate from the beginning).

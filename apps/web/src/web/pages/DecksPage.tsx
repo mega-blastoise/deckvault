@@ -11,7 +11,7 @@ import type { DeckFormat, FORMAT_NAMES } from '../../types/deck';
 
 function DecksPage() {
   const navigate = useNavigate();
-  const { decks, deleteDeck, deckCount } = useDecks();
+  const { decks, deleteDeck, deckCount, isLoading } = useDecks();
 
   const { ref: headerRef } = useFadeIn({ y: 20, duration: 0.4 });
   const { containerRef: deckListRef } = useStagger({
@@ -30,14 +30,32 @@ function DecksPage() {
       : decks.filter((deck) => deck.format === formatFilter);
 
   // Convert decks to DeckList format
-  const deckItems = filteredDecks.map((deck) => ({
-    id: deck.id,
-    name: deck.name,
-    description: deck.description,
-    cardCount: deck.cards.reduce((sum, c) => sum + c.quantity, 0),
-    isValid: deck.cards.reduce((sum, c) => sum + c.quantity, 0) === 60,
-    lastModified: deck.updatedAt
-  }));
+  const deckItems = filteredDecks.map((deck) => {
+    const cardCount = deck.cards.reduce((sum, c) => sum + c.quantity, 0);
+
+    // Derive cover card: prefer coverCardId match, then first Pokémon, then first card
+    const coverSource = deck.coverCardId
+      ? deck.cards.find((c) => c.card.id === deck.coverCardId)
+      : (deck.cards.find((c) => c.card.supertype === 'Pokémon') ?? deck.cards[0]);
+
+    const coverCard = coverSource?.card.images?.small
+      ? {
+          id: coverSource.card.id,
+          name: coverSource.card.name,
+          imageUrl: coverSource.card.images.small
+        }
+      : undefined;
+
+    return {
+      id: deck.id,
+      name: deck.name,
+      description: deck.description,
+      cardCount,
+      isValid: cardCount === 60,
+      lastModified: deck.updatedAt,
+      coverCard
+    };
+  });
 
   // Handle deck edit
   const handleEdit = useCallback(
@@ -53,9 +71,9 @@ function DecksPage() {
   }, []);
 
   // Confirm delete
-  const handleConfirmDelete = useCallback(() => {
+  const handleConfirmDelete = useCallback(async () => {
     if (deckToDelete) {
-      deleteDeck(deckToDelete);
+      await deleteDeck(deckToDelete);
       setDeckToDelete(null);
     }
   }, [deckToDelete, deleteDeck]);
@@ -68,7 +86,22 @@ function DecksPage() {
     [navigate]
   );
 
-  // Empty state
+  // Loading / empty state
+  if (isLoading) {
+    return (
+      <div className="page decks-page">
+        <div className="page__header">
+          <h1>My Decks</h1>
+        </div>
+        <div className="page__content">
+          <div className="page__empty-state">
+            <p>Loading decks...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (deckCount === 0) {
     return (
       <div className="page decks-page">

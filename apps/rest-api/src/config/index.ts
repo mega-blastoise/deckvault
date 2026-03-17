@@ -7,6 +7,9 @@ export interface Config {
     path: string;
     readonly: boolean;
   };
+  deckDatabase: {
+    path: string;
+  };
   cors: {
     origins: string[];
   };
@@ -32,6 +35,10 @@ export function loadConfig(): Config {
     database: {
       path: process.env.DATABASE_PATH || './database/pokemon-data.sqlite3.db',
       readonly: process.env.DATABASE_READONLY !== 'false'
+    },
+    deckDatabase: {
+      path:
+        process.env.DECK_DATABASE_PATH || './database/decks.sqlite3.db'
     },
     cors: {
       origins: parseOrigins(process.env.CORS_ORIGINS)

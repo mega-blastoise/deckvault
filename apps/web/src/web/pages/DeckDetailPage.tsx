@@ -1,79 +1,164 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router';
 import { Layers } from 'lucide-react';
 import { useDecks } from '../contexts/Deck';
-import { useCards } from '../hooks/useCards';
-import { useDeckValidation } from '../hooks/useDeckValidation';
 import { Modal } from '../components/Modal';
 import { Badge } from '../components/Badge';
 import { DeckValidation } from '../components/DeckValidation';
 import { ROUTES } from '../routes';
 import { FORMAT_NAMES } from '../../types/deck';
+import type { DeckCard, DeckValidation as DeckValidationType } from '../../types/deck';
+
+function TiltCard({ card, quantity, onClick }: { card: DeckCard['card']; quantity: number; onClick?: () => void }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const rafRef = useRef<number | null>(null);
+
+  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+    rafRef.current = requestAnimationFrame(() => {
+      const el = ref.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      const x = (e.clientX - rect.left) / rect.width;
+      const y = (e.clientY - rect.top) / rect.height;
+      const rx = (0.5 - y) * 24;
+      const ry = (x - 0.5) * 24;
+      el.style.transform = `perspective(700px) rotateX(${rx}deg) rotateY(${ry}deg) scale3d(1.06, 1.06, 1.06)`;
+      el.style.setProperty('--shimmer-x', `${x * 100}%`);
+      el.style.setProperty('--shimmer-y', `${y * 100}%`);
+    });
+  }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+    const el = ref.current;
+    if (!el) return;
+    el.style.transform = '';
+    el.style.removeProperty('--shimmer-x');
+    el.style.removeProperty('--shimmer-y');
+  }, []);
+
+  const src = card.images?.small;
+
+  return (
+    <div className="deck-detail-page__card-item">
+      <div
+        ref={ref}
+        className="tcg-tilt-card"
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseLeave}
+        onClick={onClick}
+        role={onClick ? 'button' : undefined}
+        tabIndex={onClick ? 0 : undefined}
+      >
+        {src ? (
+          <img src={src} alt={card.name} className="tcg-tilt-card__img" loading="lazy" />
+        ) : (
+          <div className="tcg-tilt-card__placeholder">
+            <Layers size={32} aria-hidden="true" />
+          </div>
+        )}
+        <div className="tcg-tilt-card__shimmer" />
+        {quantity > 1 && (
+          <span className="tcg-tilt-card__qty">×{quantity}</span>
+        )}
+      </div>
+      <div className="deck-detail-page__card-info">
+        <span className="deck-detail-page__card-name">{card.name}</span>
+        <span className="deck-detail-page__card-set">{card.set.name}</span>
+      </div>
+    </div>
+  );
+}
+
+function buildValidation(cards: DeckCard[]): DeckValidationType {
+  const breakdown = { pokemon: 0, trainer: 0, energy: 0, basicPokemon: 0 };
+  let totalCards = 0;
+
+  for (const dc of cards) {
+    totalCards += dc.quantity;
+    const st = dc.card.supertype;
+    if (st === 'Pokémon') {
+      breakdown.pokemon += dc.quantity;
+      if (dc.card.subtypes?.includes('Basic')) {
+        breakdown.basicPokemon += dc.quantity;
+      }
+    } else if (st === 'Trainer') {
+      breakdown.trainer += dc.quantity;
+    } else if (st === 'Energy') {
+      breakdown.energy += dc.quantity;
+    }
+  }
+
+  const errors = [];
+  if (totalCards !== 60) {
+    errors.push({
+      code: 'INVALID_DECK_SIZE',
+      message: `Deck must contain exactly 60 cards (currently ${totalCards})`
+    });
+  }
+  if (breakdown.basicPokemon === 0 && breakdown.pokemon > 0) {
+    errors.push({
+      code: 'NO_BASIC_POKEMON',
+      message: 'Deck must contain at least 1 Basic Pokémon'
+    });
+  }
+
+  return {
+    isValid: errors.length === 0,
+    totalCards,
+    errors,
+    warnings: [],
+    breakdown
+  };
+}
 
 function DeckDetailPage() {
   const { deckId } = useParams<{ deckId: string }>();
   const navigate = useNavigate();
-  const { getDeck, deleteDeck } = useDecks();
+  const { getDeck, deleteDeck, isLoading } = useDecks();
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
-  // Get the deck
   const deck = deckId ? getDeck(deckId) : undefined;
 
-  // Fetch card details
-  const { data: allCards, isLoading: loading } = useCards(1, 100);
+  const validation = useMemo(
+    () => buildValidation(deck?.cards ?? []),
+    [deck?.cards]
+  );
 
-  // Get card details for deck cards
-  const deckCardsWithDetails = useMemo(() => {
-    if (!deck || !allCards?.data.length) return [];
+  const { totalCards, isValid } = validation;
 
-    return deck.cards
-      .map((deckCard) => {
-        const cardDetail = allCards?.data?.find(
-          (c) => c.id === deckCard.cardId
-        );
-        return cardDetail
-          ? { ...cardDetail, quantity: deckCard.quantity }
-          : null;
-      })
-      .filter(Boolean) as Array<
-      { quantity: number } & (typeof allCards)['data'][0]
-    >;
-  }, [deck, allCards]);
-
-  // Group cards by supertype
   const groupedCards = useMemo(() => {
-    const groups: Record<string, typeof deckCardsWithDetails> = {
-      Pokemon: [],
+    const groups: Record<string, DeckCard[]> = {
+      'Pokémon': [],
       Trainer: [],
       Energy: []
     };
-
-    deckCardsWithDetails.forEach((card) => {
-      const supertype = card.supertype || 'Other';
-      if (!groups[supertype]) groups[supertype] = [];
-      groups[supertype].push(card);
-    });
-
+    for (const dc of deck?.cards ?? []) {
+      const st = dc.card.supertype;
+      if (!groups[st]) groups[st] = [];
+      groups[st].push(dc);
+    }
     return groups;
-  }, [deckCardsWithDetails]);
+  }, [deck?.cards]);
 
-  // Validate deck
-  const validation = useDeckValidation(
-    deck?.cards || [],
-    allCards?.data || [],
-    deck?.format || 'standard'
-  );
-  const { totalCards, isValid } = validation;
-
-  // Handle delete
-  const handleDelete = useCallback(() => {
+  const handleDelete = useCallback(async () => {
     if (deckId) {
-      deleteDeck(deckId);
+      await deleteDeck(deckId);
       navigate(ROUTES.DECKS);
     }
   }, [deckId, deleteDeck, navigate]);
 
-  // Deck not found
+  if (isLoading) {
+    return (
+      <div className="page deck-detail-page">
+        <div className="page__content">
+          <div className="deck-detail-page__loading">Loading deck...</div>
+        </div>
+      </div>
+    );
+  }
+
   if (!deck) {
     return (
       <div className="page deck-detail-page">
@@ -86,7 +171,7 @@ function DeckDetailPage() {
               <Layers size={64} aria-hidden="true" />
             </span>
             <h2>Deck not found</h2>
-            <p>The deck you're looking for doesn't exist.</p>
+            <p>The deck you&apos;re looking for doesn&apos;t exist.</p>
             <Link to={ROUTES.DECKS} className="button button--primary">
               Back to Decks
             </Link>
@@ -160,7 +245,7 @@ function DeckDetailPage() {
       </div>
 
       {/* Validation Status */}
-      {!loading && deck.cards.length > 0 && (
+      {deck.cards.length > 0 && (
         <div className="deck-detail-page__validation">
           <DeckValidation
             validation={validation}
@@ -172,54 +257,28 @@ function DeckDetailPage() {
 
       {/* Card Groups */}
       <div className="page__content">
-        {loading ? (
-          <div className="deck-detail-page__loading">
-            Loading card details...
-          </div>
-        ) : (
-          Object.entries(groupedCards).map(([supertype, cards]) => {
-            if (!cards.length) return null;
-            const groupTotal = cards.reduce((sum, c) => sum + c.quantity, 0);
+        {Object.entries(groupedCards).map(([supertype, cards]) => {
+          if (!cards.length) return null;
+          const groupTotal = cards.reduce((sum, c) => sum + c.quantity, 0);
 
-            return (
-              <div key={supertype} className="deck-detail-page__group">
-                <h2 className="deck-detail-page__group-title">
-                  {supertype} ({groupTotal})
-                </h2>
-                <div className="deck-detail-page__card-list">
-                  {cards.map((card) => (
-                    <div key={card.id} className="deck-detail-page__card-item">
-                      <img
-                        src={card.images?.small}
-                        alt={card.name}
-                        className="deck-detail-page__card-image"
-                      />
-                      <div className="deck-detail-page__card-info">
-                        <span className="deck-detail-page__card-name">
-                          {card.name}
-                        </span>
-                        <span className="deck-detail-page__card-quantity">
-                          x{card.quantity}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+          return (
+            <div key={supertype} className="deck-detail-page__group">
+              <h2 className="deck-detail-page__group-title">
+                {supertype} ({groupTotal})
+              </h2>
+              <div className="deck-detail-page__card-list">
+                {cards.map((dc) => (
+                  <TiltCard
+                    key={dc.card.id}
+                    card={dc.card}
+                    quantity={dc.quantity}
+                    onClick={() => navigate(ROUTES.CARD(dc.card.id))}
+                  />
+                ))}
               </div>
-            );
-          })
-        )}
-
-        {!loading &&
-          deckCardsWithDetails.length === 0 &&
-          deck.cards.length > 0 && (
-            <div className="deck-detail-page__no-details">
-              <p>
-                Card details could not be loaded. The deck contains{' '}
-                {deck.cards.length} card entries.
-              </p>
             </div>
-          )}
+          );
+        })}
 
         {deck.cards.length === 0 && (
           <div className="page__empty-state">
@@ -264,8 +323,8 @@ function DeckDetailPage() {
         }
       >
         <p>
-          Are you sure you want to delete "{deck.name}"? This action cannot be
-          undone.
+          Are you sure you want to delete &ldquo;{deck.name}&rdquo;? This action
+          cannot be undone.
         </p>
       </Modal>
     </div>

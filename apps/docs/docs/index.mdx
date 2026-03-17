@@ -1,0 +1,54 @@
+---
+title: Introduction
+description: Project Johto internal engineering documentation
+---
+
+# Project Johto
+
+Project Johto is a full-stack Pokemon Trading Card Game platform built as a Turborepo monorepo. This site documents its internal architecture, data pipelines, and operational runbooks.
+
+## Architecture at a Glance
+
+| Layer | Technology | Purpose |
+|-------|-----------|---------|
+| Frontend | React 19 SSR + Bun | Server-rendered web UI |
+| REST API | Bun.serve() | Card and deck HTTP endpoints |
+| GraphQL API | Rust + async-graphql | Type-safe graph queries |
+| Relational DB | PostgreSQL 16 | Cards, sets, users, collections |
+| Graph DB | Neo4j | Evolution chains, deck synergies |
+| Local cache | SQLite (bun:sqlite) | Per-service read replica |
+| Card data | `@pokemon-data` package | Versioned JSON blobs, no network at runtime |
+
+## Monorepo Structure
+
+```
+Pokemon/
+├── apps/
+│   ├── web/              # React SSR frontend
+│   ├── rest-api/         # Bun HTTP server
+│   ├── graphql-api/      # Rust GraphQL server
+│   ├── tcg-api/          # Rust TCG API
+│   ├── mcp-server/       # MCP integration
+│   ├── scripts/          # Data management (oak CLI)
+│   └── docs/             # This site
+├── packages/
+│   ├── @pokemon-data/    # Versioned card/set JSON + read helpers
+│   ├── @clients/         # PokemonTCGClient (API v2 wrapper)
+│   ├── @database/        # Postgres, Neo4j, SQLite adapters
+│   └── ...
+├── forks/
+│   └── pokemon-tcg-data/ # Git submodule — upstream card data
+└── database/
+    └── pokemon-data.sqlite3.db  # Canonical SQLite database
+```
+
+## Key Concepts
+
+<CardGrid>
+  <Card title="Data Sync Pipeline" href="/data-sync/overview">
+    How upstream card data flows from a git submodule through to Postgres, Neo4j, and SQLite across all services.
+  </Card>
+  <Card title="Running the Pipeline" href="/data-sync/running">
+    Step-by-step commands to execute a full end-to-end sync from scratch.
+  </Card>
+</CardGrid>

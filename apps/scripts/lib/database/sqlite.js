@@ -19,8 +19,8 @@ const DATABASE_PATH = path.resolve(
 );
 const DATABASE_OPTIONS = { create: true, readwrite: true, readonly: false };
 
-const STATIC_TOTAL_SETS = 170;
-const STATIC_TOTAL_CARDS = 19818;
+const STATIC_TOTAL_SETS = 171;
+const STATIC_TOTAL_CARDS = 20113;
 
 const ENABLED_DB_SEED = process.env.SQLITE3_SEED_DATABASE === 'true';
 

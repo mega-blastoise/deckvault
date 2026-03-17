@@ -1,0 +1,78 @@
+---
+title: Pipeline Overview
+description: End-to-end overview of how Pokemon TCG card data moves from upstream source to all datastores
+---
+
+# Data Sync Pipeline Overview
+
+Card and set data originates from an upstream git repository and flows through three discrete stages before landing in all per-service datastores. Each stage is independently runnable via the `oak` CLI (`apps/scripts`).
+
+## Pipeline Stages
+
+<Steps>
+  <Step title="Stage 0 — Pull upstream submodule">
+    Advance the `forks/pokemon-tcg-data` git submodule to the latest upstream commit. This is a pure git operation — no scripts involved.
+  </Step>
+  <Step title="Stage 1 — Fork → @pokemon-data (oak fork:sync)">
+    Transform raw fork JSON into the `packages/@pokemon-data` workspace package. Embeds set objects into cards, preserves existing pricing data, writes per-set `cards.json` files.
+  </Step>
+  <Step title="Stage 2 — Live API → Postgres + Neo4j (oak db:sync)">
+    Authenticates against the Pokemon TCG API v2 and upserts all sets and cards into both relational (Postgres) and graph (Neo4j) datastores. Operates independently of Stage 1.
+  </Step>
+  <Step title="Stage 3 — @pokemon-data → SQLite (oak db:sqlite:init)">
+    Seeds the canonical `database/pokemon-data.sqlite3.db` from the local `@pokemon-data` package. Validates against expected set and card counts after seeding.
+  </Step>
+  <Step title="Replication — SQLite → all app databases (db:replicate)">
+    Serializes the canonical SQLite database and copies it to each app that maintains a local read replica (`rest-api`, `graphql-api`, `tcg-api`, `mcp-server`).
+  </Step>
+</Steps>
+
+## Dependency Graph
+
+```
+upstream git remote (nicholasgalante1997/pokemon-tcg-data)
+        │
+        ▼  git submodule update --remote
+forks/pokemon-tcg-data/                 ← raw upstream JSON
+        │
+        ▼  oak fork:sync
+packages/@pokemon-data/data/            ← transformed local JSON package
+        │
+        ▼  oak db:sqlite:init + SQLITE3_SEED_DATABASE=true
+database/pokemon-data.sqlite3.db        ← canonical SQLite
+        │
+        ▼  bun run db:replicate:force
+apps/*/database/pokemon-data.sqlite3.db ← per-service read replicas
+
+
+live Pokemon TCG API v2 (api.pokemontcg.io)
+        │
+        ▼  oak db:sync
+Postgres  (pokemon_card_sets, pokemon_cards)
+Neo4j     (:PokemonCardSet nodes, :PokemonCard nodes)
+```
+
+<Callout variant="info">
+Stages 2 and 3 are independent. Postgres/Neo4j are seeded from the **live API**, while SQLite is seeded from the **local `@pokemon-data` package**. Run them in any order, or in parallel.
+</Callout>
+
+## Data Sources
+
+| Source | Used by | Auth required |
+|--------|---------|--------------|
+| `forks/pokemon-tcg-data` (git submodule) | Stage 1 | Git SSH |
+| `packages/@pokemon-data` (local JSON) | Stage 3, runtime services | None |
+| Pokemon TCG API v2 (`api.pokemontcg.io`) | Stage 2 | `POKEMON_TCG_API_KEY` |
+
+## Conflict Semantics
+
+Both Postgres and Neo4j use **insert-on-conflict-do-nothing** semantics:
+
+- Postgres: `ON CONFLICT (id) DO NOTHING`
+- Neo4j: `MERGE ... ON CREATE SET ...`
+
+This means existing records are **never updated** by a sync run. If a card's data changes upstream, the row must be deleted before re-syncing to pick up the change.
+
+<Callout variant="warning">
+A single card or set failure in `oak db:sync` causes the loop to `return` immediately — it does not continue to the next record. Monitor logs carefully on first runs against a large dataset.
+</Callout>

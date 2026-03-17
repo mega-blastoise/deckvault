@@ -1,0 +1,109 @@
+---
+title: "Stage 1: Fork → @pokemon-data"
+description: How the pokemon-tcg-data submodule is transformed into the local @pokemon-data package
+---
+
+# Stage 1: Fork → `@pokemon-data`
+
+**Command:** `oak fork:sync` (or `bun run scripts:fork:sync` from `apps/scripts`)
+
+**Source:** `forks/pokemon-tcg-data/` (git submodule)
+**Target:** `packages/@pokemon-data/data/`
+
+---
+
+## Stage 0: Pulling the Submodule
+
+Before running this stage, advance the submodule to the latest upstream commit:
+
+```bash
+git submodule update --remote forks/pokemon-tcg-data
+```
+
+The submodule is configured as a **shallow clone** (`shallow = true`) of `git@github.com:nicholasgalante1997/pokemon-tcg-data.git` tracking `main`. This keeps checkout time fast by fetching only the latest snapshot rather than full history.
+
+**Fork layout:**
+```
+forks/pokemon-tcg-data/
+├── sets/
+│   └── en.json          # flat array of all TCG set objects
+└── cards/
+    └── en/
+        ├── base1.json   # flat array of cards for that set
+        ├── base2.json
+        └── ...          # one file per set ID
+```
+
+---
+
+## What `fork:sync` Does
+
+### Phase 1 — Sets
+
+Reads `forks/pokemon-tcg-data/sets/en.json` (a flat `Set[]` array) and writes it to `packages/@pokemon-data/data/sets.json` wrapped in a `{ data: Set[] }` envelope:
+
+```json
+{
+  "data": [
+    { "id": "base1", "name": "Base Set", "series": "Base", ... },
+    ...
+  ]
+}
+```
+
+### Phase 2 — Cards (per set)
+
+Globs all `*.json` files under `forks/pokemon-tcg-data/cards/en/`. For each set file:
+
+1. **Reads fork cards** — flat `Card[]` array from the fork (no pricing, no embedded set).
+2. **Loads existing cards** — reads `packages/@pokemon-data/data/cards/<setId>.d/cards.json` into a `Map<cardId, card>` if it exists. This is used to preserve pricing fields across syncs.
+3. **Transforms each card:**
+   - Spreads all fork card fields
+   - Embeds the full `Set` object as `card.set` (looked up from the sets map by `setId`)
+   - Copies `tcgplayer` and `cardmarket` from the existing local card if present, otherwise sets them to `null`
+4. **Ensures the output directory** exists by writing a `.keep` placeholder via `Bun.write(..., { createPath: true })`.
+5. **Writes** `packages/@pokemon-data/data/cards/<setId>.d/cards.json` wrapped as `{ data: Card[] }`.
+
+**Output layout:**
+```
+packages/@pokemon-data/data/
+├── sets.json                    # { data: Set[] }
+└── cards/
+    ├── base1.d/
+    │   ├── .keep
+    │   └── cards.json           # { data: Card[] } — card has .set embedded, pricing nullable
+    ├── base2.d/
+    │   └── cards.json
+    └── ...
+```
+
+---
+
+## Pricing Preservation
+
+The fork contains no pricing data. The local `@pokemon-data` package acts as the persistent store for `tcgplayer` and `cardmarket` pricing when it is available. On each sync:
+
+- If the card **existed** locally with pricing: pricing is carried forward.
+- If the card is **new** or had no pricing: fields are set to `null`.
+
+<Callout variant="info">
+Pricing data is not populated by this pipeline. It must be sourced and written to `@pokemon-data` separately (e.g. via the Pokemon TCG API `tcgplayer` fields returned on card objects).
+</Callout>
+
+---
+
+## Dry Run Mode
+
+Pass `--dry-run` to preview the sync without writing any files:
+
+```bash
+DEBUG=* bun run ./bin/index.js fork:sync --dry-run
+```
+
+Stats (sets processed, cards processed, directories created) are logged but no writes occur.
+
+---
+
+## Error Handling
+
+Per-set errors are non-fatal: the error is logged and the loop continues to the next set. After all sets are processed, if any errors were collected a single aggregate error is thrown. Check logs for the per-set detail.

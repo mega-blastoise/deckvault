@@ -9,6 +9,7 @@ services:
       - REST_API_PORT=3001
       - REST_API_HOST=0.0.0.0
       - DATABASE_PATH=/data/pokemon-data.sqlite3.db
+      - DECK_DATABASE_PATH=/deck-data/decks.sqlite3.db
       - LOG_LEVEL=info
       - CORS_ORIGINS=http://localhost:3000,http://bun-pokemon-web-server:3000
     ports:
@@ -17,6 +18,7 @@ services:
       - "3001"
     volumes:
       - ../../database:/data:ro
+      - deck_data:/deck-data
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
       interval: 30s
@@ -25,3 +27,8 @@ services:
       start_period: 5s
     networks:
       - pika
+
+volumes:
+  deck_data:
+    labels:
+      - "docker.pokemon.workspace.service=rest-api"

@@ -1,4 +1,5 @@
 import type { DatabaseService } from '../services/database';
+import type { DeckDatabaseService } from '../services/deckDatabase';
 import type { Config } from '../config';
 
 /**
@@ -8,5 +9,6 @@ import type { Config } from '../config';
 export interface Services {
   config: Config;
   db: DatabaseService;
+  deckDb: DeckDatabaseService;
   [key: string]: unknown;
 }

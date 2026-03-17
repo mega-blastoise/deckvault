@@ -12,6 +12,8 @@ export interface DeckCard {
     id: string;
     supertype: string;
     subtype?: string;
+    subtypes?: string[];
+    images?: { small?: string; large?: string };
     set: {
       id: string;
       name: string;

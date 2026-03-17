@@ -9,6 +9,7 @@ import {
 
 import { loadConfig } from './config';
 import { DatabaseService } from './services/database';
+import { DeckDatabaseService } from './services/deckDatabase';
 import type { Services } from './types';
 import { getCards, getCardById, searchCards } from './handlers/cards';
 import {
@@ -18,6 +19,13 @@ import {
   getSetsBySeries
 } from './handlers/sets';
 import { healthCheck, readyCheck, getApiDiscovery } from './handlers/health';
+import {
+  listDecks,
+  getDeck,
+  createDeck,
+  updateDeck,
+  deleteDeck
+} from './handlers/decks';
 
 const config = loadConfig();
 
@@ -27,7 +35,11 @@ const config = loadConfig();
 
 const container = createContainer()
   .register('config', () => config)
-  .register('db', (c) => new DatabaseService(c.get('config').database));
+  .register('db', (c) => new DatabaseService(c.get('config').database))
+  .register(
+    'deckDb',
+    (c) => new DeckDatabaseService(c.get('config').deckDatabase.path)
+  );
 
 // ============================================================
 // 2. Routers — route definitions grouped by domain
@@ -54,6 +66,14 @@ const sets = createRouter<Services>('/api/v1/sets')
   .get('/:id/cards', getSetCards)
   .get('/:id', getSetById)
   .get('/', getSets);
+
+// Decks — CRUD endpoints
+const decks = createRouter<Services>('/api/v1/decks')
+  .get('/:id', getDeck)
+  .put('/:id', updateDeck)
+  .delete('/:id', deleteDeck)
+  .post('/', createDeck)
+  .get('/', listDecks);
 
 // ============================================================
 // 3. Application assembly
@@ -85,7 +105,8 @@ const app = createApp({ container })
   .routes(ready)
   .routes(discovery)
   .routes(cards)
-  .routes(sets);
+  .routes(sets)
+  .routes(decks);
 
 // ============================================================
 // 4. Start

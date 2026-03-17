@@ -112,14 +112,14 @@ export function validateDeck(
 
   // Process each card in the deck
   for (const deckCard of deckCards) {
-    const card = cardDetails.get(deckCard.cardId);
+    const card = cardDetails.get(deckCard.card.id);
     totalCards += deckCard.quantity;
 
     if (!card) {
       warnings.push({
         code: 'UNKNOWN_CARD',
-        message: `Card details not found for ${deckCard.cardId}`,
-        cardId: deckCard.cardId
+        message: `Card details not found for ${deckCard.card.id}`,
+        cardId: deckCard.card.id
       });
       continue;
     }
@@ -151,16 +151,16 @@ export function validateDeck(
       copyCountByName[canonicalName] = { count: 0, cardIds: [] };
     }
     copyCountByName[canonicalName].count += deckCard.quantity;
-    copyCountByName[canonicalName].cardIds.push(deckCard.cardId);
+    copyCountByName[canonicalName].cardIds.push(deckCard.card.id);
 
     // Check format legality using card's legalities field
     if (format !== 'unlimited' && format !== 'theme') {
-      const cardLegality = card.legalities?.[format as 'standard' | 'expanded'];
+      const cardLegality = (card.legalities as any)?.[format as 'standard' | 'expanded'];
       if (cardLegality !== 'Legal') {
         errors.push({
           code: 'NOT_LEGAL_IN_FORMAT',
           message: `${card.name} is not legal in ${format} format`,
-          cardId: deckCard.cardId
+          cardId: deckCard.card.id
         });
       }
     }
@@ -170,7 +170,7 @@ export function validateDeck(
       errors.push({
         code: 'BANNED_CARD',
         message: `${card.name} is banned in ${format} format`,
-        cardId: deckCard.cardId
+        cardId: deckCard.card.id
       });
     }
   }

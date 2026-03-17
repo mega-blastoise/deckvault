@@ -173,14 +173,14 @@ function DeckBuilderPage() {
   }, [isDirty, isEditing, deckId, navigate]);
 
   // Handle save
-  const handleSave = useCallback(() => {
+  const handleSave = useCallback(async () => {
     if (!deckName.trim()) {
       alert('Please enter a deck name');
       return;
     }
 
     if (isEditing && deckId) {
-      updateDeck(deckId, {
+      await updateDeck(deckId, {
         name: deckName,
         description: deckDescription || undefined,
         format: deckFormat,
@@ -188,7 +188,7 @@ function DeckBuilderPage() {
       });
       navigate(ROUTES.DECK_DETAIL(deckId));
     } else {
-      const newDeck = createDeck({
+      const newDeck = await createDeck({
         name: deckName,
         description: deckDescription || undefined,
         format: deckFormat,

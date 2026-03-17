@@ -3,295 +3,193 @@ import React, {
   useContext,
   useMemo,
   useCallback,
-  useState
+  useEffect
 } from 'react';
-import { useLocalStorage } from '../hooks/useLocalStorage';
+import { useQueryClient } from '@tanstack/react-query';
+import { useDecksQuery, DECKS_QUERY_KEY } from '../hooks/useDecksQuery';
+import { useDeckMutations } from '../hooks/useDeckMutations';
+import { DecksService } from '../services/DecksService';
 import type { Deck, DeckCard, DeckFormat, DeckStore } from '../../types/deck';
-import { DECK_STORE_VERSION } from '../../types/deck';
 import { STORAGE_KEYS } from '../../types/collection';
 
-/**
- * Deck context value interface
- */
 export interface DeckContextValue {
-  /** All decks */
   decks: Deck[];
-  /** Currently selected deck for editing */
   currentDeck: Deck | null;
-  /** Create a new deck */
-  createDeck: (deck: Omit<Deck, 'id' | 'createdAt' | 'updatedAt'>) => Deck;
-  /** Update an existing deck */
+  isLoading: boolean;
+  createDeck: (deck: Omit<Deck, 'id' | 'createdAt' | 'updatedAt'>) => Promise<Deck>;
   updateDeck: (
     id: string,
     updates: Partial<Omit<Deck, 'id' | 'createdAt'>>
-  ) => void;
-  /** Delete a deck */
-  deleteDeck: (id: string) => void;
-  /** Get a deck by ID */
+  ) => Promise<void>;
+  deleteDeck: (id: string) => Promise<void>;
   getDeck: (id: string) => Deck | undefined;
-  /** Set the current deck for editing */
   setCurrentDeck: (id: string | null) => void;
-  /** Add a card to a deck */
-  addCardToDeck: (deckId: string, cardId: string, quantity?: number) => void;
-  /** Remove a card from a deck */
-  removeCardFromDeck: (
-    deckId: string,
-    cardId: string,
-    quantity?: number
-  ) => void;
-  /** Set card quantity in a deck */
-  setCardQuantityInDeck: (
-    deckId: string,
-    cardId: string,
-    quantity: number
-  ) => void;
-  /** Get total deck count */
+  addCardToDeck: (deckId: string, card: DeckCard['card'], quantity?: number) => Promise<void>;
+  removeCardFromDeck: (deckId: string, cardId: string, quantity?: number) => Promise<void>;
+  setCardQuantityInDeck: (deckId: string, cardId: string, quantity: number) => Promise<void>;
   deckCount: number;
-  /** Get decks by format */
   getDecksByFormat: (format: DeckFormat) => Deck[];
 }
 
 const DeckContext = createContext<DeckContextValue | null>(null);
 
-/**
- * Initial empty deck store
- */
-const initialStore: DeckStore = {
-  version: DECK_STORE_VERSION,
-  decks: {}
-};
-
-/**
- * Generate a unique ID
- */
-function generateId(): string {
-  return `deck-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-}
-
 interface DeckProviderProps {
   children: React.ReactNode;
 }
 
-/**
- * Deck provider component
- */
 export function DeckProvider({ children }: DeckProviderProps) {
-  const [store, setStore] = useLocalStorage<DeckStore>(
-    STORAGE_KEYS.DECKS,
-    initialStore
-  );
-  const [currentDeckId, setCurrentDeckId] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+  const { data: decks = [], isLoading } = useDecksQuery();
+  const { createMutation, updateMutation, deleteMutation } = useDeckMutations();
 
-  // Convert decks record to array
-  const decks = useMemo(() => Object.values(store.decks), [store.decks]);
+  const [currentDeckId, setCurrentDeckId] = React.useState<string | null>(null);
 
-  // Get current deck
+  // localStorage migration: on first mount, migrate any existing decks
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const raw = window.localStorage.getItem(STORAGE_KEYS.DECKS);
+    if (!raw) return;
+
+    let store: DeckStore;
+    try {
+      store = JSON.parse(raw) as DeckStore;
+    } catch {
+      window.localStorage.removeItem(STORAGE_KEYS.DECKS);
+      return;
+    }
+
+    const existing = Object.values(store.decks ?? {});
+    if (existing.length === 0) {
+      window.localStorage.removeItem(STORAGE_KEYS.DECKS);
+      return;
+    }
+
+    const service = new DecksService();
+    Promise.all(
+      existing.map((deck) =>
+        service.createDeck({
+          name: deck.name,
+          description: deck.description,
+          format: deck.format,
+          cards: deck.cards,
+          coverCardId: deck.coverCardId
+        })
+      )
+    )
+      .then(() => {
+        window.localStorage.removeItem(STORAGE_KEYS.DECKS);
+        queryClient.invalidateQueries({ queryKey: DECKS_QUERY_KEY });
+      })
+      .catch(() => {
+        // silently fail — don't erase localStorage if migration fails
+      });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const currentDeck = useMemo(
-    () => (currentDeckId ? store.decks[currentDeckId] || null : null),
-    [currentDeckId, store.decks]
+    () => (currentDeckId ? (decks.find((d) => d.id === currentDeckId) ?? null) : null),
+    [currentDeckId, decks]
   );
 
-  // Create a new deck
   const createDeck = useCallback(
-    (deckData: Omit<Deck, 'id' | 'createdAt' | 'updatedAt'>): Deck => {
-      const id = generateId();
-      const now = new Date().toISOString();
-      const newDeck: Deck = {
-        ...deckData,
-        id,
-        createdAt: now,
-        updatedAt: now
-      };
-
-      setStore((prev) => ({
-        ...prev,
-        decks: {
-          ...prev.decks,
-          [id]: newDeck
-        }
-      }));
-
-      return newDeck;
+    async (deckData: Omit<Deck, 'id' | 'createdAt' | 'updatedAt'>): Promise<Deck> => {
+      return createMutation.mutateAsync(deckData);
     },
-    [setStore]
+    [createMutation]
   );
 
-  // Update an existing deck
   const updateDeck = useCallback(
-    (id: string, updates: Partial<Omit<Deck, 'id' | 'createdAt'>>) => {
-      setStore((prev) => {
-        const existingDeck = prev.decks[id];
-        if (!existingDeck) return prev;
-
-        return {
-          ...prev,
-          decks: {
-            ...prev.decks,
-            [id]: {
-              ...existingDeck,
-              ...updates,
-              updatedAt: new Date().toISOString()
-            }
-          }
-        };
-      });
+    async (id: string, updates: Partial<Omit<Deck, 'id' | 'createdAt'>>) => {
+      await updateMutation.mutateAsync({ id, input: updates });
     },
-    [setStore]
+    [updateMutation]
   );
 
-  // Delete a deck
   const deleteDeck = useCallback(
-    (id: string) => {
-      setStore((prev) => {
-        const { [id]: _, ...remainingDecks } = prev.decks;
-        return {
-          ...prev,
-          decks: remainingDecks
-        };
-      });
-
-      // Clear current deck if it was deleted
-      if (currentDeckId === id) {
-        setCurrentDeckId(null);
-      }
+    async (id: string) => {
+      await deleteMutation.mutateAsync(id);
+      if (currentDeckId === id) setCurrentDeckId(null);
     },
-    [setStore, currentDeckId]
+    [deleteMutation, currentDeckId]
   );
 
-  // Get a deck by ID
   const getDeck = useCallback(
-    (id: string): Deck | undefined => {
-      return store.decks[id];
-    },
-    [store.decks]
+    (id: string): Deck | undefined => decks.find((d) => d.id === id),
+    [decks]
   );
 
-  // Set current deck for editing
   const setCurrentDeck = useCallback((id: string | null) => {
     setCurrentDeckId(id);
   }, []);
 
-  // Add a card to a deck
   const addCardToDeck = useCallback(
-    (deckId: string, cardId: string, quantity: number = 1) => {
-      setStore((prev) => {
-        const deck = prev.decks[deckId];
-        if (!deck) return prev;
+    async (deckId: string, card: DeckCard['card'], quantity: number = 1) => {
+      const deck = decks.find((d) => d.id === deckId);
+      if (!deck) return;
 
-        const existingCardIndex = deck.cards.findIndex(
-          (c) => c.cardId === cardId
-        );
-        let newCards: DeckCard[];
+      const existing = deck.cards.find((c) => c.card.id === card.id);
+      const newCards: DeckCard[] = existing
+        ? deck.cards.map((c) =>
+            c.card.id === card.id
+              ? { ...c, quantity: c.quantity + quantity }
+              : c
+          )
+        : [...deck.cards, { card, quantity }];
 
-        if (existingCardIndex >= 0) {
-          newCards = deck.cards.map((card, index) =>
-            index === existingCardIndex
-              ? { ...card, quantity: card.quantity + quantity }
-              : card
-          );
-        } else {
-          newCards = [...deck.cards, { cardId, quantity }];
-        }
-
-        return {
-          ...prev,
-          decks: {
-            ...prev.decks,
-            [deckId]: {
-              ...deck,
-              cards: newCards,
-              updatedAt: new Date().toISOString()
-            }
-          }
-        };
+      await updateMutation.mutateAsync({
+        id: deckId,
+        input: { cards: newCards }
       });
     },
-    [setStore]
+    [decks, updateMutation]
   );
 
-  // Remove a card from a deck
   const removeCardFromDeck = useCallback(
-    (deckId: string, cardId: string, quantity: number = 1) => {
-      setStore((prev) => {
-        const deck = prev.decks[deckId];
-        if (!deck) return prev;
+    async (deckId: string, cardId: string, quantity: number = 1) => {
+      const deck = decks.find((d) => d.id === deckId);
+      if (!deck) return;
 
-        const newCards = deck.cards
-          .map((card) => {
-            if (card.cardId !== cardId) return card;
-            const newQuantity = card.quantity - quantity;
-            return newQuantity > 0 ? { ...card, quantity: newQuantity } : null;
-          })
-          .filter((card): card is DeckCard => card !== null);
+      const newCards = deck.cards
+        .map((c) => {
+          if (c.card.id !== cardId) return c;
+          const newQty = c.quantity - quantity;
+          return newQty > 0 ? { ...c, quantity: newQty } : null;
+        })
+        .filter((c): c is DeckCard => c !== null);
 
-        return {
-          ...prev,
-          decks: {
-            ...prev.decks,
-            [deckId]: {
-              ...deck,
-              cards: newCards,
-              updatedAt: new Date().toISOString()
-            }
-          }
-        };
-      });
+      await updateMutation.mutateAsync({ id: deckId, input: { cards: newCards } });
     },
-    [setStore]
+    [decks, updateMutation]
   );
 
-  // Set card quantity in a deck
   const setCardQuantityInDeck = useCallback(
-    (deckId: string, cardId: string, quantity: number) => {
-      setStore((prev) => {
-        const deck = prev.decks[deckId];
-        if (!deck) return prev;
+    async (deckId: string, cardId: string, quantity: number) => {
+      const deck = decks.find((d) => d.id === deckId);
+      if (!deck) return;
 
-        let newCards: DeckCard[];
+      const newCards: DeckCard[] =
+        quantity <= 0
+          ? deck.cards.filter((c) => c.card.id !== cardId)
+          : deck.cards.some((c) => c.card.id === cardId)
+          ? deck.cards.map((c) =>
+              c.card.id === cardId ? { ...c, quantity } : c
+            )
+          : deck.cards;
 
-        if (quantity <= 0) {
-          // Remove card
-          newCards = deck.cards.filter((c) => c.cardId !== cardId);
-        } else {
-          const existingCardIndex = deck.cards.findIndex(
-            (c) => c.cardId === cardId
-          );
-          if (existingCardIndex >= 0) {
-            newCards = deck.cards.map((card, index) =>
-              index === existingCardIndex ? { ...card, quantity } : card
-            );
-          } else {
-            newCards = [...deck.cards, { cardId, quantity }];
-          }
-        }
-
-        return {
-          ...prev,
-          decks: {
-            ...prev.decks,
-            [deckId]: {
-              ...deck,
-              cards: newCards,
-              updatedAt: new Date().toISOString()
-            }
-          }
-        };
-      });
+      await updateMutation.mutateAsync({ id: deckId, input: { cards: newCards } });
     },
-    [setStore]
+    [decks, updateMutation]
   );
 
-  // Get decks by format
   const getDecksByFormat = useCallback(
-    (format: DeckFormat): Deck[] => {
-      return decks.filter((deck) => deck.format === format);
-    },
+    (format: DeckFormat): Deck[] => decks.filter((d) => d.format === format),
     [decks]
   );
 
   const value: DeckContextValue = {
     decks,
     currentDeck,
+    isLoading,
     createDeck,
     updateDeck,
     deleteDeck,
@@ -307,9 +205,6 @@ export function DeckProvider({ children }: DeckProviderProps) {
   return <DeckContext.Provider value={value}>{children}</DeckContext.Provider>;
 }
 
-/**
- * Hook to access deck context
- */
 export function useDecks(): DeckContextValue {
   const context = useContext(DeckContext);
   if (!context) {

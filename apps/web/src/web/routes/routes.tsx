@@ -7,6 +7,7 @@ import DashboardPage from '../pages/DashboardPage';
 import DecksPage from '../pages/DecksPage';
 import DeckBuilderPage from '../pages/DeckBuilderPage';
 import DeckDetailPage from '../pages/DeckDetailPage';
+import CardPage from '../pages/CardPage';
 
 export const REACT_ROUTER_ROUTES: RouteObject[] = [
   {
@@ -37,6 +38,10 @@ export const REACT_ROUTER_ROUTES: RouteObject[] = [
   {
     path: '/decks/:deckId',
     Component: DeckDetailPage
+  },
+  {
+    path: '/cards/:cardId',
+    Component: CardPage
   },
   {
     path: '/collection/:cardId',
