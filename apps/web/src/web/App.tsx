@@ -1,7 +1,6 @@
 import React, { useEffect } from 'react';
 
 import Document from './components/Document/Document';
-import { AppLayout } from './components/AppLayout';
 import { AppRoutes } from './routes';
 import { AuthProvider } from './contexts/Auth';
 import { CollectionProvider } from './contexts/Collection';
@@ -15,11 +14,7 @@ export type AppProps = {
 };
 
 function AppContent(props: AppProps) {
-  return (
-    <AppLayout>
-      <AppRoutes {...props.routes} />
-    </AppLayout>
-  );
+  return <AppRoutes {...props.routes} />;
 }
 
 export function App(props: AppProps) {

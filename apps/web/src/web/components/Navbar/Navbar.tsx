@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Layers, Library, Box, Search, LogIn } from 'lucide-react';
+import { Layers, Search, LogIn } from 'lucide-react';
 import { ROUTES } from '@/web/routes';
 import { useCollectionQuery } from '@/web/hooks/useCollectionQuery';
 import { useDecks } from '@/web/contexts/Deck';
@@ -10,6 +10,23 @@ import './Navbar.css';
 function getPathname(): string {
   if (typeof window === 'undefined') return '/';
   return window.location.pathname;
+}
+
+interface NavLinkGatedProps {
+  label: string;
+  tooltip: string;
+}
+
+function NavLinkGated({ label, tooltip }: NavLinkGatedProps) {
+  return (
+    <span
+      className="navbar__link navbar__link--gated"
+      aria-disabled="true"
+      data-tooltip={tooltip}
+    >
+      <span>{label}</span>
+    </span>
+  );
 }
 
 export function Navbar() {
@@ -31,12 +48,7 @@ export function Navbar() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const isActive = (path: string) => {
-    if (path === ROUTES.DASHBOARD) {
-      return pathname === '/' || pathname.startsWith('/dashboard');
-    }
-    return pathname.startsWith(path);
-  };
+  const isActive = (path: string) => pathname.startsWith(path);
 
   return (
     <nav className="navbar">
@@ -46,13 +58,6 @@ export function Navbar() {
         </a>
 
         <div className="navbar__links">
-          <a
-            href={ROUTES.DASHBOARD}
-            className={`navbar__link ${isActive(ROUTES.DASHBOARD) ? 'navbar__link--active' : ''}`}
-          >
-            <Box size={18} />
-            <span>Home</span>
-          </a>
           <a
             href={ROUTES.BROWSE}
             className={`navbar__link ${isActive(ROUTES.BROWSE) ? 'navbar__link--active' : ''}`}
@@ -70,16 +75,8 @@ export function Navbar() {
               <span className="navbar__badge">{deckCount}</span>
             )}
           </a>
-          <a
-            href={ROUTES.COLLECTION}
-            className={`navbar__link ${isActive(ROUTES.COLLECTION) ? 'navbar__link--active' : ''}`}
-          >
-            <Library size={18} />
-            <span>Collection</span>
-            {isAuthenticated && uniqueCards > 0 && (
-              <span className="navbar__badge">{uniqueCards}</span>
-            )}
-          </a>
+          <NavLinkGated label="Collection" tooltip="Coming Soon" />
+          <NavLinkGated label="Dashboard" tooltip="Coming Soon" />
         </div>
 
         <div className="navbar__actions">
@@ -104,9 +101,6 @@ export function Navbar() {
                 <div className="navbar__user-dropdown">
                   <a href={ROUTES.DECKS} className="navbar__dropdown-item">
                     My Decks
-                  </a>
-                  <a href={ROUTES.COLLECTION} className="navbar__dropdown-item">
-                    My Collection
                   </a>
                   <div className="navbar__dropdown-divider" />
                   <button

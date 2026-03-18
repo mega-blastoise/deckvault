@@ -1,6 +1,10 @@
+import React from 'react';
 import type { RouteObject } from 'react-router';
-import { Navigate } from 'react-router';
+import { Outlet } from 'react-router';
 
+import { AppLayout } from '../components/AppLayout';
+import { ProtectedRoute } from '../components/ProtectedRoute';
+import { LandingPage } from '../pages/LandingPage';
 import BrowsePage from '../pages/BrowsePage';
 import CollectionPage from '../pages/CollectionPage';
 import DashboardPage from '../pages/DashboardPage';
@@ -10,76 +14,90 @@ import DeckBuilderPage from '../pages/DeckBuilderPage';
 import DeckDetailPage from '../pages/DeckDetailPage';
 import CardPage from '../pages/CardPage';
 import SignInPage from '../pages/SignInPage';
-import { ProtectedRoute } from '../components/ProtectedRoute';
 
 export const REACT_ROUTER_ROUTES: RouteObject[] = [
+  // Standalone routes — no Navbar, no AppLayout
   {
     path: '/',
-    index: true,
-    element: <Navigate to="/dashboard" replace />
-  },
-  {
-    path: '/browse',
-    Component: BrowsePage
-  },
-  {
-    path: '/dashboard',
-    Component: DashboardPage
+    element: <LandingPage />
   },
   {
     path: '/sign-in',
     Component: SignInPage
   },
+
+  // App shell — all routes rendered inside AppLayout (with Navbar)
   {
-    path: '/decks/browse',
-    Component: DeckBrowsePage
-  },
-  {
-    path: '/decks',
     element: (
-      <ProtectedRoute>
-        <DecksPage />
-      </ProtectedRoute>
-    )
-  },
-  {
-    path: '/decks/new',
-    element: (
-      <ProtectedRoute>
-        <DeckBuilderPage />
-      </ProtectedRoute>
-    )
-  },
-  {
-    path: '/decks/:deckId/edit',
-    element: (
-      <ProtectedRoute>
-        <DeckBuilderPage />
-      </ProtectedRoute>
-    )
-  },
-  {
-    path: '/decks/:deckId',
-    Component: DeckDetailPage
-  },
-  {
-    path: '/cards/:cardId',
-    Component: CardPage
-  },
-  {
-    path: '/collection/:cardId',
-    element: (
-      <ProtectedRoute>
-        <CollectionPage />
-      </ProtectedRoute>
-    )
-  },
-  {
-    path: '/collection',
-    element: (
-      <ProtectedRoute>
-        <CollectionPage />
-      </ProtectedRoute>
-    )
+      <AppLayout>
+        <Outlet />
+      </AppLayout>
+    ),
+    children: [
+      {
+        path: '/browse',
+        Component: BrowsePage
+      },
+      {
+        path: '/dashboard',
+        element: (
+          <ProtectedRoute>
+            <DashboardPage />
+          </ProtectedRoute>
+        )
+      },
+      {
+        path: '/decks/browse',
+        Component: DeckBrowsePage
+      },
+      {
+        path: '/decks',
+        element: (
+          <ProtectedRoute>
+            <DecksPage />
+          </ProtectedRoute>
+        )
+      },
+      {
+        path: '/decks/new',
+        element: (
+          <ProtectedRoute>
+            <DeckBuilderPage />
+          </ProtectedRoute>
+        )
+      },
+      {
+        path: '/decks/:deckId/edit',
+        element: (
+          <ProtectedRoute>
+            <DeckBuilderPage />
+          </ProtectedRoute>
+        )
+      },
+      {
+        path: '/decks/:deckId',
+        Component: DeckDetailPage
+      },
+      {
+        path: '/cards/:cardId',
+        Component: CardPage
+      },
+      {
+        path: '/collection/:cardId',
+        element: (
+          <ProtectedRoute>
+            <CollectionPage />
+          </ProtectedRoute>
+        )
+      },
+      {
+        path: '/collection',
+        element: (
+          <ProtectedRoute>
+            <CollectionPage />
+          </ProtectedRoute>
+        )
+      }
+    ]
   }
 ];
