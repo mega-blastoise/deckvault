@@ -26,6 +26,11 @@ export const serve = async () => {
         return proxyToRestApi(req);
       }
 
+      // Proxy auth requests to REST API microservice
+      if (url.pathname.startsWith('/auth/')) {
+        return proxyToRestApi(req);
+      }
+
       // Proxy GraphQL requests to GraphQL API microservice
       if (
         url.pathname.startsWith('/graphql') ||

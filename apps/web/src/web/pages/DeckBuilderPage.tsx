@@ -138,7 +138,7 @@ function DeckBuilderPage() {
           c.card.id === card.id ? { ...c, quantity: c.quantity + 1 } : c
         );
       }
-      return [...prev, { quantity: 1, card: card }];
+      return [...prev, { quantity: 1, card: card as unknown as DeckCard['card'] }];
     });
     setIsDirty(true);
   }, []);

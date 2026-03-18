@@ -10,6 +10,7 @@ import {
 import { loadConfig } from './config';
 import { DatabaseService } from './services/database';
 import { DeckDatabaseService } from './services/deckDatabase';
+import { PostgresService } from './services/postgres';
 import type { Services } from './types';
 import {
   getCards,
@@ -29,8 +30,21 @@ import {
   getDeck,
   createDeck,
   updateDeck,
-  deleteDeck
+  deleteDeck,
+  browseDecks
 } from './handlers/decks';
+import {
+  initiateGoogleAuth,
+  handleGoogleCallback,
+  getMe,
+  logout
+} from './handlers/auth';
+import {
+  getCollection,
+  upsertCollectionCard,
+  removeCollectionCard
+} from './handlers/collection';
+import { authRequired, authOptional } from './middleware/auth';
 
 const config = loadConfig();
 
@@ -44,20 +58,30 @@ const container = createContainer()
   .register(
     'deckDb',
     (c) => new DeckDatabaseService(c.get('config').deckDatabase.path)
+  )
+  .register(
+    'pg',
+    (c) => new PostgresService(c.get('config').postgres.url)
   );
 
 // ============================================================
 // 2. Routers — route definitions grouped by domain
 // ============================================================
 
-// Health & discovery (no base path — these live at the root)
+// Health & discovery
 const health = createRouter<Services>('/health').get('/', healthCheck);
-
 const ready = createRouter<Services>('/ready').get('/', readyCheck);
-
 const discovery = createRouter<Services>('/api/v1')
   .get('/endpoints', getApiDiscovery)
   .get('/', getApiDiscovery);
+
+// Auth — public endpoints
+const auth = createRouter<Services>('/auth')
+  .get('/google', initiateGoogleAuth)
+  .get('/callback', handleGoogleCallback)
+  .get('/me', getMe)
+  .get('/logout', logout)
+  .post('/logout', logout);
 
 // Cards — search must be registered before :id so it matches first
 const cards = createRouter<Services>('/api/v1/cards')
@@ -73,13 +97,27 @@ const sets = createRouter<Services>('/api/v1/sets')
   .get('/:id', getSetById)
   .get('/', getSets);
 
-// Decks — CRUD endpoints
-const decks = createRouter<Services>('/api/v1/decks')
-  .get('/:id', getDeck)
-  .put('/:id', updateDeck)
-  .delete('/:id', deleteDeck)
+// Decks — browse is public, user-specific list and mutations require auth
+const decksBrowse = createRouter<Services>('/api/v1/decks')
+  .get('/browse', browseDecks);
+
+const decksDetail = createRouter<Services>('/api/v1/decks')
+  .use(authOptional)
+  .get('/:id', getDeck);
+
+const decksProtected = createRouter<Services>('/api/v1/decks')
+  .use(authRequired)
+  .get('/', listDecks)
   .post('/', createDeck)
-  .get('/', listDecks);
+  .put('/:id', updateDeck)
+  .delete('/:id', deleteDeck);
+
+// Collection — all auth-required
+const collection = createRouter<Services>('/api/v1/collection')
+  .use(authRequired)
+  .get('/', getCollection)
+  .put('/:cardId', upsertCollectionCard)
+  .delete('/:cardId', removeCollectionCard);
 
 // ============================================================
 // 3. Application assembly
@@ -110,9 +148,13 @@ const app = createApp({ container })
   .routes(health)
   .routes(ready)
   .routes(discovery)
+  .routes(auth)
   .routes(cards)
   .routes(sets)
-  .routes(decks);
+  .routes(decksBrowse)
+  .routes(decksDetail)
+  .routes(decksProtected)
+  .routes(collection);
 
 // ============================================================
 // 4. Start

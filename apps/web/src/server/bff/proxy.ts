@@ -5,6 +5,30 @@ import {
   withCircuitBreaker
 } from './circuitBreaker';
 
+// Headers that must not be forwarded to upstream services
+const HOP_BY_HOP_HEADERS = new Set([
+  'host',
+  'connection',
+  'keep-alive',
+  'proxy-authenticate',
+  'proxy-authorization',
+  'te',
+  'trailers',
+  'transfer-encoding',
+  'upgrade',
+  'upgrade-insecure-requests'
+]);
+
+function buildProxyHeaders(incoming: Headers): Headers {
+  const out = new Headers();
+  incoming.forEach((value, key) => {
+    if (!HOP_BY_HOP_HEADERS.has(key.toLowerCase())) {
+      out.set(key, value);
+    }
+  });
+  return out;
+}
+
 /**
  * Proxy a request to the REST API microservice with circuit breaker
  */
@@ -32,12 +56,27 @@ export async function proxyToRestApi(request: Request): Promise<Response> {
   try {
     const response = await fetch(targetUrl, {
       method: request.method,
-      headers: request.headers,
+      headers: buildProxyHeaders(request.headers),
+      redirect: 'manual',
+      signal: AbortSignal.timeout(15000),
       body:
         request.method !== 'GET' && request.method !== 'HEAD'
           ? request.body
           : undefined
     });
+
+    // Opaque redirect (status 0) means Bun resolved a relative Location URL
+    // internally. Reconstruct the redirect from the response URL in that case.
+    if (response.status === 0 || response.type === 'opaqueredirect') {
+      const location = response.headers.get('location') ?? response.url;
+      const headers = new Headers();
+      headers.set('Location', location);
+      response.headers.forEach((value, key) => {
+        if (key.toLowerCase() !== 'location') headers.set(key, value);
+      });
+      headers.set('X-Proxied-By', 'bff');
+      return new Response(null, { status: 302, headers });
+    }
 
     // Record success for circuit breaker
     if (response.ok) {
@@ -106,7 +145,9 @@ export async function proxyToGraphqlApi(request: Request): Promise<Response> {
   try {
     const response = await fetch(targetUrl, {
       method: request.method,
-      headers: request.headers,
+      headers: buildProxyHeaders(request.headers),
+      redirect: 'manual',
+      signal: AbortSignal.timeout(15000),
       body:
         request.method !== 'GET' && request.method !== 'HEAD'
           ? request.body

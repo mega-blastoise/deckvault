@@ -1,7 +1,9 @@
 import React, { useState, useCallback, useMemo, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router';
 import { Layers, Printer } from 'lucide-react';
-import { useDecks } from '../contexts/Deck';
+import { useDeckQuery } from '../hooks/useDeckQuery';
+import { useDeckMutations } from '../hooks/useDeckMutations';
+import { useAuth } from '../contexts/Auth';
 import { Modal } from '../components/Modal';
 import { Badge } from '../components/Badge';
 import { DeckValidation } from '../components/DeckValidation';
@@ -61,7 +63,7 @@ function TiltCard({ card, quantity, onClick }: { card: DeckCard['card']; quantit
         )}
         <div className="tcg-tilt-card__shimmer" />
         {quantity > 1 && (
-          <span className="tcg-tilt-card__qty">×{quantity}</span>
+          <span className="tcg-tilt-card__qty">{'\u00D7'}{quantity}</span>
         )}
       </div>
       <div className="deck-detail-page__card-info">
@@ -79,7 +81,7 @@ function buildValidation(cards: DeckCard[]): DeckValidationType {
   for (const dc of cards) {
     totalCards += dc.quantity;
     const st = dc.card.supertype;
-    if (st === 'Pokémon') {
+    if (st === 'Pok\u00E9mon') {
       breakdown.pokemon += dc.quantity;
       if (dc.card.subtypes?.includes('Basic')) {
         breakdown.basicPokemon += dc.quantity;
@@ -101,7 +103,7 @@ function buildValidation(cards: DeckCard[]): DeckValidationType {
   if (breakdown.basicPokemon === 0 && breakdown.pokemon > 0) {
     errors.push({
       code: 'NO_BASIC_POKEMON',
-      message: 'Deck must contain at least 1 Basic Pokémon'
+      message: 'Deck must contain at least 1 Basic Pok\u00E9mon'
     });
   }
 
@@ -117,11 +119,11 @@ function buildValidation(cards: DeckCard[]): DeckValidationType {
 function DeckDetailPage() {
   const { deckId } = useParams<{ deckId: string }>();
   const navigate = useNavigate();
-  const { getDeck, deleteDeck, isLoading } = useDecks();
+  const { user } = useAuth();
+  const { data: deck, isLoading } = useDeckQuery(deckId);
+  const { deleteMutation } = useDeckMutations();
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showPrintView, setShowPrintView] = useState(false);
-
-  const deck = deckId ? getDeck(deckId) : undefined;
 
   const validation = useMemo(
     () => buildValidation(deck?.cards ?? []),
@@ -130,9 +132,12 @@ function DeckDetailPage() {
 
   const { totalCards, isValid } = validation;
 
+  // Check ownership for edit/delete gating
+  const isOwner = user && deck && (deck as { userId?: string }).userId === user.id;
+
   const groupedCards = useMemo(() => {
     const groups: Record<string, DeckCard[]> = {
-      'Pokémon': [],
+      'Pok\u00E9mon': [],
       Trainer: [],
       Energy: []
     };
@@ -146,10 +151,10 @@ function DeckDetailPage() {
 
   const handleDelete = useCallback(async () => {
     if (deckId) {
-      await deleteDeck(deckId);
+      await deleteMutation.mutateAsync(deckId);
       navigate(ROUTES.DECKS);
     }
-  }, [deckId, deleteDeck, navigate]);
+  }, [deckId, deleteMutation, navigate]);
 
   if (isLoading) {
     return (
@@ -174,8 +179,8 @@ function DeckDetailPage() {
             </span>
             <h2>Deck not found</h2>
             <p>The deck you&apos;re looking for doesn&apos;t exist.</p>
-            <Link to={ROUTES.DECKS} className="button button--primary">
-              Back to Decks
+            <Link to={ROUTES.DECKS_BROWSE} className="button button--primary">
+              Browse Decks
             </Link>
           </div>
         </div>
@@ -202,7 +207,7 @@ function DeckDetailPage() {
           )}
         </div>
         <div className="page__header-actions">
-          {validation.isValid && (
+          {validation.isValid && isOwner && (
             <button
               type="button"
               className="button button--secondary"
@@ -212,19 +217,23 @@ function DeckDetailPage() {
               Print Deck List
             </button>
           )}
-          <Link
-            to={ROUTES.DECK_EDIT(deckId!)}
-            className="button button--secondary"
-          >
-            Edit Deck
-          </Link>
-          <button
-            type="button"
-            className="button button--danger"
-            onClick={() => setShowDeleteModal(true)}
-          >
-            Delete
-          </button>
+          {isOwner && (
+            <>
+              <Link
+                to={ROUTES.DECK_EDIT(deckId!)}
+                className="button button--secondary"
+              >
+                Edit Deck
+              </Link>
+              <button
+                type="button"
+                className="button button--danger"
+                onClick={() => setShowDeleteModal(true)}
+              >
+                Delete
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -299,12 +308,14 @@ function DeckDetailPage() {
             </span>
             <h2>Empty Deck</h2>
             <p>This deck has no cards yet.</p>
-            <Link
-              to={ROUTES.DECK_EDIT(deckId!)}
-              className="button button--primary"
-            >
-              Add Cards
-            </Link>
+            {isOwner && (
+              <Link
+                to={ROUTES.DECK_EDIT(deckId!)}
+                className="button button--primary"
+              >
+                Add Cards
+              </Link>
+            )}
           </div>
         )}
       </div>

@@ -10,6 +10,17 @@ export interface Config {
   deckDatabase: {
     path: string;
   };
+  postgres: {
+    url: string;
+  };
+  google: {
+    clientId: string;
+    clientSecret: string;
+    redirectUri: string;
+  };
+  jwt: {
+    secret: string;
+  };
   cors: {
     origins: string[];
   };
@@ -39,6 +50,17 @@ export function loadConfig(): Config {
     deckDatabase: {
       path:
         process.env.DECK_DATABASE_PATH || './database/decks.sqlite3.db'
+    },
+    postgres: {
+      url: process.env.POSTGRES_URL || ''
+    },
+    google: {
+      clientId: process.env.GOOGLE_CLIENT_ID || '',
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
+      redirectUri: process.env.GOOGLE_REDIRECT_URI || 'http://localhost:3001/auth/callback'
+    },
+    jwt: {
+      secret: process.env.JWT_SECRET || 'dev-jwt-secret-change-in-production'
     },
     cors: {
       origins: parseOrigins(process.env.CORS_ORIGINS)

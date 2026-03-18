@@ -5,9 +5,12 @@ import BrowsePage from '../pages/BrowsePage';
 import CollectionPage from '../pages/CollectionPage';
 import DashboardPage from '../pages/DashboardPage';
 import DecksPage from '../pages/DecksPage';
+import DeckBrowsePage from '../pages/DeckBrowsePage';
 import DeckBuilderPage from '../pages/DeckBuilderPage';
 import DeckDetailPage from '../pages/DeckDetailPage';
 import CardPage from '../pages/CardPage';
+import SignInPage from '../pages/SignInPage';
+import { ProtectedRoute } from '../components/ProtectedRoute';
 
 export const REACT_ROUTER_ROUTES: RouteObject[] = [
   {
@@ -24,16 +27,36 @@ export const REACT_ROUTER_ROUTES: RouteObject[] = [
     Component: DashboardPage
   },
   {
+    path: '/sign-in',
+    Component: SignInPage
+  },
+  {
+    path: '/decks/browse',
+    Component: DeckBrowsePage
+  },
+  {
     path: '/decks',
-    Component: DecksPage
+    element: (
+      <ProtectedRoute>
+        <DecksPage />
+      </ProtectedRoute>
+    )
   },
   {
     path: '/decks/new',
-    Component: DeckBuilderPage
+    element: (
+      <ProtectedRoute>
+        <DeckBuilderPage />
+      </ProtectedRoute>
+    )
   },
   {
     path: '/decks/:deckId/edit',
-    Component: DeckBuilderPage
+    element: (
+      <ProtectedRoute>
+        <DeckBuilderPage />
+      </ProtectedRoute>
+    )
   },
   {
     path: '/decks/:deckId',
@@ -45,10 +68,18 @@ export const REACT_ROUTER_ROUTES: RouteObject[] = [
   },
   {
     path: '/collection/:cardId',
-    Component: CollectionPage
+    element: (
+      <ProtectedRoute>
+        <CollectionPage />
+      </ProtectedRoute>
+    )
   },
   {
     path: '/collection',
-    Component: CollectionPage
+    element: (
+      <ProtectedRoute>
+        <CollectionPage />
+      </ProtectedRoute>
+    )
   }
 ];

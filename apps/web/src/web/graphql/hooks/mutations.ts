@@ -65,7 +65,7 @@ export function useCreateUser(
       // Invalidate users list to refetch with new user
       queryClient.invalidateQueries({ queryKey: ['users'] });
       // Call user's onSuccess if provided
-      options?.onSuccess?.(data, variables, context);
+      options?.onSuccess?.(data, variables, context, undefined as never);
     },
     ...options
   });
@@ -95,7 +95,7 @@ export function useUpdateUser(
       // Invalidate the specific user and users list
       queryClient.invalidateQueries({ queryKey: ['user', variables.id] });
       queryClient.invalidateQueries({ queryKey: ['users'] });
-      options?.onSuccess?.(data, variables, context);
+      options?.onSuccess?.(data, variables, context, undefined as never);
     },
     ...options
   });
@@ -125,7 +125,7 @@ export function useDeleteUser(
       // Remove from cache and invalidate lists
       queryClient.removeQueries({ queryKey: ['user', variables.id] });
       queryClient.invalidateQueries({ queryKey: ['users'] });
-      options?.onSuccess?.(data, variables, context);
+      options?.onSuccess?.(data, variables, context, undefined as never);
     },
     ...options
   });
@@ -158,7 +158,7 @@ export function useCreateSet(
     onSuccess: (data, variables, context) => {
       // Invalidate sets queries to include new set
       queryClient.invalidateQueries({ queryKey: ['sets'] });
-      options?.onSuccess?.(data, variables, context);
+      options?.onSuccess?.(data, variables, context, undefined as never);
     },
     ...options
   });
@@ -194,7 +194,7 @@ export function useCreateCard(
       queryClient.invalidateQueries({
         queryKey: ['cards', 'set', variables.set_id]
       });
-      options?.onSuccess?.(data, variables, context);
+      options?.onSuccess?.(data, variables, context, undefined as never);
     },
     ...options
   });
@@ -224,7 +224,7 @@ export function useDeleteCard(
       // Remove from cache and invalidate lists
       queryClient.removeQueries({ queryKey: ['card', variables.id] });
       queryClient.invalidateQueries({ queryKey: ['cards'] });
-      options?.onSuccess?.(data, variables, context);
+      options?.onSuccess?.(data, variables, context, undefined as never);
     },
     ...options
   });

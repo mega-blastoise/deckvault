@@ -3,11 +3,15 @@ export const WEB_INDEX_ROUTES = ['/', '/index.html'];
 // All frontend routes that should render the React app
 export const WEB_ROUTES = [
   ...WEB_INDEX_ROUTES,
+  '/dashboard',
+  '/sign-in',
   '/collection',
   '/collection/:cardId',
   '/browse',
   '/browse/:cardId',
+  '/cards/:cardId',
   '/decks',
+  '/decks/browse',
   '/decks/new',
   '/decks/:deckId',
   '/decks/:deckId/edit'
@@ -15,14 +19,18 @@ export const WEB_ROUTES = [
 
 // Patterns to match web routes
 const WEB_ROUTE_PATTERNS = [
-  /^\/$/, // Dashboard
+  /^\/$/, // Root → dashboard redirect
   /^\/index\.html$/, // Dashboard alt
+  /^\/dashboard$/, // Dashboard
+  /^\/sign-in$/, // Sign in
   /^\/collection(\/.*)?$/, // Collection and card detail
   /^\/browse(\/.*)?$/, // Browse and card detail
+  /^\/cards\/[^/]+$/, // Card detail
   /^\/decks$/, // Deck list
+  /^\/decks\/browse$/, // Public deck browser
   /^\/decks\/new$/, // New deck
-  /^\/decks\/[^\/]+$/, // Deck detail
-  /^\/decks\/[^\/]+\/edit$/ // Edit deck
+  /^\/decks\/[^/]+$/, // Deck detail
+  /^\/decks\/[^/]+\/edit$/ // Edit deck
 ];
 
 export const API_ROUTES = [

@@ -12,8 +12,18 @@ export const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 export interface ThemeProviderProps {
   children: ReactNode;
-  /** Override the default theme (useful for testing) */
   defaultTheme?: ThemeName;
+}
+
+function getSystemTheme(): ThemeName {
+  if (typeof window === 'undefined') return DEFAULT_THEME;
+  return window.matchMedia('(prefers-color-scheme: light)').matches
+    ? 'light'
+    : 'nebula';
+}
+
+function isValidTheme(value: string | null): value is ThemeName {
+  return value === 'nebula' || value === 'light' || value === 'catppuccin';
 }
 
 export function ThemeProvider({
@@ -23,17 +33,17 @@ export function ThemeProvider({
   const [theme, setThemeState] = useState<ThemeName>(defaultTheme);
   const [mounted, setMounted] = useState(false);
 
-  // On mount, check localStorage for saved preference
   useEffect(() => {
     setMounted(true);
 
     const stored = localStorage.getItem(THEME_STORAGE_KEY);
-    if (stored === 'nebula' || stored === 'catppuccin') {
+    if (isValidTheme(stored)) {
       setThemeState(stored);
+    } else {
+      setThemeState(getSystemTheme());
     }
   }, []);
 
-  // Apply theme to document when it changes (only after mount to avoid hydration mismatch)
   useEffect(() => {
     if (mounted) {
       document.documentElement.setAttribute('data-theme', theme);
@@ -46,7 +56,7 @@ export function ThemeProvider({
   }, []);
 
   const toggleTheme = useCallback(() => {
-    setThemeState((prev) => (prev === 'nebula' ? 'catppuccin' : 'nebula'));
+    setThemeState((prev) => (prev === 'nebula' ? 'light' : 'nebula'));
   }, []);
 
   const value: ThemeContextValue = {

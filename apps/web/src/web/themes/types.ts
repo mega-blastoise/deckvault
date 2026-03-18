@@ -1,15 +1,11 @@
-export type ThemeName = 'nebula' | 'catppuccin';
+export type ThemeName = 'nebula' | 'light' | 'catppuccin';
 
 export interface ThemeContextValue {
-  /** Current active theme */
   theme: ThemeName;
-  /** Update the current theme */
   setTheme: (theme: ThemeName) => void;
-  /** Toggle between themes */
   toggleTheme: () => void;
-  /** Whether the component has mounted (for SSR hydration safety) */
   mounted: boolean;
 }
 
-export const THEME_STORAGE_KEY = 'pokemon-tcg-theme';
+export const THEME_STORAGE_KEY = '__theme';
 export const DEFAULT_THEME: ThemeName = 'nebula';

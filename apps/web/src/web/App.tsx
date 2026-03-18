@@ -3,6 +3,7 @@ import React, { useEffect } from 'react';
 import Document from './components/Document/Document';
 import { AppLayout } from './components/AppLayout';
 import { AppRoutes } from './routes';
+import { AuthProvider } from './contexts/Auth';
 import { CollectionProvider } from './contexts/Collection';
 import { DeckProvider } from './contexts/Deck';
 import { ThemeProvider } from './themes';
@@ -31,11 +32,13 @@ export function App(props: AppProps) {
     <React.StrictMode>
       <QueryProvider>
         <ThemeProvider>
-          <CollectionProvider>
-            <DeckProvider>
-              <AppContent routes={props.routes} />
-            </DeckProvider>
-          </CollectionProvider>
+          <AuthProvider>
+            <CollectionProvider>
+              <DeckProvider>
+                <AppContent routes={props.routes} />
+              </DeckProvider>
+            </CollectionProvider>
+          </AuthProvider>
         </ThemeProvider>
       </QueryProvider>
     </React.StrictMode>

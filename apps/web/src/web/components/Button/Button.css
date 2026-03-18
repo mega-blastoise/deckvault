@@ -3,8 +3,8 @@
    ============================================ */
 
 :root {
-  --pokemon-button-radius: 6px;
-  --pokemon-button-transition: all 0.15s ease;
+  --pokemon-button-radius: 8px;
+  --pokemon-button-transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .pokemon-button {

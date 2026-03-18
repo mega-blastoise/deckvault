@@ -4,6 +4,9 @@ export {
   useCollectionCardsData,
   cardToDisplayFormat
 } from './useCollectionCardsData';
+export { useCollectionQuery, COLLECTION_QUERY_KEY } from './useCollectionQuery';
+export type { CollectionItem } from './useCollectionQuery';
+export { useCollectionMutations } from './useCollectionMutations';
 export {
   FORMAT_RULES,
   type FormatRules,

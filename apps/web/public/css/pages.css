@@ -37,11 +37,11 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 3rem 1.5rem;
+  padding: 4rem 2rem;
   text-align: center;
   background-color: var(--pico-card-background-color);
   border: 1px dashed var(--pico-muted-border-color);
-  border-radius: 8px;
+  border-radius: 16px;
 }
 
 .page__empty-icon {
@@ -67,13 +67,14 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0.5rem 1rem;
-  border-radius: 6px;
+  gap: 0.375rem;
+  padding: 0.5rem 1.125rem;
+  border-radius: 8px;
   font-size: 0.875rem;
   font-weight: 500;
   text-decoration: none;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   border: none;
 }
 
@@ -84,6 +85,7 @@
 
 .button--primary:hover {
   background-color: var(--pico-primary-hover);
+  transform: translateY(-1px);
 }
 
 .button--secondary {
@@ -104,6 +106,13 @@
 
 .button--danger:hover {
   filter: brightness(1.15);
+  transform: translateY(-1px);
+}
+
+.button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
 }
 
 /* Browse page */
@@ -909,6 +918,324 @@
   .dashboard-page__deck-list {
     grid-template-columns: 1fr;
   }
+}
+
+/* Sign-in page */
+.sign-in-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(100vh - 200px);
+}
+
+.sign-in-page__container {
+  width: 100%;
+  max-width: 420px;
+  padding: 1.5rem;
+}
+
+.sign-in-page__card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 3rem 2.5rem;
+  background-color: var(--pico-card-background-color);
+  border: 1px solid var(--pico-muted-border-color);
+  border-radius: 20px;
+  text-align: center;
+  box-shadow: var(--card-shadow);
+}
+
+.sign-in-page__title {
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--pico-color);
+  letter-spacing: -0.02em;
+}
+
+.sign-in-page__subtitle {
+  margin: 0;
+  font-size: 0.9375rem;
+  color: var(--pico-muted-color);
+  line-height: 1.5;
+}
+
+.sign-in-page__google-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem 1.75rem;
+  background-color: var(--pico-form-element-background-color);
+  border: 1px solid var(--pico-muted-border-color);
+  border-radius: 12px;
+  color: var(--pico-color);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  margin-top: 0.75rem;
+  width: 100%;
+  justify-content: center;
+}
+
+.sign-in-page__google-btn:hover {
+  background-color: var(--surface-hover);
+  border-color: var(--pico-primary);
+  color: var(--pico-color);
+  transform: translateY(-1px);
+  box-shadow: var(--card-shadow-hover);
+}
+
+[data-theme="nebula"] .sign-in-page__card {
+  background: var(--nebula-bg-secondary);
+  border-color: var(--nebula-surface-border);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="nebula"] .sign-in-page__google-btn {
+  background: var(--nebula-surface-glass);
+  border-color: var(--nebula-surface-border);
+}
+
+[data-theme="nebula"] .sign-in-page__google-btn:hover {
+  background: var(--nebula-surface-glass-hover);
+  border-color: var(--nebula-accent-primary);
+  box-shadow: 0 4px 16px rgba(32, 129, 226, 0.2);
+}
+
+/* Decks browse page */
+.decks-browse-page__toolbar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.decks-browse-page__search {
+  flex: 1;
+  min-width: 200px;
+}
+
+.decks-browse-page__search input {
+  width: 100%;
+  border-radius: 10px;
+  padding: 0.625rem 1rem;
+}
+
+.decks-browse-page__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.25rem;
+}
+
+.decks-browse-page__card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  padding: 1.25rem;
+  background-color: var(--pico-card-background-color);
+  border: 1px solid var(--pico-muted-border-color);
+  border-radius: 14px;
+  text-decoration: none;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--card-shadow);
+}
+
+.decks-browse-page__card:hover {
+  border-color: var(--pico-primary);
+  transform: translateY(-4px);
+  box-shadow: var(--card-shadow-hover);
+}
+
+.decks-browse-page__card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.decks-browse-page__card-name {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  color: var(--pico-color);
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.decks-browse-page__card-format {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.1875rem 0.625rem;
+  background-color: var(--pico-primary-hover-background);
+  color: var(--pico-primary);
+  border-radius: 9999px;
+  white-space: nowrap;
+}
+
+.decks-browse-page__card-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--pico-muted-border-color);
+}
+
+.decks-browse-page__card-count {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.decks-browse-page__card-owner {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.decks-browse-page__card-avatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.decks-browse-page__card-owner-name {
+  font-size: 0.8125rem;
+  color: var(--pico-muted-color);
+}
+
+.decks-browse-page__pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 2rem;
+}
+
+.decks-browse-page__pagination-info {
+  font-size: 0.8125rem;
+  color: var(--pico-muted-color);
+  margin: 0 0.75rem;
+}
+
+/* Nebula theme deck browse cards */
+[data-theme="nebula"] .decks-browse-page__card {
+  background: var(--nebula-bg-secondary);
+  border-color: var(--nebula-surface-border);
+}
+
+[data-theme="nebula"] .decks-browse-page__card:hover {
+  border-color: var(--nebula-accent-primary);
+}
+
+[data-theme="nebula"] .decks-browse-page__card-meta {
+  border-top-color: var(--nebula-surface-border);
+}
+
+/* Deck detail owner info */
+.deck-detail-page__owner {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.375rem;
+}
+
+.deck-detail-page__owner-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.deck-detail-page__owner-name {
+  font-size: 0.8125rem;
+  color: var(--pico-muted-color);
+}
+
+/* User menu in navbar */
+.navbar__user-menu {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.navbar__user-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.375rem 0.625rem;
+  background: transparent;
+  border: 1px solid var(--pico-muted-border-color);
+  border-radius: 8px;
+  color: var(--pico-color);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.navbar__user-btn:hover {
+  background: var(--surface-hover);
+  border-color: var(--pico-primary);
+}
+
+.navbar__user-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.navbar__user-name {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  max-width: 120px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.navbar__user-dropdown {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  min-width: 180px;
+  background-color: var(--pico-card-background-color);
+  border: 1px solid var(--pico-muted-border-color);
+  border-radius: 8px;
+  box-shadow: var(--card-shadow);
+  z-index: 100;
+  overflow: hidden;
+}
+
+.navbar__dropdown-item {
+  display: block;
+  width: 100%;
+  padding: 0.625rem 1rem;
+  background: none;
+  border: none;
+  color: var(--pico-color);
+  font-size: 0.875rem;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  text-decoration: none;
+}
+
+.navbar__dropdown-item:hover {
+  background-color: var(--surface-hover);
+  color: var(--pico-color);
+}
+
+.navbar__dropdown-divider {
+  height: 1px;
+  background-color: var(--pico-muted-border-color);
+  margin: 0;
 }
 
 /* Not found page */

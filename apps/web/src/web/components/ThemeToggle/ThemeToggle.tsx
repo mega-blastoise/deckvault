@@ -1,4 +1,4 @@
-import { Moon, Sparkles } from 'lucide-react';
+import { Moon, Sun, Sparkles } from 'lucide-react';
 import { useTheme } from '../../themes';
 import type { ThemeToggleProps } from './types';
 import './ThemeToggle.css';
@@ -9,7 +9,6 @@ export function ThemeToggle({
 }: ThemeToggleProps) {
   const { theme, toggleTheme, mounted } = useTheme();
 
-  // Don't render interactive content until mounted to avoid hydration mismatch
   if (!mounted) {
     return (
       <div
@@ -23,16 +22,16 @@ export function ThemeToggle({
     );
   }
 
-  const isNebula = theme === 'nebula';
-  const label = isNebula ? 'Nebula' : 'Catppuccin';
-  const Icon = isNebula ? Sparkles : Moon;
+  const isLight = theme === 'light';
+  const label = isLight ? 'Light' : 'Nebula';
+  const Icon = isLight ? Sun : Sparkles;
 
   return (
     <button
       type="button"
       className={`theme-toggle ${className}`}
       onClick={toggleTheme}
-      aria-label={`Switch to ${isNebula ? 'Catppuccin' : 'Nebula'} theme`}
+      aria-label={`Switch to ${isLight ? 'Nebula' : 'Light'} theme`}
       title={`Current: ${label}. Click to switch.`}
     >
       <span className="theme-toggle__icon">

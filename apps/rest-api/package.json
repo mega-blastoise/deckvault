@@ -16,6 +16,7 @@
     "@pokemon/framework": "workspace:*",
     "debug": "^4.4.3",
     "dotenv": "17.2.3",
+    "jsonwebtoken": "^9.0.3",
     "supports-color": "^10.2.2"
   },
   "devDependencies": {
@@ -23,6 +24,7 @@
     "@pokemon/configs": "workspace:*",
     "@types/bun": "latest",
     "@types/debug": "^4.1.12",
+    "@types/jsonwebtoken": "^9.0.10",
     "typescript": "5.5.4"
   }
 }

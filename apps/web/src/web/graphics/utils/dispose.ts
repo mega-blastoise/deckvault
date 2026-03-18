@@ -10,22 +10,20 @@ export function disposeMaterial(material: THREE.Material): void {
     return;
   }
 
-  // Dispose textures
-  const mat = material as THREE.MeshStandardMaterial;
+  const mat = material as unknown as Record<string, unknown>;
 
-  if (mat.map) mat.map.dispose();
-  if (mat.lightMap) mat.lightMap.dispose();
-  if (mat.bumpMap) mat.bumpMap.dispose();
-  if (mat.normalMap) mat.normalMap.dispose();
-  if (mat.specularMap) mat.specularMap.dispose();
-  if (mat.envMap) mat.envMap.dispose();
-  if (mat.alphaMap) mat.alphaMap.dispose();
-  if (mat.aoMap) mat.aoMap.dispose();
-  if (mat.displacementMap) mat.displacementMap.dispose();
-  if (mat.emissiveMap) mat.emissiveMap.dispose();
-  if (mat.gradientMap) mat.gradientMap.dispose();
-  if (mat.metalnessMap) mat.metalnessMap.dispose();
-  if (mat.roughnessMap) mat.roughnessMap.dispose();
+  const textureKeys = [
+    'map', 'lightMap', 'bumpMap', 'normalMap', 'specularMap',
+    'envMap', 'alphaMap', 'aoMap', 'displacementMap', 'emissiveMap',
+    'gradientMap', 'metalnessMap', 'roughnessMap'
+  ];
+
+  for (const key of textureKeys) {
+    const texture = mat[key];
+    if (texture && typeof (texture as THREE.Texture).dispose === 'function') {
+      (texture as THREE.Texture).dispose();
+    }
+  }
 
   material.dispose();
 }
@@ -55,7 +53,8 @@ export function disposeObject(object: THREE.Object3D): void {
 
   // Dispose material
   if (mesh.material) {
-    disposeMaterial(mesh.material);
+    const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+    materials.forEach(disposeMaterial);
   }
 }
 
@@ -71,7 +70,8 @@ export function disposeScene(scene: THREE.Scene): void {
     }
 
     if (mesh.material) {
-      disposeMaterial(mesh.material);
+      const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+      materials.forEach(disposeMaterial);
     }
   });
 

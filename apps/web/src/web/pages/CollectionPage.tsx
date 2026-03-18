@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { Library, Search, ChevronDown, ChevronUp } from 'lucide-react';
-import { useCollection } from '../contexts/Collection';
+import { useCollectionQuery } from '../hooks/useCollectionQuery';
+import { useCollectionMutations } from '../hooks/useCollectionMutations';
 import {
   useSearchCards,
   toCardFormat,
@@ -21,10 +22,11 @@ function CollectionPage() {
     cards: collectionCards,
     totalCards,
     uniqueCards,
-    addCard,
-    removeCard,
-    getQuantity
-  } = useCollection();
+    getQuantity,
+    isLoading: collectionQueryLoading
+  } = useCollectionQuery();
+
+  const { addCard, removeCard } = useCollectionMutations();
 
   const { ref: headerRef } = useFadeIn({ y: 20, duration: 0.4 });
   const { containerRef: collectionGridRef } = useStagger({
@@ -34,16 +36,18 @@ function CollectionPage() {
     autoPlay: true
   });
 
-  // Local state
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCard, setSelectedCard] = useState<Pokemon.Card | null>(null);
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
 
-  // Fetch card data for collection
-  const { cards: collectionCardsData, isLoading: collectionLoading } =
-    useCollectionCardsData(collectionCards);
+  const collectionAsLegacy = useMemo(
+    () => collectionCards.map((c) => ({ cardId: c.cardId, quantity: c.quantity, dateAdded: '' })),
+    [collectionCards]
+  );
 
-  // Convert collection cards to display format
+  const { cards: collectionCardsData, isLoading: collectionLoading } =
+    useCollectionCardsData(collectionAsLegacy);
+
   const displayCollectionCards: Pokemon.Card[] = useMemo(() => {
     return collectionCardsData.map((card) => {
       const formatted = cardToDisplayFormat(card);
@@ -54,7 +58,6 @@ function CollectionPage() {
     });
   }, [collectionCardsData]);
 
-  // Search cards with debouncing - for adding new cards
   const {
     cards: searchResults,
     isLoading: searchLoading,
@@ -62,7 +65,6 @@ function CollectionPage() {
     isError
   } = useSearchCards(searchQuery, { limit: 100, enabled: isSearchExpanded });
 
-  // Convert search results to Pokemon.Card format
   const searchCards: Pokemon.Card[] = useMemo(() => {
     if (error || isError) return [];
     if (!searchResults) return [];
@@ -76,25 +78,22 @@ function CollectionPage() {
     });
   }, [searchResults, error, isError]);
 
-  // Handle search
   const handleSearch = useCallback((filters: SearchFilters) => {
     setSearchQuery(filters.query);
   }, []);
 
-  // Handle card click
   const handleCardSelect = useCallback((card: Pokemon.Card) => {
     setSelectedCard(card);
   }, []);
 
-  // Handle add to collection
   const handleAddToCollection = useCallback(
     (card: Pokemon.Card) => {
-      addCard(card.id);
+      const current = getQuantity(card.id);
+      addCard(card.id, current + 1);
     },
-    [addCard]
+    [addCard, getQuantity]
   );
 
-  // Handle remove from collection
   const handleRemoveFromCollection = useCallback(
     (card: Pokemon.Card) => {
       removeCard(card.id);
@@ -102,15 +101,15 @@ function CollectionPage() {
     [removeCard]
   );
 
-  // Close modal
   const handleCloseModal = useCallback(() => {
     setSelectedCard(null);
   }, []);
 
-  // Toggle search section
   const toggleSearch = useCallback(() => {
     setIsSearchExpanded((prev) => !prev);
   }, []);
+
+  const loading = collectionQueryLoading || collectionLoading;
 
   return (
     <div className="page collection-page">
@@ -121,10 +120,9 @@ function CollectionPage() {
         </p>
       </div>
 
-      {/* Collection Section */}
       <section className="collection-page__section">
         <div ref={collectionGridRef} className="page__content">
-          {uniqueCards === 0 ? (
+          {uniqueCards === 0 && !loading ? (
             <div className="page__empty-state">
               <span className="page__empty-icon">
                 <Library size={48} aria-hidden="true" />
@@ -145,7 +143,7 @@ function CollectionPage() {
             <CardGrid
               cards={displayCollectionCards}
               onCardSelect={handleCardSelect}
-              loading={collectionLoading}
+              loading={loading}
               emptyMessage="Loading your collection..."
               renderCardOverlay={(card) => {
                 const quantity = getQuantity(card.id);
@@ -165,7 +163,6 @@ function CollectionPage() {
         </div>
       </section>
 
-      {/* Add More Cards Section */}
       <section className="collection-page__add-section">
         <button
           type="button"
@@ -222,7 +219,6 @@ function CollectionPage() {
         )}
       </section>
 
-      {/* Card Detail Modal */}
       {selectedCard && (
         <Modal
           isOpen={!!selectedCard}

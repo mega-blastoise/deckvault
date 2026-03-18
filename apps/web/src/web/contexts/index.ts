@@ -1,3 +1,6 @@
+export { AuthProvider, useAuth } from './Auth';
+export type { AuthContextValue, AuthUser } from './Auth';
+
 export { CollectionProvider, useCollection } from './Collection';
 export type { CollectionContextValue } from './Collection';
 

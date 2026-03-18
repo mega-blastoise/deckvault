@@ -105,7 +105,7 @@ export function createGraphQLSidecarServer() {
     return apolloServer.executeHTTPGraphQLRequest({
       httpGraphQLRequest: {
         method: request.method,
-        headers: new HeaderMap(request.headers),
+        headers: new HeaderMap(Array.from((request.headers as unknown as Iterable<[string, string]>))),
         search: url.search,
         body: request.body
       },
@@ -141,7 +141,7 @@ export function createGraphQLSidecarServer() {
       const gqlResponse = await apolloServer.executeHTTPGraphQLRequest({
         httpGraphQLRequest: {
           method: request.method.toUpperCase(),
-          headers: new HeaderMap(request.headers),
+          headers: new HeaderMap(Array.from((request.headers as unknown as Iterable<[string, string]>))),
           search: url.search,
           body
         },

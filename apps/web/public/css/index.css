@@ -163,6 +163,79 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
+   LIGHT THEME - Clean, modern light mode
+   ═══════════════════════════════════════════════════════════════════════════ */
+:root[data-theme="light"] {
+  /* Backgrounds */
+  --light-bg-primary: #ffffff;
+  --light-bg-secondary: #f8f9fa;
+  --light-bg-tertiary: #f0f1f3;
+  --light-bg-elevated: #ffffff;
+
+  /* Surfaces */
+  --light-surface-glass: rgba(0, 0, 0, 0.02);
+  --light-surface-glass-hover: rgba(0, 0, 0, 0.04);
+  --light-surface-border: rgba(0, 0, 0, 0.1);
+  --light-surface-border-hover: rgba(0, 0, 0, 0.18);
+
+  /* Text */
+  --light-text-primary: #1a1a2e;
+  --light-text-secondary: rgba(26, 26, 46, 0.7);
+  --light-text-tertiary: rgba(26, 26, 46, 0.5);
+  --light-text-muted: rgba(26, 26, 46, 0.35);
+
+  /* Accent */
+  --light-accent-primary: #2081e2;
+  --light-accent-primary-hover: #1a6fc4;
+  --light-accent-secondary: #7b61ff;
+  --light-accent-secondary-hover: #6a4fe0;
+
+  /* Semantic */
+  --light-success: #22a352;
+  --light-warning: #e5a100;
+  --light-error: #e5383b;
+
+  /* Map to Pico-compatible variables */
+  --pico-primary: var(--light-accent-primary);
+  --pico-primary-hover: var(--light-accent-primary-hover);
+  --pico-primary-hover-background: rgba(32, 129, 226, 0.1);
+  --pico-background-color: var(--light-bg-primary);
+  --pico-card-background-color: var(--light-bg-secondary);
+  --pico-color: var(--light-text-primary);
+  --pico-muted-color: var(--light-text-tertiary);
+  --pico-muted-border-color: var(--light-surface-border);
+  --pico-secondary-hover-background: rgba(0, 0, 0, 0.04);
+  --pico-form-element-background-color: var(--light-bg-primary);
+
+  /* Semantic colors */
+  --color-success: var(--light-success);
+  --color-warning: var(--light-warning);
+  --color-error: var(--light-error);
+
+  /* Extended semantic tokens */
+  --bg-sunken: #f0f1f3;
+  --text-secondary: rgba(26, 26, 46, 0.55);
+  --surface-hover: rgba(0, 0, 0, 0.04);
+  --surface-active: rgba(0, 0, 0, 0.07);
+  --contrast-text: #ffffff;
+  --focus-ring: var(--light-accent-primary);
+  --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.06);
+  --card-shadow-hover: 0 10px 25px rgba(0, 0, 0, 0.1), 0 4px 10px rgba(0, 0, 0, 0.06);
+
+  /* Pokemon rarity */
+  --pokemon-rarity-common: rgba(26, 26, 46, 0.35);
+  --pokemon-rarity-uncommon: rgba(26, 26, 46, 0.5);
+  --pokemon-rarity-rare: var(--light-accent-primary);
+  --pokemon-rarity-rare-holo: var(--light-accent-secondary);
+  --pokemon-rarity-rare-ultra: #d946a8;
+  --pokemon-rarity-rare-secret: #d4a00a;
+
+  /* Pokemon-specific */
+  --pokemon-header-background-stable-top: transparent;
+  --pokemon-header-background-scrolling: var(--light-accent-primary);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
    GLOBAL STYLES
    ═══════════════════════════════════════════════════════════════════════════ */
 * {
@@ -182,6 +255,7 @@ body {
   min-height: 100vh;
   width: 100%;
   font-family:
+    'DM Sans',
     system-ui,
     -apple-system,
     BlinkMacSystemFont,
@@ -251,7 +325,7 @@ a:hover {
 
 /* Code */
 code {
-  font-family: 'Space Mono', monospace;
+  font-family: 'JetBrains Mono', 'Space Mono', monospace;
   font-size: 0.875em;
   background-color: var(--pico-card-background-color);
   color: var(--pico-primary);
