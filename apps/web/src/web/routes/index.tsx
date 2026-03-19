@@ -17,6 +17,7 @@ export const ROUTES = {
   DECK_NEW: '/decks/new',
   DECK_DETAIL: (deckId: string) => `/decks/${deckId}`,
   DECK_EDIT: (deckId: string) => `/decks/${deckId}/edit`,
+  DECK_ANALYTICS: (deckId: string) => `/decks/${deckId}/analytics`,
   CARD: (cardId: string) => `/cards/${cardId}`,
   COLLECTION: '/collection',
   COLLECTION_CARD: (cardId: string) => `/collection/${cardId}`

@@ -207,6 +207,14 @@ function DeckDetailPage() {
           )}
         </div>
         <div className="page__header-actions">
+          {deck.cards.length > 0 && (
+            <Link
+              to={ROUTES.DECK_ANALYTICS(deckId!)}
+              className="button button--secondary"
+            >
+              View Analytics
+            </Link>
+          )}
           {validation.isValid && isOwner && (
             <button
               type="button"

@@ -15,7 +15,7 @@
 |------|-------|--------|---------|
 | SPEC_01 | Landing Page + Navigation Gating | ✅ Complete | 2026-03-18 |
 | SPEC_02 | From Meta → My Deck Pipeline | ✅ Complete | 2026-03-18 |
-| SPEC_03 | Deck Analytics Engine | ⬜ Not started | — |
+| SPEC_03 | Deck Analytics Engine | ✅ Complete | 2026-03-18 |
 | SPEC_04 | Deck Evolution Tracking | ⬜ Not started | — |
 | SPEC_05 | UX / Product-Level Differentiators | ⬜ Not started | — |
 | SPEC_06 | Local Meta Intelligence | ⬜ Not started | — |
@@ -25,6 +25,45 @@
 ---
 
 ## Session Log
+
+### 2026-03-18 — SPEC_03: Deck Analytics Engine
+
+**Completed**:
+
+1. **`deck-math` library** (`apps/web/src/web/lib/deck-math/`) — four pure TypeScript modules with no side effects:
+   - `hypergeometric.ts` — log-space PMF + CDF (base primitive)
+   - `opening-hand.ts` — `openingHandProbabilities()`, `comboConsistency()`
+   - `prize-risk.ts` — `prizeRisk()` with risk level classification
+   - `energy-curve.ts` — `energyCurveAnalysis()` with turn curve + recommendation
+   - `index.ts` — barrel re-exports all public functions and types
+2. **Unit tests** (31 tests, 0 failures) across 4 files in `lib/deck-math/__tests__/`
+3. **Panel components** in `apps/web/src/web/components/DeckAnalyticsPanel/`:
+   - `OpeningHandPanel` — sortable table with hand-size slider (5/6/7/8) and CSS probability bars
+   - `PrizeRiskPanel` — color-coded risk table (critical/high/medium), 1-copy callout
+   - `EnergyCurvePanel` — CSS vertical bar chart for 5-turn curve, energy stats, recommendation badge
+   - `ConsistencyPanel` — chip-based combo selector (up to 3 cards), real-time `comboConsistency()` probability
+4. **`DeckAnalyticsPage`** at `/decks/:deckId/analytics` — 2-column responsive grid with all 4 panels
+5. **`ROUTES.DECK_ANALYTICS`** added to routes index
+6. **Route registered** in `routes.tsx`
+7. **"View Analytics" link** added to `DeckDetailPage` header actions (visible when deck has cards)
+
+**Acceptance criteria**:
+- [x] 31 `bun test lib/deck-math` tests pass
+- [x] `hypergeometricPMF(60, 4, 7, 0)` ≈ 0.6005 (spec value 0.6097 was incorrect — log-space implementation is exact)
+- [x] `hypergeometricCDF(60, 4, 7, 1)` ≈ 0.3995 (same; spec value 0.3903 was incorrect)
+- [x] `prizeRisk` for 4-copy card returns `probAtLeastOnePrized ≈ 0.3515`
+- [x] `prizeRisk` for 1-copy card returns `riskLevel === 'critical'` (10% all-prized, > 2% threshold)
+- [x] `energyCurveAnalysis` for 12 basic energy returns `recommendation === 'standard'`
+- [x] `DeckAnalyticsPage` renders at `/decks/:id/analytics`
+- [x] All four panels render with correct data
+- [x] "View Analytics" link on `DeckDetailPage`
+- [x] No TypeScript errors (`bun run check-types` clean)
+
+**Notes**:
+- Spec acceptance criteria values for PMF/CDF were slightly wrong (spec ≈ 0.3903, exact = 0.3995). Implementation is mathematically correct; tests updated to match exact values.
+- 1-copy card risk level is `critical` (not `high`) because P(all prized) = 10% > 2% threshold — spec note was incorrect.
+
+---
 
 ### 2026-03-18 — SPEC_02: From Meta → My Deck Pipeline
 

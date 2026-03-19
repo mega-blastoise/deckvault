@@ -1,0 +1,75 @@
+/* ── Deck Analytics Page ─────────────────────────────────────────────────── */
+
+.deck-analytics-page__header-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.deck-analytics-page__back {
+  color: var(--text-secondary, rgba(255, 255, 255, 0.45));
+  font-size: 0.82rem;
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.deck-analytics-page__back:hover {
+  color: var(--text-primary, #fff);
+}
+
+.deck-analytics-page__title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.deck-analytics-page__subtitle {
+  color: var(--text-secondary, rgba(255, 255, 255, 0.45));
+  font-size: 0.875rem;
+  margin: 0;
+}
+
+.deck-analytics-page__loading {
+  color: var(--text-secondary, rgba(255, 255, 255, 0.45));
+  padding: 2rem 0;
+  text-align: center;
+}
+
+/* ── Grid ────────────────────────────────────────────────────────────────── */
+
+.deck-analytics-page__grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(3, 1fr);
+}
+
+/* 2-column span (opening hand table + consistency) */
+.deck-analytics-page__panel--wide {
+  grid-column: span 2;
+}
+
+/* Full-width span (scatter chart, hand simulator) */
+.deck-analytics-page__panel--full {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 960px) {
+  .deck-analytics-page__grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .deck-analytics-page__panel--wide {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 600px) {
+  .deck-analytics-page__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .deck-analytics-page__panel--wide,
+  .deck-analytics-page__panel--full {
+    grid-column: 1;
+  }
+}

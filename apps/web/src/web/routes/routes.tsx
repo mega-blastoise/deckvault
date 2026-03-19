@@ -13,6 +13,7 @@ import DecksPage from '../pages/DecksPage';
 import DeckBrowsePage from '../pages/DeckBrowsePage';
 import DeckBuilderPage from '../pages/DeckBuilderPage';
 import DeckDetailPage from '../pages/DeckDetailPage';
+import { DeckAnalyticsPage } from '../pages/DeckAnalyticsPage';
 import CardPage from '../pages/CardPage';
 import SignInPage from '../pages/SignInPage';
 
@@ -82,6 +83,10 @@ export const REACT_ROUTER_ROUTES: RouteObject[] = [
       {
         path: '/decks/:deckId',
         Component: DeckDetailPage
+      },
+      {
+        path: '/decks/:deckId/analytics',
+        element: <DeckAnalyticsPage />
       },
       {
         path: '/cards/:cardId',
