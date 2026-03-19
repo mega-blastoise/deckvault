@@ -1159,6 +1159,42 @@
   color: var(--pico-muted-color);
 }
 
+/* ── Deck detail tabs ──────────────────────────────────────────────────────── */
+
+.deck-detail-page__tabs {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  gap: 0;
+  padding: 0 1.5rem;
+}
+
+.deck-detail-page__tab {
+  align-items: center;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.45));
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 0.875rem;
+  font-weight: 500;
+  gap: 0.375rem;
+  margin-bottom: -1px;
+  padding: 0.75rem 1rem;
+  text-decoration: none;
+  transition: color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+
+.deck-detail-page__tab:hover {
+  color: var(--text-primary, #fff);
+}
+
+.deck-detail-page__tab--active {
+  border-bottom-color: var(--accent, #6c63ff);
+  color: var(--text-primary, #fff);
+}
+
 /* User menu in navbar */
 .navbar__user-menu {
   position: relative;

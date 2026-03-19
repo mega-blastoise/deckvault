@@ -45,6 +45,12 @@ import {
   removeCollectionCard
 } from './handlers/collection';
 import { listMetaDecks, getMetaDeck } from './handlers/meta-decks';
+import {
+  listVersions,
+  getVersion,
+  diffVersions,
+  updateVersionLabel
+} from './handlers/deck-versions';
 import { authRequired, authOptional } from './middleware/auth';
 
 const config = loadConfig();
@@ -120,6 +126,14 @@ const collection = createRouter<Services>('/api/v1/collection')
   .put('/:cardId', upsertCollectionCard)
   .delete('/:cardId', removeCollectionCard);
 
+// Deck versions — auth-required; diff and static 'diff' segment before :versionId
+const deckVersions = createRouter<Services>('/api/v1/decks')
+  .use(authRequired)
+  .get('/:id/versions/diff', diffVersions)
+  .get('/:id/versions/:versionId', getVersion)
+  .get('/:id/versions', listVersions)
+  .put('/:id/versions/:versionId/label', updateVersionLabel);
+
 // Meta decks — public browse, collection-aware enrichment when auth present
 const metaDecksList = createRouter<Services>('/api/v1/meta-decks')
   .use(authOptional)
@@ -163,6 +177,7 @@ const app = createApp({ container })
   .routes(decksBrowse)
   .routes(decksDetail)
   .routes(decksProtected)
+  .routes(deckVersions)
   .routes(collection)
   .routes(metaDecksList)
   .routes(metaDecksDetail);

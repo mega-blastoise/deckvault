@@ -242,6 +242,11 @@ export const updateDeck: Handler<Services> = async (ctx) => {
   }
 
   const cards = await pg.getDeckCards(ctx.params.id);
+
+  // Fire-and-forget version snapshot — does not block response
+  const snapshotCards = cards.map((c) => ({ cardId: c.card_id, quantity: c.quantity }));
+  pg.createVersionSnapshot(ctx.params.id, snapshotCards).catch(console.error);
+
   return ctx.json({ data: formatDeck(updated!, hydrateCards(db, cards)) });
 };
 

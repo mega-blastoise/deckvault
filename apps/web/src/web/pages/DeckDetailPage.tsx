@@ -8,9 +8,12 @@ import { Modal } from '../components/Modal';
 import { Badge } from '../components/Badge';
 import { DeckValidation } from '../components/DeckValidation';
 import { DeckPrintView } from '../components/DeckPrintView';
+import { DeckVersionHistory } from '../components/DeckVersionHistory';
 import { ROUTES } from '../routes';
 import { FORMAT_NAMES } from '../../types/deck';
 import type { DeckCard, DeckValidation as DeckValidationType } from '../../types/deck';
+
+type DeckTab = 'overview' | 'history';
 
 function TiltCard({ card, quantity, onClick }: { card: DeckCard['card']; quantity: number; onClick?: () => void }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -124,6 +127,7 @@ function DeckDetailPage() {
   const { deleteMutation } = useDeckMutations();
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showPrintView, setShowPrintView] = useState(false);
+  const [activeTab, setActiveTab] = useState<DeckTab>('overview');
 
   const validation = useMemo(
     () => buildValidation(deck?.cards ?? []),
@@ -245,6 +249,41 @@ function DeckDetailPage() {
         </div>
       </div>
 
+      {/* Tab bar */}
+      <div className="deck-detail-page__tabs">
+        <button
+          type="button"
+          className={`deck-detail-page__tab${activeTab === 'overview' ? ' deck-detail-page__tab--active' : ''}`}
+          onClick={() => setActiveTab('overview')}
+        >
+          Overview
+        </button>
+        <Link
+          to={ROUTES.DECK_ANALYTICS(deckId!)}
+          className="deck-detail-page__tab"
+        >
+          Analytics ▶
+        </Link>
+        <button
+          type="button"
+          className={`deck-detail-page__tab${activeTab === 'history' ? ' deck-detail-page__tab--active' : ''}`}
+          onClick={() => setActiveTab('history')}
+        >
+          History 🕐
+        </button>
+      </div>
+
+      {/* History tab */}
+      {activeTab === 'history' && (
+        <div className="page__content">
+          <DeckVersionHistory deckId={deckId!} />
+        </div>
+      )}
+
+      {/* Overview tab content (stats, validation, cards) */}
+      {activeTab === 'overview' && (
+      <>
+
       {/* Deck Stats */}
       <div className="deck-detail-page__stats">
         <div className="deck-detail-page__stat">
@@ -327,6 +366,9 @@ function DeckDetailPage() {
           </div>
         )}
       </div>
+
+      </> /* end overview tab */
+      )}
 
       {/* Print View Overlay */}
       {showPrintView && (

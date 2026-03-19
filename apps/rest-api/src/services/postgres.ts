@@ -44,6 +44,15 @@ export interface BrowseDeckRow extends DeckRow {
   card_count: number;
 }
 
+export interface DeckVersionRow {
+  id: string;
+  deck_id: string;
+  version: number;
+  label: string | null;
+  cards: { cardId: string; quantity: number }[];
+  created_at: Date;
+}
+
 export interface MetaDeckRow {
   id: string;
   name: string;
@@ -371,5 +380,78 @@ export class PostgresService implements Service {
       SELECT * FROM meta_deck_cards WHERE meta_deck_id = ${metaDeckId}
     `;
     return rows as MetaDeckCardRow[];
+  }
+
+  // ─── Deck Versions ──────────────────────────────────────
+
+  async createVersionSnapshot(
+    deckId: string,
+    cards: { cardId: string; quantity: number }[]
+  ): Promise<void> {
+    const maxRows = await this.instance`
+      SELECT MAX(version) as max FROM deck_versions WHERE deck_id = ${deckId}
+    `;
+    const nextVersion = ((maxRows[0] as { max: number | null })?.max ?? 0) + 1;
+
+    // Use unsafe() so that $3::jsonb is emitted literally — tagged template
+    // literals do not reliably handle type casts appended after interpolations.
+    await this.instance.unsafe(
+      `INSERT INTO deck_versions (deck_id, version, cards) VALUES ($1, $2, $3::jsonb)`,
+      [deckId, nextVersion, JSON.stringify(cards)]
+    );
+
+    // Rolling window: keep only the 50 most recent versions
+    await this.instance`
+      DELETE FROM deck_versions
+      WHERE deck_id = ${deckId}
+        AND version NOT IN (
+          SELECT version FROM deck_versions
+          WHERE deck_id = ${deckId}
+          ORDER BY version DESC
+          LIMIT 50
+        )
+    `;
+  }
+
+  async listDeckVersions(
+    deckId: string,
+    page: number,
+    limit: number
+  ): Promise<{ data: DeckVersionRow[]; total: number }> {
+    const countRows = await this.instance`
+      SELECT COUNT(*) as total FROM deck_versions WHERE deck_id = ${deckId}
+    `;
+    const total = Number((countRows[0] as { total: number }).total ?? 0);
+    const offset = (page - 1) * limit;
+
+    const rows = await this.instance`
+      SELECT id, deck_id, version, label, created_at,
+             CASE WHEN jsonb_typeof(cards) = 'array' THEN jsonb_array_length(cards) ELSE 0 END AS card_count
+      FROM deck_versions
+      WHERE deck_id = ${deckId}
+      ORDER BY version DESC
+      LIMIT ${limit} OFFSET ${offset}
+    `;
+    return { data: rows as unknown as DeckVersionRow[], total };
+  }
+
+  async getDeckVersion(versionId: string): Promise<DeckVersionRow | null> {
+    const rows = await this.instance`
+      SELECT * FROM deck_versions WHERE id = ${versionId}
+    `;
+    const row = rows[0] as DeckVersionRow | undefined;
+    if (!row) return null;
+    // Bun.SQL returns JSONB columns as raw strings — parse explicitly
+    if (typeof row.cards === 'string') {
+      row.cards = JSON.parse(row.cards) as DeckVersionRow['cards'];
+    }
+    return row;
+  }
+
+  async updateVersionLabel(versionId: string, label: string): Promise<DeckVersionRow | null> {
+    const rows = await this.instance`
+      UPDATE deck_versions SET label = ${label} WHERE id = ${versionId} RETURNING *
+    `;
+    return (rows[0] as DeckVersionRow) ?? null;
   }
 }

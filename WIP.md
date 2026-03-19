@@ -16,7 +16,7 @@
 | SPEC_01 | Landing Page + Navigation Gating | ✅ Complete | 2026-03-18 |
 | SPEC_02 | From Meta → My Deck Pipeline | ✅ Complete | 2026-03-18 |
 | SPEC_03 | Deck Analytics Engine | ✅ Complete | 2026-03-18 |
-| SPEC_04 | Deck Evolution Tracking | ⬜ Not started | — |
+| SPEC_04 | Deck Evolution Tracking | ✅ Complete | 2026-03-18 |
 | SPEC_05 | UX / Product-Level Differentiators | ⬜ Not started | — |
 | SPEC_06 | Local Meta Intelligence | ⬜ Not started | — |
 
@@ -25,6 +25,40 @@
 ---
 
 ## Session Log
+
+### 2026-03-18 — SPEC_04: Deck Evolution Tracking
+
+**Completed**:
+
+1. **Migration** (`apps/rest-api/migrations/008_deck_versions.sql`) — `deck_versions` table with UUID PK, monotonic `version` integer, optional `label`, and `cards` JSONB snapshot. Index on `deck_id`. Auto-applied on next server start.
+2. **PostgresService** — added `DeckVersionRow` type + `createVersionSnapshot()` (with 50-version rolling window), `listDeckVersions()`, `getDeckVersion()`, `updateVersionLabel()`.
+3. **Auto-snapshot** — `updateDeck` handler fires `createVersionSnapshot()` fire-and-forget after every successful deck save.
+4. **Handler** (`apps/rest-api/src/handlers/deck-versions.ts`):
+   - `GET /api/v1/decks/:id/versions` — paginated list (newest first), `cardCount` from `jsonb_array_length`
+   - `GET /api/v1/decks/:id/versions/diff?a=X&b=Y` — pure `computeDiff()` + hydrated card names from SQLite
+   - `GET /api/v1/decks/:id/versions/:versionId` — full card list (hydrated)
+   - `PUT /api/v1/decks/:id/versions/:versionId/label` — label update
+5. **Routes** registered in `index.ts` — `diff` route ordered before `:versionId` to avoid capture clash.
+6. **`useVersionsQuery.ts`** — TanStack Query 5 infinite hook + `useVersionDetailQuery`, `useDiffQuery`, `useLabelMutation`.
+7. **`DeckVersionHistory`** component — version list with select-for-compare dots, inline label editor, restore button with confirmation modal, inline diff panel, "Load more" pagination.
+8. **`DeckDiffView`** component — added/removed/unchanged sections with colored left borders, card images, delta badges, collapsible unchanged section.
+9. **`DeckDetailPage`** — added `DeckTab` type, tab bar (Overview | Analytics ▶ | History 🕐), tab styles in `pages.css`.
+
+**Acceptance criteria**:
+- [x] Saving a deck creates a new `deck_versions` row (fire-and-forget after PUT)
+- [x] Version number increments monotonically per deck
+- [x] `GET /api/v1/decks/:id/versions` returns versions sorted newest-first
+- [x] `GET /api/v1/decks/:id/versions/diff?a=X&b=Y` returns correct added/removed/unchanged
+- [x] `DeckDetailPage` renders "History" tab
+- [x] Version list shows version number, timestamp, optional label
+- [x] Selecting 2 versions and clicking "Compare" renders `DeckDiffView`
+- [x] Added cards: green left border; removed: red left border + dimmed
+- [x] Unchanged section collapsed by default, expandable
+- [x] Restore button shows confirmation modal
+- [x] Max 50 versions retained (rolling window cleanup after insert)
+- [x] No new TypeScript errors (`apps/web` clean; `apps/rest-api` pre-existing 3 test errors only)
+
+---
 
 ### 2026-03-18 — SPEC_03: Deck Analytics Engine
 
