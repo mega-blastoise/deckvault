@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router';
+import { useParams, useNavigate, useLocation } from 'react-router';
 import { useDecks } from '../contexts/Deck';
 import { useSearchCards, toCardFormat } from '../hooks/useSearchCards';
 import { useDeckValidation } from '../hooks/useDeckValidation';
@@ -11,10 +11,18 @@ import type { DeckFormat, DeckCard } from '../../types/deck';
 import type { Pokemon } from '@pokemon/clients';
 import type { SearchFilters } from '../components/SearchBar/types';
 
+interface CloneMetaDeck {
+  name: string;
+  format: string;
+  cards: { card: { id: string; name: string; supertype: string; subtypes?: string[]; number?: string; regulationMark?: string; images?: { small?: string; large?: string }; set: { id: string; name: string } }; quantity: number }[];
+}
+
 function DeckBuilderPage() {
   const { deckId } = useParams<{ deckId?: string }>();
 
   const navigate = useNavigate();
+  const location = useLocation();
+  const { cloneFromMetaDeck } = (location.state ?? {}) as { cloneFromMetaDeck?: CloneMetaDeck };
 
   const { getDeck, createDeck, updateDeck } = useDecks();
 
@@ -23,18 +31,22 @@ function DeckBuilderPage() {
   // Get existing deck if editing
   const existingDeck = deckId ? getDeck(deckId) : undefined;
 
-  // Deck state
-  const [deckName, setDeckName] = useState(existingDeck?.name || '');
+  // Deck state — seeded from clone if provided
+  const [deckName, setDeckName] = useState(
+    cloneFromMetaDeck ? `${cloneFromMetaDeck.name} (Copy)` : existingDeck?.name || ''
+  );
   const [deckDescription, setDeckDescription] = useState(
     existingDeck?.description || ''
   );
   const [deckFormat, setDeckFormat] = useState<DeckFormat>(
-    existingDeck?.format || 'standard'
+    (cloneFromMetaDeck?.format as DeckFormat) ?? existingDeck?.format ?? 'standard'
   );
   const [deckCards, setDeckCards] = useState<DeckCard[]>(
-    existingDeck?.cards || []
+    cloneFromMetaDeck
+      ? (cloneFromMetaDeck.cards as unknown as DeckCard[])
+      : existingDeck?.cards || []
   );
-  const [isDirty, setIsDirty] = useState(false);
+  const [isDirty, setIsDirty] = useState(Boolean(cloneFromMetaDeck));
 
   // Card browser state
   const [searchQuery, setSearchQuery] = useState('');

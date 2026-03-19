@@ -44,6 +44,7 @@ import {
   upsertCollectionCard,
   removeCollectionCard
 } from './handlers/collection';
+import { listMetaDecks, getMetaDeck } from './handlers/meta-decks';
 import { authRequired, authOptional } from './middleware/auth';
 
 const config = loadConfig();
@@ -119,6 +120,14 @@ const collection = createRouter<Services>('/api/v1/collection')
   .put('/:cardId', upsertCollectionCard)
   .delete('/:cardId', removeCollectionCard);
 
+// Meta decks — public browse, collection-aware enrichment when auth present
+const metaDecksList = createRouter<Services>('/api/v1/meta-decks')
+  .use(authOptional)
+  .get('/', listMetaDecks);
+
+const metaDecksDetail = createRouter<Services>('/api/v1/meta-decks')
+  .get('/:id', getMetaDeck);
+
 // ============================================================
 // 3. Application assembly
 // ============================================================
@@ -154,7 +163,9 @@ const app = createApp({ container })
   .routes(decksBrowse)
   .routes(decksDetail)
   .routes(decksProtected)
-  .routes(collection);
+  .routes(collection)
+  .routes(metaDecksList)
+  .routes(metaDecksDetail);
 
 // ============================================================
 // 4. Start

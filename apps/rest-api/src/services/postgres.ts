@@ -44,6 +44,27 @@ export interface BrowseDeckRow extends DeckRow {
   card_count: number;
 }
 
+export interface MetaDeckRow {
+  id: string;
+  name: string;
+  archetype: string;
+  format: string;
+  source_url: string | null;
+  placement: string | null;
+  event_name: string | null;
+  event_date: string | null;
+  last_updated: Date;
+  created_at: Date;
+  card_count: number;
+}
+
+export interface MetaDeckCardRow {
+  id: string;
+  meta_deck_id: string;
+  card_id: string;
+  quantity: number;
+}
+
 export class PostgresService implements Service {
   private db: BunSQL | null = null;
 
@@ -52,7 +73,7 @@ export class PostgresService implements Service {
   async start(): Promise<void> {
     this.db = new Bun.SQL(this.url);
 
-    // Ensure migrations tracking table exists
+    // DDL must use unsafe — tagged templates are for parameterized DML only
     await this.db.unsafe(`
       CREATE TABLE IF NOT EXISTS _migrations (
         id         SERIAL PRIMARY KEY,
@@ -91,6 +112,7 @@ export class PostgresService implements Service {
     }
 
     for (const file of files) {
+      // Migration filenames are internal constants, not user input — unsafe is correct here
       const applied = await this.instance.unsafe(
         `SELECT 1 FROM _migrations WHERE name = $1`,
         [file]
@@ -108,11 +130,7 @@ export class PostgresService implements Service {
   }
 
   ping(): boolean {
-    try {
-      return this.db !== null;
-    } catch {
-      return false;
-    }
+    return this.db !== null;
   }
 
   // ─── Users ──────────────────────────────────────────────
@@ -123,51 +141,40 @@ export class PostgresService implements Service {
     name: string;
     avatarUrl: string | null;
   }): Promise<UserRow> {
-    const rows = await this.instance.unsafe(
-      `INSERT INTO users (google_id, email, name, avatar_url)
-       VALUES ($1, $2, $3, $4)
-       ON CONFLICT (google_id) DO UPDATE SET
-         email = EXCLUDED.email,
-         name = EXCLUDED.name,
-         avatar_url = EXCLUDED.avatar_url,
-         updated_at = now()
-       RETURNING *`,
-      [profile.googleId, profile.email, profile.name, profile.avatarUrl]
-    );
+    const rows = await this.instance`
+      INSERT INTO users (google_id, email, name, avatar_url)
+      VALUES (${profile.googleId}, ${profile.email}, ${profile.name}, ${profile.avatarUrl})
+      ON CONFLICT (google_id) DO UPDATE SET
+        email      = EXCLUDED.email,
+        name       = EXCLUDED.name,
+        avatar_url = EXCLUDED.avatar_url,
+        updated_at = now()
+      RETURNING *
+    `;
     return rows[0] as UserRow;
   }
 
   async getUserById(id: string): Promise<UserRow | null> {
-    const rows = await this.instance.unsafe(
-      `SELECT * FROM users WHERE id = $1`,
-      [id]
-    );
+    const rows = await this.instance`SELECT * FROM users WHERE id = ${id}`;
     return (rows[0] as UserRow) ?? null;
   }
 
   // ─── Decks ──────────────────────────────────────────────
 
   async listUserDecks(userId: string): Promise<DeckRow[]> {
-    const rows = await this.instance.unsafe(
-      `SELECT * FROM decks WHERE user_id = $1 ORDER BY updated_at DESC`,
-      [userId]
-    );
+    const rows = await this.instance`
+      SELECT * FROM decks WHERE user_id = ${userId} ORDER BY updated_at DESC
+    `;
     return rows as DeckRow[];
   }
 
   async getDeck(id: string): Promise<DeckRow | null> {
-    const rows = await this.instance.unsafe(
-      `SELECT * FROM decks WHERE id = $1`,
-      [id]
-    );
+    const rows = await this.instance`SELECT * FROM decks WHERE id = ${id}`;
     return (rows[0] as DeckRow) ?? null;
   }
 
   async getDeckCards(deckId: string): Promise<DeckCardRow[]> {
-    const rows = await this.instance.unsafe(
-      `SELECT * FROM deck_cards WHERE deck_id = $1`,
-      [deckId]
-    );
+    const rows = await this.instance`SELECT * FROM deck_cards WHERE deck_id = ${deckId}`;
     return rows as DeckCardRow[];
   }
 
@@ -179,19 +186,18 @@ export class PostgresService implements Service {
     coverCardId?: string;
     isPublic?: boolean;
   }): Promise<DeckRow> {
-    const rows = await this.instance.unsafe(
-      `INSERT INTO decks (user_id, name, description, format, cover_card_id, is_public)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       RETURNING *`,
-      [
-        input.userId,
-        input.name,
-        input.description ?? null,
-        input.format,
-        input.coverCardId ?? null,
-        input.isPublic ?? true
-      ]
-    );
+    const rows = await this.instance`
+      INSERT INTO decks (user_id, name, description, format, cover_card_id, is_public)
+      VALUES (
+        ${input.userId},
+        ${input.name},
+        ${input.description ?? null},
+        ${input.format},
+        ${input.coverCardId ?? null},
+        ${input.isPublic ?? true}
+      )
+      RETURNING *
+    `;
     return rows[0] as DeckRow;
   }
 
@@ -205,30 +211,17 @@ export class PostgresService implements Service {
       isPublic?: boolean;
     }
   ): Promise<DeckRow | null> {
+    // Dynamic SET is safe here: SET clause keys are hardcoded column names,
+    // never user input. Only values are user-supplied and remain parameterized.
     const sets: string[] = [];
     const values: unknown[] = [];
     let idx = 1;
 
-    if (input.name !== undefined) {
-      sets.push(`name = $${idx++}`);
-      values.push(input.name);
-    }
-    if (input.description !== undefined) {
-      sets.push(`description = $${idx++}`);
-      values.push(input.description);
-    }
-    if (input.format !== undefined) {
-      sets.push(`format = $${idx++}`);
-      values.push(input.format);
-    }
-    if (input.coverCardId !== undefined) {
-      sets.push(`cover_card_id = $${idx++}`);
-      values.push(input.coverCardId);
-    }
-    if (input.isPublic !== undefined) {
-      sets.push(`is_public = $${idx++}`);
-      values.push(input.isPublic);
-    }
+    if (input.name !== undefined) { sets.push(`name = $${idx++}`); values.push(input.name); }
+    if (input.description !== undefined) { sets.push(`description = $${idx++}`); values.push(input.description); }
+    if (input.format !== undefined) { sets.push(`format = $${idx++}`); values.push(input.format); }
+    if (input.coverCardId !== undefined) { sets.push(`cover_card_id = $${idx++}`); values.push(input.coverCardId); }
+    if (input.isPublic !== undefined) { sets.push(`is_public = $${idx++}`); values.push(input.isPublic); }
 
     if (sets.length === 0) return this.getDeck(id);
 
@@ -243,10 +236,7 @@ export class PostgresService implements Service {
   }
 
   async deleteDeck(id: string): Promise<boolean> {
-    const rows = await this.instance.unsafe(
-      `DELETE FROM decks WHERE id = $1 RETURNING id`,
-      [id]
-    );
+    const rows = await this.instance`DELETE FROM decks WHERE id = ${id} RETURNING id`;
     return rows.length > 0;
   }
 
@@ -254,16 +244,15 @@ export class PostgresService implements Service {
     deckId: string,
     cards: Array<{ cardId: string; quantity: number }>
   ): Promise<void> {
-    await this.instance.unsafe(
-      `DELETE FROM deck_cards WHERE deck_id = $1`,
-      [deckId]
-    );
-    for (const card of cards) {
-      await this.instance.unsafe(
-        `INSERT INTO deck_cards (deck_id, card_id, quantity) VALUES ($1, $2, $3)`,
-        [deckId, card.cardId, card.quantity]
-      );
-    }
+    await this.instance.transaction(async (tx) => {
+      await tx`DELETE FROM deck_cards WHERE deck_id = ${deckId}`;
+      for (const card of cards) {
+        await tx`
+          INSERT INTO deck_cards (deck_id, card_id, quantity)
+          VALUES (${deckId}, ${card.cardId}, ${card.quantity})
+        `;
+      }
+    });
   }
 
   // ─── Browse (public decks) ──────────────────────────────
@@ -274,41 +263,32 @@ export class PostgresService implements Service {
     format?: string;
     q?: string;
   }): Promise<{ data: BrowseDeckRow[]; total: number }> {
-    const conditions = ['d.is_public = true'];
-    const values: unknown[] = [];
-    let idx = 1;
-
-    if (opts.format) {
-      conditions.push(`d.format = $${idx++}`);
-      values.push(opts.format);
-    }
-    if (opts.q) {
-      conditions.push(`d.name ILIKE $${idx++}`);
-      values.push(`%${opts.q}%`);
-    }
-
-    const where = conditions.join(' AND ');
+    const format = opts.format ?? null;
+    const likeQ = opts.q ? `%${opts.q}%` : null;
     const offset = (opts.page - 1) * opts.limit;
 
-    const countResult = await this.instance.unsafe(
-      `SELECT COUNT(*) as total FROM decks d WHERE ${where}`,
-      values
-    );
-    const total = Number(countResult[0]?.total ?? 0);
+    const countRows = await this.instance`
+      SELECT COUNT(*) as total
+      FROM decks d
+      WHERE d.is_public = true
+        AND (${format}::text IS NULL OR d.format = ${format})
+        AND (${likeQ}::text IS NULL OR d.name ILIKE ${likeQ})
+    `;
+    const total = Number(countRows[0]?.total ?? 0);
 
-    const dataValues = [...values, opts.limit, offset];
-    const rows = await this.instance.unsafe(
-      `SELECT d.*,
-              u.name as owner_name,
-              u.avatar_url as owner_avatar_url,
-              COALESCE((SELECT SUM(dc.quantity) FROM deck_cards dc WHERE dc.deck_id = d.id), 0) as card_count
-       FROM decks d
-       JOIN users u ON u.id = d.user_id
-       WHERE ${where}
-       ORDER BY d.updated_at DESC
-       LIMIT $${idx++} OFFSET $${idx}`,
-      dataValues
-    );
+    const rows = await this.instance`
+      SELECT d.*,
+             u.name as owner_name,
+             u.avatar_url as owner_avatar_url,
+             COALESCE((SELECT SUM(dc.quantity) FROM deck_cards dc WHERE dc.deck_id = d.id), 0) as card_count
+      FROM decks d
+      JOIN users u ON u.id = d.user_id
+      WHERE d.is_public = true
+        AND (${format}::text IS NULL OR d.format = ${format})
+        AND (${likeQ}::text IS NULL OR d.name ILIKE ${likeQ})
+      ORDER BY d.updated_at DESC
+      LIMIT ${opts.limit} OFFSET ${offset}
+    `;
 
     return { data: rows as BrowseDeckRow[], total };
   }
@@ -316,10 +296,9 @@ export class PostgresService implements Service {
   // ─── Collection ─────────────────────────────────────────
 
   async getUserCollection(userId: string): Promise<CollectionRow[]> {
-    const rows = await this.instance.unsafe(
-      `SELECT * FROM user_collections WHERE user_id = $1`,
-      [userId]
-    );
+    const rows = await this.instance`
+      SELECT * FROM user_collections WHERE user_id = ${userId}
+    `;
     return rows as CollectionRow[];
   }
 
@@ -328,21 +307,69 @@ export class PostgresService implements Service {
     cardId: string,
     quantity: number
   ): Promise<CollectionRow> {
-    const rows = await this.instance.unsafe(
-      `INSERT INTO user_collections (user_id, card_id, quantity)
-       VALUES ($1, $2, $3)
-       ON CONFLICT (user_id, card_id) DO UPDATE SET quantity = $3
-       RETURNING *`,
-      [userId, cardId, quantity]
-    );
+    const rows = await this.instance`
+      INSERT INTO user_collections (user_id, card_id, quantity)
+      VALUES (${userId}, ${cardId}, ${quantity})
+      ON CONFLICT (user_id, card_id) DO UPDATE SET quantity = ${quantity}
+      RETURNING *
+    `;
     return rows[0] as CollectionRow;
   }
 
   async removeCollectionCard(userId: string, cardId: string): Promise<boolean> {
-    const rows = await this.instance.unsafe(
-      `DELETE FROM user_collections WHERE user_id = $1 AND card_id = $2 RETURNING card_id`,
-      [userId, cardId]
-    );
+    const rows = await this.instance`
+      DELETE FROM user_collections WHERE user_id = ${userId} AND card_id = ${cardId} RETURNING card_id
+    `;
     return rows.length > 0;
+  }
+
+  // ─── Meta Decks ──────────────────────────────────────────
+
+  async getMetaDecks(opts: {
+    format?: string;
+    archetype?: string;
+    page: number;
+    limit: number;
+  }): Promise<{ data: MetaDeckRow[]; total: number }> {
+    const format = opts.format ?? null;
+    const likeArchetype = opts.archetype ? `%${opts.archetype}%` : null;
+    const offset = (opts.page - 1) * opts.limit;
+
+    const countRows = await this.instance`
+      SELECT COUNT(*) as total
+      FROM meta_decks
+      WHERE (${format}::text IS NULL OR format = ${format})
+        AND (${likeArchetype}::text IS NULL OR name ILIKE ${likeArchetype} OR archetype ILIKE ${likeArchetype})
+    `;
+    const total = Number(countRows[0]?.total ?? 0);
+
+    const rows = await this.instance`
+      SELECT md.*,
+             COALESCE((SELECT SUM(mdc.quantity) FROM meta_deck_cards mdc WHERE mdc.meta_deck_id = md.id), 0) AS card_count
+      FROM meta_decks md
+      WHERE (${format}::text IS NULL OR md.format = ${format})
+        AND (${likeArchetype}::text IS NULL OR md.name ILIKE ${likeArchetype} OR md.archetype ILIKE ${likeArchetype})
+      ORDER BY md.event_date DESC NULLS LAST, md.created_at DESC
+      LIMIT ${opts.limit} OFFSET ${offset}
+    `;
+
+    return { data: rows as MetaDeckRow[], total };
+  }
+
+  async getMetaDeck(id: string): Promise<MetaDeckRow | null> {
+    const rows = await this.instance`
+      SELECT md.*,
+             COALESCE((SELECT SUM(mdc.quantity) FROM meta_deck_cards mdc WHERE mdc.meta_deck_id = md.id), 0) AS card_count
+      FROM meta_decks md
+      WHERE md.id = ${id}
+    `;
+    return (rows[0] as MetaDeckRow) ?? null;
+  }
+
+  async getMetaDeckCards(metaDeckId: string): Promise<MetaDeckCardRow[]> {
+    const rows = await this.instance`
+      SELECT * FROM meta_deck_cards WHERE meta_deck_id = ${metaDeckId}
+    `;
+    return rows as MetaDeckCardRow[];
   }
 }

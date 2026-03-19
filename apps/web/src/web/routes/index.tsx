@@ -13,6 +13,7 @@ export const ROUTES = {
   SIGN_IN: '/sign-in',
   DECKS: '/decks',
   DECKS_BROWSE: '/decks/browse',
+  META_DECKS: '/meta-decks',
   DECK_NEW: '/decks/new',
   DECK_DETAIL: (deckId: string) => `/decks/${deckId}`,
   DECK_EDIT: (deckId: string) => `/decks/${deckId}/edit`,

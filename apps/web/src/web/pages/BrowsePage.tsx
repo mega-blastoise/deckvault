@@ -1,178 +1,79 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { useParams, useSearchParams, useNavigate } from 'react-router';
-import { useCards } from '../hooks/useCards';
-import { useCollection } from '../contexts/Collection';
+import { useSearchParams, useNavigate } from 'react-router';
+import { useSearchCards, toCardFormat } from '../hooks/useSearchCards';
 import { CardGrid } from '../components/CardGrid';
 import { SearchBar } from '../components/SearchBar';
-import { Pagination } from '../components/Pagination';
-import { Modal } from '../components/Modal';
-import { CardDetail } from '../components/CardDetail';
-import { useFadeIn } from '../motion/hooks/useFadeIn';
-import { useStagger } from '../motion/hooks/useStagger';
 import { ROUTES } from '../routes';
 import type { Pokemon } from '@pokemon/clients';
 import type { SearchFilters } from '../components/SearchBar/types';
 
 function BrowsePage() {
-  const { cardId } = useParams<{ cardId?: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { addCard, getQuantity } = useCollection();
 
-  // Animations
-  const { ref: headerRef } = useFadeIn({ y: 20, duration: 0.4 });
-  const { containerRef: gridContainerRef, animate: replayStagger } = useStagger(
-    {
-      stagger: 0.03,
-      y: 20,
-      fromScale: 0.97,
-      autoPlay: true
-    }
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('q') ?? '');
+
+  const { cards: rawCards, isLoading, isError } = useSearchCards(searchQuery, {
+    limit: 100
+  });
+
+  const cards: Pokemon.Card[] = useMemo(
+    () => rawCards.map((c) => toCardFormat(c) as unknown as Pokemon.Card),
+    [rawCards]
   );
 
-  // Parse search params
-  const page = parseInt(searchParams.get('page') || '1', 10);
-  const search = searchParams.get('q') || undefined;
-  const type = searchParams.get('type') || undefined;
-  const rarity = searchParams.get('rarity') || undefined;
-
-  // Fetch cards
-  const { data, isLoading: loading, error, isError } = useCards(page, 500);
-
-  const cards: Pokemon.Card[] = useMemo(() => {
-    if (loading || error || isError) {
-      return [];
-    }
-
-    if (data) {
-      if (Array.isArray(data.data)) {
-        return data.data;
-      }
-
-      if (
-        typeof data.data === 'object' &&
-        data.data !== null &&
-        'data' in data.data
-      ) {
-        if (Array.isArray((data?.data as any)?.data)) {
-          return (data?.data as any)?.data;
-        }
-      }
-    }
-
-    return [];
-  }, [data, loading, error, isError]);
-
-  // Selected card for modal
-  const [selectedCard, setSelectedCard] = useState<Pokemon.Card | null>(null);
-
-  // Handle search
   const handleSearch = useCallback(
     (filters: SearchFilters) => {
+      const q = filters.query ?? '';
+      setSearchQuery(q);
       const params = new URLSearchParams();
-      if (filters.query) params.set('q', filters.query);
-      if (filters.type) params.set('type', filters.type);
-      if (filters.rarity) params.set('rarity', filters.rarity);
-      params.set('page', '1');
+      if (q) params.set('q', q);
       setSearchParams(params);
     },
     [setSearchParams]
   );
 
-  // Handle page change
-  const handlePageChange = useCallback(
-    (newPage: number) => {
-      const params = new URLSearchParams(searchParams);
-      params.set('page', String(newPage));
-      setSearchParams(params);
-    },
-    [searchParams, setSearchParams]
-  );
-
-  // Handle card click
-  const handleCardSelect = useCallback((card: Pokemon.Card) => {
-    setSelectedCard(card);
-  }, []);
-
-  // Handle add to collection
-  const handleAddToCollection = useCallback(
+  const handleCardSelect = useCallback(
     (card: Pokemon.Card) => {
-      addCard(card.id);
+      navigate(ROUTES.CARD(card.id));
     },
-    [addCard]
+    [navigate]
   );
-
-  // Close modal
-  const handleCloseModal = useCallback(() => {
-    setSelectedCard(null);
-  }, []);
 
   return (
     <div className="page browse-page">
-      <div ref={headerRef} className="page__header">
+      <div className="page__header">
         <h1>Browse Cards</h1>
-        <p>Explore all available Pokemon cards.</p>
+        <p>Search across all Pokemon TCG cards.</p>
       </div>
 
-      {/* Search Bar */}
       <div className="browse-page__toolbar">
         <SearchBar
           onSearch={handleSearch}
-          placeholder="Search cards..."
-          showFilters
+          placeholder="Search by card name…"
+          showFilters={false}
+          loading={isLoading}
         />
       </div>
 
-      {/* Error state */}
-      {error && (
+      {isError && (
         <div className="browse-page__error">
-          <p>Error loading cards: {error.message}</p>
-          <button
-            type="button"
-            className="button button--primary"
-            onClick={() => window.location.reload()}
-          >
-            Retry
-          </button>
+          <p>Failed to load cards. Please try again.</p>
         </div>
       )}
 
-      {/* Card Grid */}
-      <div ref={gridContainerRef} className="page__content">
+      <div className="page__content">
         <CardGrid
-          cards={cards || []}
+          cards={cards}
           onCardSelect={handleCardSelect}
-          loading={loading}
-          emptyMessage="No cards found. Try adjusting your search."
+          loading={isLoading}
+          emptyMessage={
+            searchQuery
+              ? `No cards found for "${searchQuery}".`
+              : 'Enter a card name to search.'
+          }
         />
       </div>
-
-      {/* Pagination */}
-      {/* {pagination.totalPages > 1 && (
-        <Pagination
-          currentPage={pagination.page}
-          totalPages={pagination.totalPages}
-          onPageChange={handlePageChange}
-        />
-      )} */}
-
-      {/* Card Detail Modal */}
-      {selectedCard && (
-        <Modal
-          isOpen={!!selectedCard}
-          onClose={handleCloseModal}
-          title={selectedCard.name}
-          size="large"
-        >
-          <CardDetail
-            card={selectedCard}
-            onClose={handleCloseModal}
-            onAddToCollection={handleAddToCollection}
-            collectionQuantity={getQuantity(selectedCard.id)}
-            isModal
-          />
-        </Modal>
-      )}
     </div>
   );
 }

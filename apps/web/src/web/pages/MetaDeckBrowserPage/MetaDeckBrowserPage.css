@@ -1,0 +1,151 @@
+.meta-browser {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 2rem 0;
+}
+
+.meta-browser__header {
+  margin-bottom: 2rem;
+}
+
+.meta-browser__title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  margin: 0 0 0.375rem;
+  color: var(--pico-color);
+}
+
+.meta-browser__subtitle {
+  font-size: 0.9375rem;
+  color: var(--pico-muted-color);
+  margin: 0;
+}
+
+/* ── Filters ─────────────────────────────────────────────── */
+.meta-browser__filters {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--pico-muted-border-color);
+}
+
+.meta-browser__format-pills {
+  display: flex;
+  gap: 0.375rem;
+  flex-wrap: wrap;
+}
+
+.meta-browser__pill {
+  padding: 0.375rem 0.875rem;
+  border-radius: 9999px;
+  border: 1px solid var(--pico-muted-border-color);
+  background: transparent;
+  color: var(--pico-muted-color);
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.meta-browser__pill:hover {
+  border-color: var(--pico-primary);
+  color: var(--pico-primary);
+}
+
+.meta-browser__pill--active {
+  background: var(--pico-primary);
+  border-color: var(--pico-primary);
+  color: #fff;
+}
+
+.meta-browser__pill--active:hover {
+  color: #fff;
+}
+
+.meta-browser__filter-right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.meta-browser__search {
+  padding: 0.5rem 0.875rem;
+  border-radius: 8px;
+  border: 1px solid var(--pico-muted-border-color);
+  background: var(--pico-card-background-color);
+  color: var(--pico-color);
+  font-family: inherit;
+  font-size: 0.875rem;
+  width: 200px;
+  transition: border-color 0.15s ease;
+}
+
+.meta-browser__search:focus {
+  outline: none;
+  border-color: var(--pico-primary);
+}
+
+.meta-browser__toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--pico-muted-color);
+  cursor: pointer;
+  user-select: none;
+}
+
+.meta-browser__toggle input[type="checkbox"] {
+  accent-color: var(--pico-primary);
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+/* ── Count + Grid ────────────────────────────────────────── */
+.meta-browser__count {
+  font-size: 0.8125rem;
+  color: var(--pico-muted-color);
+  margin: 0 0 1rem;
+}
+
+.meta-browser__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.25rem;
+}
+
+/* ── States ──────────────────────────────────────────────── */
+.meta-browser__state {
+  text-align: center;
+  padding: 4rem 2rem;
+  color: var(--pico-muted-color);
+  font-size: 0.9375rem;
+}
+
+.meta-browser__state--error {
+  color: #ef4444;
+}
+
+/* ── Responsive ──────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .meta-browser__filters {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .meta-browser__filter-right {
+    width: 100%;
+  }
+
+  .meta-browser__search {
+    width: 100%;
+  }
+}

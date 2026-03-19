@@ -14,7 +14,7 @@
 | Spec | Title | Status | Session |
 |------|-------|--------|---------|
 | SPEC_01 | Landing Page + Navigation Gating | ✅ Complete | 2026-03-18 |
-| SPEC_02 | From Meta → My Deck Pipeline | ⬜ Not started | — |
+| SPEC_02 | From Meta → My Deck Pipeline | ✅ Complete | 2026-03-18 |
 | SPEC_03 | Deck Analytics Engine | ⬜ Not started | — |
 | SPEC_04 | Deck Evolution Tracking | ⬜ Not started | — |
 | SPEC_05 | UX / Product-Level Differentiators | ⬜ Not started | — |
@@ -25,6 +25,40 @@
 ---
 
 ## Session Log
+
+### 2026-03-18 — SPEC_02: From Meta → My Deck Pipeline
+
+**Completed**:
+
+1. **Migration** (`apps/rest-api/migrations/006_meta_decks.sql`) — `meta_decks`, `meta_deck_cards`, `card_substitutes` tables. Auto-applied on next server start via `runMigrations()`.
+2. **PostgresService** — added `MetaDeckRow`/`MetaDeckCardRow` types + `getMetaDecks()`, `getMetaDeck()`, `getMetaDeckCards()` methods.
+3. **Handler** (`apps/rest-api/src/handlers/meta-decks.ts`) — `listMetaDecks` (public + collection-aware when auth present, `collectionOnly` filter) and `getMetaDeck` (with full card hydration from SQLite).
+4. **Routes registered** in `index.ts` — `GET /api/v1/meta-decks` (authOptional), `GET /api/v1/meta-decks/:id` (public).
+5. **Seed data** — 10 curated Standard tournament decklists in `database/seeds/data/meta_decks.json`. Seed script: `database/seeds/meta_decks.ts` (idempotent upsert).
+6. **`ROUTES.META_DECKS`** added to routes index.
+7. **MetaDeckCard component** — ownership progress bar, format badge, "Build This Deck" button.
+8. **MetaDeckBrowserPage** at `/meta-decks` — format pills, archetype search, "Only show decks I can build" toggle (auth only), TanStack Query fetching.
+9. **Navbar** — "Meta" link added with `TrendingUp` icon.
+10. **DeckBuilderPage** — reads `cloneFromMetaDeck` from `location.state`, pre-populates deck name (`"[Name] (Copy)"`), format, and cards on mount.
+
+**Acceptance criteria**:
+- [x] `GET /api/v1/meta-decks` returns ≥ 10 seeded decklists (after migration + seed applied)
+- [x] `GET /api/v1/meta-decks?format=standard` filters correctly
+- [x] `GET /api/v1/meta-decks?collectionOnly=true` returns only buildable decks (authenticated)
+- [x] `GET /api/v1/meta-decks/:id` returns 60-card list with hydrated card names
+- [x] `MetaDeckBrowserPage` renders at `/meta-decks`
+- [x] Format filter pills update list without page reload
+- [x] "Only show decks I can build" toggle hidden for unauthenticated users
+- [x] Ownership progress bar renders for authenticated users
+- [x] "Build This Deck" navigates to `/decks/new` with cards pre-populated
+- [x] Pre-populated builder shows `"[Name] (Copy)"` deck name
+- [x] No new TypeScript errors (pre-existing `transforms.test.ts` errors remain, documented)
+
+**Notes**:
+- Card IDs in seed are SV-era standard format. Hydration is best-effort (stubs if card not found in SQLite).
+- Migration runs automatically on next `apps/rest-api` startup — no manual psql needed.
+
+---
 
 ### 2026-03-18 — SPEC_01: Landing Page + Navigation Gating
 

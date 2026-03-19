@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Layers, Search, LogIn } from 'lucide-react';
+import { Layers, Search, LogIn, TrendingUp } from 'lucide-react';
 import { ROUTES } from '@/web/routes';
 import { useCollectionQuery } from '@/web/hooks/useCollectionQuery';
 import { useDecks } from '@/web/contexts/Deck';
@@ -74,6 +74,13 @@ export function Navbar() {
             {deckCount > 0 && (
               <span className="navbar__badge">{deckCount}</span>
             )}
+          </a>
+          <a
+            href={ROUTES.META_DECKS}
+            className={`navbar__link ${isActive(ROUTES.META_DECKS) ? 'navbar__link--active' : ''}`}
+          >
+            <TrendingUp size={18} />
+            <span>Meta</span>
           </a>
           <NavLinkGated label="Collection" tooltip="Coming Soon" />
           <NavLinkGated label="Dashboard" tooltip="Coming Soon" />

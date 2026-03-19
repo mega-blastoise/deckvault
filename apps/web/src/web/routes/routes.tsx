@@ -5,6 +5,7 @@ import { Outlet } from 'react-router';
 import { AppLayout } from '../components/AppLayout';
 import { ProtectedRoute } from '../components/ProtectedRoute';
 import { LandingPage } from '../pages/LandingPage';
+import { MetaDeckBrowserPage } from '../pages/MetaDeckBrowserPage';
 import BrowsePage from '../pages/BrowsePage';
 import CollectionPage from '../pages/CollectionPage';
 import DashboardPage from '../pages/DashboardPage';
@@ -37,6 +38,10 @@ export const REACT_ROUTER_ROUTES: RouteObject[] = [
       {
         path: '/browse',
         Component: BrowsePage
+      },
+      {
+        path: '/meta-decks',
+        element: <MetaDeckBrowserPage />
       },
       {
         path: '/dashboard',
