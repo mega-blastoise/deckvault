@@ -17,7 +17,7 @@
 | SPEC_02 | From Meta → My Deck Pipeline | ✅ Complete | 2026-03-18 |
 | SPEC_03 | Deck Analytics Engine | ✅ Complete | 2026-03-18 |
 | SPEC_04 | Deck Evolution Tracking | ✅ Complete | 2026-03-18 |
-| SPEC_05 | UX / Product-Level Differentiators | ⬜ Not started | — |
+| SPEC_05 | UX / Product-Level Differentiators | ✅ Complete | 2026-03-18 |
 | SPEC_06 | Local Meta Intelligence | ⬜ Not started | — |
 
 **Status legend**: ⬜ Not started · 🔄 In progress · ✅ Complete · ⚠️ Deferred item(s)
@@ -25,6 +25,35 @@
 ---
 
 ## Session Log
+
+### 2026-03-18 — SPEC_05: UX / Product-Level Differentiators
+
+**Completed**:
+
+1. **`deck-legality.ts`** (`apps/web/src/web/lib/`) — Pure `getCardLegalityIssue()` function. Checks regulation mark vs format (Standard: G/H/I, Expanded: D–I) and 4-copy limit for non-basic-energy cards. Returns `CardLegalityIssue | null`.
+2. **`DeckBuilderList`** component (`apps/web/src/web/components/DeckBuilderList/`) — Extracted deck list view with HTML5 drag-and-drop reordering (`dragIndexRef`, `onReorder` callback), legality badges (⚠ with tooltip), `+`/`−` controls. Drag-over row gets a `--focus-ring` border-top.
+3. **`DeckBuilderVisual`** component (`apps/web/src/web/components/DeckBuilderVisual/`) — Card grid grouped into Pokémon/Trainer/Energy swimlanes, sorted by name. Each card renders at 72px width with `×N` quantity badge and hover overlay `+`/`−` controls. Legality badge overlaid top-right.
+4. **`DeckBuilderPage.tsx`** — Added `BuilderView` toggle (List/Visual) in deck panel header. Added `legalityIssues` + `legalityMap` derived state (recomputes on every `deckCards`/`format` change). Added `versionLabel` state + version label input bar (editing mode only). Added `isDirty` indicator ("Unsaved changes ●") in toolbar. Added `handleReorder` for drag-and-drop. Updated `handleSave` (edit path) to call `DecksService.updateDeck` directly with `versionLabel` + manually invalidate TanStack Query caches.
+5. **Backend `decks.ts`** — `CreateDeckBody` gains `versionLabel?`; passed to `createVersionSnapshot` after successful PUT.
+6. **Backend `postgres.ts`** — `createVersionSnapshot` accepts optional `label` param; INSERT now includes the `label` column.
+7. **`pages.css`** — Added styles for view toggle buttons, dirty indicator, version label bar.
+
+**Acceptance criteria**:
+- [x] Deck builder shows "List" / "Visual" toggle in toolbar
+- [x] Visual view groups cards into Pokémon / Trainer / Energy swimlanes
+- [x] Visual view card images render at `72px` width with quantity badge
+- [x] Clicking `+` / `−` on a visual card updates the deck count immediately
+- [x] Adding a rotated (non-Standard-legal) card shows `⚠` badge on that card in both views
+- [x] Adding a 5th copy of a non-energy card shows `over-limit` `⚠` badge
+- [x] Legality badge tooltip states the specific reason
+- [x] List view rows are draggable; dropping reorders in local state
+- [x] Drag indicator border appears above the drop target row
+- [x] Deck builder toolbar shows "Unsaved changes ●" indicator after any edit
+- [x] Optional version label input visible in toolbar before saving (edit mode)
+- [x] Saving clears the dirty indicator
+- [x] No TypeScript errors introduced (`apps/web` clean; `apps/rest-api` pre-existing 3 test errors only)
+
+---
 
 ### 2026-03-18 — SPEC_04: Deck Evolution Tracking
 

@@ -1,15 +1,24 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router';
+import { useQueryClient } from '@tanstack/react-query';
 import { useDecks } from '../contexts/Deck';
 import { useSearchCards, toCardFormat } from '../hooks/useSearchCards';
 import { useDeckValidation } from '../hooks/useDeckValidation';
 import { CardGrid } from '../components/CardGrid';
 import { SearchBar } from '../components/SearchBar';
 import { DeckValidation } from '../components/DeckValidation';
+import { DeckBuilderList } from '../components/DeckBuilderList';
+import { DeckBuilderVisual } from '../components/DeckBuilderVisual';
+import { getCardLegalityIssue } from '../lib/deck-legality';
+import { DecksService } from '../services/DecksService';
+import { DECKS_QUERY_KEY } from '../hooks/useDecksQuery';
+import { deckQueryKey } from '../hooks/useDeckQuery';
 import { ROUTES } from '../routes';
 import type { DeckFormat, DeckCard } from '../../types/deck';
 import type { Pokemon } from '@pokemon/clients';
 import type { SearchFilters } from '../components/SearchBar/types';
+
+type BuilderView = 'list' | 'visual';
 
 interface CloneMetaDeck {
   name: string;
@@ -19,25 +28,20 @@ interface CloneMetaDeck {
 
 function DeckBuilderPage() {
   const { deckId } = useParams<{ deckId?: string }>();
-
   const navigate = useNavigate();
   const location = useLocation();
+  const queryClient = useQueryClient();
   const { cloneFromMetaDeck } = (location.state ?? {}) as { cloneFromMetaDeck?: CloneMetaDeck };
 
-  const { getDeck, createDeck, updateDeck } = useDecks();
+  const { getDeck, createDeck } = useDecks();
 
   const isEditing = Boolean(deckId);
-
-  // Get existing deck if editing
   const existingDeck = deckId ? getDeck(deckId) : undefined;
 
-  // Deck state — seeded from clone if provided
   const [deckName, setDeckName] = useState(
     cloneFromMetaDeck ? `${cloneFromMetaDeck.name} (Copy)` : existingDeck?.name || ''
   );
-  const [deckDescription, setDeckDescription] = useState(
-    existingDeck?.description || ''
-  );
+  const [deckDescription, setDeckDescription] = useState(existingDeck?.description || '');
   const [deckFormat, setDeckFormat] = useState<DeckFormat>(
     (cloneFromMetaDeck?.format as DeckFormat) ?? existingDeck?.format ?? 'standard'
   );
@@ -47,12 +51,13 @@ function DeckBuilderPage() {
       : existingDeck?.cards || []
   );
   const [isDirty, setIsDirty] = useState(Boolean(cloneFromMetaDeck));
+  const [versionLabel, setVersionLabel] = useState('');
+  const [view, setView] = useState<BuilderView>('list');
 
-  // Card browser state
   const [searchQuery, setSearchQuery] = useState('');
   const [filterByLegality, setFilterByLegality] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
 
-  // Search cards with debouncing - returns top 100 sorted by most recent release
   const {
     cards: searchResults,
     isLoading: loading,
@@ -60,30 +65,18 @@ function DeckBuilderPage() {
     isError
   } = useSearchCards(searchQuery, { limit: 100 });
 
-  // Convert search results to Pokemon.Card format and filter by legality
   const cards: Pokemon.Card[] = useMemo(() => {
     if (error || isError) return [];
     if (!searchResults) return [];
 
     let results = searchResults.map((card) => {
       const formatted = toCardFormat(card);
-      // Use unknown cast since we have a partial card structure that's compatible
-      // with what the UI components actually use
-      return {
-        ...formatted,
-        images: formatted.images
-      } as unknown as Pokemon.Card;
+      return { ...formatted, images: formatted.images } as unknown as Pokemon.Card;
     });
 
-    // Filter by legality if enabled and format is standard/expanded
-    if (
-      filterByLegality &&
-      (deckFormat === 'standard' || deckFormat === 'expanded')
-    ) {
+    if (filterByLegality && (deckFormat === 'standard' || deckFormat === 'expanded')) {
       results = results.filter((card) => {
-        const legality = (card.legalities as Record<DeckFormat, string>)?.[
-          deckFormat
-        ];
+        const legality = (card.legalities as Record<DeckFormat, string>)?.[deckFormat];
         return legality === 'Legal';
       });
     }
@@ -91,19 +84,14 @@ function DeckBuilderPage() {
     return results;
   }, [searchResults, filterByLegality, deckFormat, error, isError]);
 
-  // Cards used for deck validation (include all searched cards)
   const allCards = useMemo(() => {
     if (!searchResults) return [];
     return searchResults.map((card) => {
       const formatted = toCardFormat(card);
-      return {
-        ...formatted,
-        images: formatted.images
-      } as unknown as Pokemon.Card;
+      return { ...formatted, images: formatted.images } as unknown as Pokemon.Card;
     });
   }, [searchResults]);
 
-  // Initialize from existing deck
   useEffect(() => {
     if (existingDeck) {
       setDeckName(existingDeck.name);
@@ -113,39 +101,32 @@ function DeckBuilderPage() {
     }
   }, [existingDeck]);
 
-  // Validate deck - use allCards for validation (unfiltered by legality display)
   const validation = useDeckValidation(deckCards, allCards, deckFormat);
-
   const { totalCards, isValid } = validation;
 
-  // Get card details for deck display - search through all available cards
-  const deckCardsWithDetails = useMemo(() => {
-    return deckCards
-      .map((deckCard) => {
-        const cardDetail = allCards.find((c) => c.id === deckCard.card.id);
-        return cardDetail
-          ? { ...cardDetail, quantity: deckCard.quantity }
-          : null;
-      })
-      .filter(Boolean) as Array<{ quantity: number } & Pokemon.Card>;
-  }, [deckCards, allCards]);
+  const legalityIssues = useMemo(
+    () =>
+      deckCards
+        .map((dc) => getCardLegalityIssue(dc.card, deckFormat, deckCards))
+        .filter((issue): issue is NonNullable<typeof issue> => issue !== null),
+    [deckCards, deckFormat]
+  );
 
-  // Handle search - debouncing is handled by useSearchCards
+  const legalityMap = useMemo(
+    () => new Map(legalityIssues.map((i) => [i.cardId, i])),
+    [legalityIssues]
+  );
+
   const handleSearch = useCallback((filters: SearchFilters) => {
     setSearchQuery(filters.query);
   }, []);
 
-  // Add card to deck
   const handleAddCard = useCallback((card: Pokemon.Card) => {
     setDeckCards((prev) => {
       const existing = prev.find((c) => c.card.id === card.id);
       if (existing) {
-        // Check 4-of rule (basic energy exempt)
-        const isBasicEnergy =
-          card.supertype === 'Energy' && card.subtypes?.includes('Basic');
-        if (!isBasicEnergy && existing.quantity >= 4) {
-          return prev;
-        }
+        const isBasicEnergy = card.supertype === 'Energy' && card.subtypes?.includes('Basic');
+        if (!isBasicEnergy && existing.quantity >= 4) return prev;
         return prev.map((c) =>
           c.card.id === card.id ? { ...c, quantity: c.quantity + 1 } : c
         );
@@ -155,26 +136,39 @@ function DeckBuilderPage() {
     setIsDirty(true);
   }, []);
 
-  // Remove card from deck
-  const handleRemoveCard = useCallback((cardId: string) => {
+  const handleAddOne = useCallback((cardId: string) => {
+    setDeckCards((prev) => {
+      const dc = prev.find((c) => c.card.id === cardId);
+      if (!dc) return prev;
+      const isBasicEnergy = dc.card.supertype === 'Energy' && !dc.card.subtypes?.includes('Special');
+      if (!isBasicEnergy && dc.quantity >= 4) return prev;
+      return prev.map((c) => c.card.id === cardId ? { ...c, quantity: c.quantity + 1 } : c);
+    });
+    setIsDirty(true);
+  }, []);
+
+  const handleRemoveOne = useCallback((cardId: string) => {
     setDeckCards((prev) => {
       const existing = prev.find((c) => c.card.id === cardId);
       if (existing && existing.quantity > 1) {
-        return prev.map((c) =>
-          c.card.id === cardId ? { ...c, quantity: c.quantity - 1 } : c
-        );
+        return prev.map((c) => c.card.id === cardId ? { ...c, quantity: c.quantity - 1 } : c);
       }
       return prev.filter((c) => c.card.id !== cardId);
     });
     setIsDirty(true);
   }, []);
 
-  // Handle cancel
+  const handleReorder = useCallback((fromIndex: number, toIndex: number) => {
+    setDeckCards((prev) => {
+      const next = [...prev];
+      const [moved] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, moved);
+      return next;
+    });
+  }, []);
+
   const handleCancel = useCallback(() => {
-    if (
-      isDirty &&
-      !confirm('You have unsaved changes. Are you sure you want to leave?')
-    ) {
+    if (isDirty && !confirm('You have unsaved changes. Are you sure you want to leave?')) {
       return;
     }
     if (isEditing && deckId) {
@@ -184,40 +178,42 @@ function DeckBuilderPage() {
     }
   }, [isDirty, isEditing, deckId, navigate]);
 
-  // Handle save
   const handleSave = useCallback(async () => {
     if (!deckName.trim()) {
       alert('Please enter a deck name');
       return;
     }
-
-    if (isEditing && deckId) {
-      await updateDeck(deckId, {
-        name: deckName,
-        description: deckDescription || undefined,
-        format: deckFormat,
-        cards: deckCards
-      });
-      navigate(ROUTES.DECK_DETAIL(deckId));
-    } else {
-      const newDeck = await createDeck({
-        name: deckName,
-        description: deckDescription || undefined,
-        format: deckFormat,
-        cards: deckCards
-      });
-      navigate(ROUTES.DECK_DETAIL(newDeck.id));
+    setIsSaving(true);
+    try {
+      if (isEditing && deckId) {
+        const svc = new DecksService();
+        await svc.updateDeck(deckId, {
+          name: deckName,
+          description: deckDescription || undefined,
+          format: deckFormat,
+          cards: deckCards,
+          versionLabel: versionLabel || undefined
+        });
+        queryClient.invalidateQueries({ queryKey: DECKS_QUERY_KEY });
+        queryClient.invalidateQueries({ queryKey: deckQueryKey(deckId) });
+        setIsDirty(false);
+        setVersionLabel('');
+        navigate(ROUTES.DECK_DETAIL(deckId));
+      } else {
+        const newDeck = await createDeck({
+          name: deckName,
+          description: deckDescription || undefined,
+          format: deckFormat,
+          cards: deckCards
+        });
+        navigate(ROUTES.DECK_DETAIL(newDeck.id));
+      }
+    } finally {
+      setIsSaving(false);
     }
   }, [
-    deckName,
-    deckDescription,
-    deckFormat,
-    deckCards,
-    isEditing,
-    deckId,
-    createDeck,
-    updateDeck,
-    navigate
+    deckName, deckDescription, deckFormat, deckCards, versionLabel,
+    isEditing, deckId, createDeck, navigate, queryClient
   ]);
 
   return (
@@ -229,18 +225,12 @@ function DeckBuilderPage() {
             className="deck-builder-page__name-input"
             placeholder="Deck Name"
             value={deckName}
-            onChange={(e) => {
-              setDeckName(e.target.value);
-              setIsDirty(true);
-            }}
+            onChange={(e) => { setDeckName(e.target.value); setIsDirty(true); }}
           />
           <select
             className="deck-builder-page__format-select"
             value={deckFormat}
-            onChange={(e) => {
-              setDeckFormat(e.target.value as DeckFormat);
-              setIsDirty(true);
-            }}
+            onChange={(e) => { setDeckFormat(e.target.value as DeckFormat); setIsDirty(true); }}
           >
             <option value="standard">Standard</option>
             <option value="expanded">Expanded</option>
@@ -248,29 +238,43 @@ function DeckBuilderPage() {
           </select>
         </div>
         <div className="deck-builder-page__header-center">
-          <span
-            className={`deck-builder-page__card-count ${isValid ? 'deck-builder-page__card-count--valid' : ''}`}
-          >
+          <span className={`deck-builder-page__card-count${isValid ? ' deck-builder-page__card-count--valid' : ''}`}>
             {totalCards}/60
           </span>
         </div>
         <div className="page__header-actions">
-          <button
-            type="button"
-            className="button button--secondary"
-            onClick={handleCancel}
-          >
+          {isDirty && (
+            <span className="deck-builder-page__dirty-indicator">Unsaved changes ●</span>
+          )}
+          <button type="button" className="button button--secondary" onClick={handleCancel}>
             Cancel
           </button>
           <button
             type="button"
             className="button button--primary"
             onClick={handleSave}
+            disabled={isSaving}
           >
-            Save Deck
+            {isSaving ? 'Saving…' : 'Save Deck'}
           </button>
         </div>
       </div>
+
+      {isEditing && (
+        <div className="deck-builder-page__version-bar">
+          <label className="deck-builder-page__version-label-label" htmlFor="deck-version-label">
+            Version label
+          </label>
+          <input
+            id="deck-version-label"
+            type="text"
+            className="deck-builder-page__version-label-input"
+            placeholder='e.g. "Pre-Regional"'
+            value={versionLabel}
+            onChange={(e) => setVersionLabel(e.target.value)}
+          />
+        </div>
+      )}
 
       <div className="deck-builder-page__builder">
         {/* Card Browser Panel */}
@@ -314,89 +318,49 @@ function DeckBuilderPage() {
         <div className="deck-builder-page__panel deck-builder-page__deck">
           <div className="deck-builder-page__panel-header">
             <h2>Deck Contents</h2>
+            <div className="deck-builder-page__view-toggle">
+              <button
+                type="button"
+                className={`deck-builder-page__view-btn${view === 'list' ? ' deck-builder-page__view-btn--active' : ''}`}
+                onClick={() => setView('list')}
+                title="List view"
+              >
+                ≡ List
+              </button>
+              <button
+                type="button"
+                className={`deck-builder-page__view-btn${view === 'visual' ? ' deck-builder-page__view-btn--active' : ''}`}
+                onClick={() => setView('visual')}
+                title="Visual view"
+              >
+                ⊞ Visual
+              </button>
+            </div>
             <DeckValidation validation={validation} compact />
           </div>
           <div className="deck-builder-page__panel-content deck-builder-page__deck-list">
-            {deckCards.length === 0 ? (
-              <div className="deck-builder-page__empty">
-                <p>Click cards to add them to your deck</p>
-              </div>
+            {view === 'list' ? (
+              <DeckBuilderList
+                cards={deckCards}
+                legalityMap={legalityMap}
+                onAddOne={handleAddOne}
+                onRemoveOne={handleRemoveOne}
+                onReorder={handleReorder}
+              />
             ) : (
-              deckCardsWithDetails.map((card) => (
-                <div key={card.id} className="deck-builder-page__deck-card">
-                  <img
-                    src={card.images?.small}
-                    alt={card.name}
-                    className="deck-builder-page__deck-card-image"
-                  />
-                  <div className="deck-builder-page__deck-card-info">
-                    <span className="deck-builder-page__deck-card-name">
-                      {card.name}
-                    </span>
-                    <div className="deck-builder-page__deck-card-controls">
-                      <button
-                        type="button"
-                        className="deck-builder-page__qty-btn"
-                        onClick={() => handleRemoveCard(card.id)}
-                      >
-                        -
-                      </button>
-                      <span className="deck-builder-page__qty">
-                        {card.quantity}
-                      </span>
-                      <button
-                        type="button"
-                        className="deck-builder-page__qty-btn"
-                        onClick={() => handleAddCard(card)}
-                      >
-                        +
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))
+              <DeckBuilderVisual
+                cards={deckCards}
+                legalityMap={legalityMap}
+                onAddOne={handleAddOne}
+                onRemoveOne={handleRemoveOne}
+              />
             )}
-            {/* Show cards without details */}
-            {deckCards
-              .filter(
-                (dc) => !deckCardsWithDetails.find((d) => d.id === dc.card.id)
-              )
-              .map((dc) => (
-                <div
-                  key={dc.card.id}
-                  className="deck-builder-page__deck-card deck-builder-page__deck-card--no-image"
-                >
-                  <div className="deck-builder-page__deck-card-info">
-                    <span className="deck-builder-page__deck-card-name">
-                      {`${dc.card.name} (ID: ${dc.card.id}) (Set: ${dc.card.set.name})}`}
-                    </span>
-                    <div className="deck-builder-page__deck-card-controls">
-                      <button
-                        type="button"
-                        className="deck-builder-page__qty-btn"
-                        onClick={() => handleRemoveCard(dc.card.id)}
-                      >
-                        -
-                      </button>
-                      <span className="deck-builder-page__qty">
-                        {dc.quantity}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              ))}
           </div>
-          {deckCards.length > 0 &&
-            (validation.errors.length > 0 ||
-              validation.warnings.length > 0) && (
-              <div className="deck-builder-page__panel-footer deck-builder-page__validation">
-                <DeckValidation
-                  validation={validation}
-                  showBreakdown={false}
-                  showDetails
-                />
-              </div>
-            )}
+          {deckCards.length > 0 && (validation.errors.length > 0 || validation.warnings.length > 0) && (
+            <div className="deck-builder-page__panel-footer deck-builder-page__validation">
+              <DeckValidation validation={validation} showBreakdown={false} showDetails />
+            </div>
+          )}
         </div>
       </div>
     </div>

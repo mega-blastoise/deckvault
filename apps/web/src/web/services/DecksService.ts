@@ -2,7 +2,7 @@ import type { Deck } from '../../types/deck';
 import { APIModel, getBaseAPIURL } from './APIModel';
 
 type CreateDeckInput = Omit<Deck, 'id' | 'createdAt' | 'updatedAt'>;
-type UpdateDeckInput = Partial<Omit<Deck, 'id' | 'createdAt'>>;
+type UpdateDeckInput = Partial<Omit<Deck, 'id' | 'createdAt'>> & { versionLabel?: string };
 
 export class DecksService extends APIModel {
   constructor() {

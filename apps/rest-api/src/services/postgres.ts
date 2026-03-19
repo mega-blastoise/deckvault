@@ -386,18 +386,18 @@ export class PostgresService implements Service {
 
   async createVersionSnapshot(
     deckId: string,
-    cards: { cardId: string; quantity: number }[]
+    cards: { cardId: string; quantity: number }[],
+    label?: string
   ): Promise<void> {
     const maxRows = await this.instance`
       SELECT MAX(version) as max FROM deck_versions WHERE deck_id = ${deckId}
     `;
     const nextVersion = ((maxRows[0] as { max: number | null })?.max ?? 0) + 1;
 
-    // Use unsafe() so that $3::jsonb is emitted literally — tagged template
-    // literals do not reliably handle type casts appended after interpolations.
+    // Use unsafe() so that type casts are emitted literally
     await this.instance.unsafe(
-      `INSERT INTO deck_versions (deck_id, version, cards) VALUES ($1, $2, $3::jsonb)`,
-      [deckId, nextVersion, JSON.stringify(cards)]
+      `INSERT INTO deck_versions (deck_id, version, label, cards) VALUES ($1, $2, $3, $4::jsonb)`,
+      [deckId, nextVersion, label ?? null, JSON.stringify(cards)]
     );
 
     // Rolling window: keep only the 50 most recent versions

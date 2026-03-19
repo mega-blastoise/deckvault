@@ -26,6 +26,7 @@ interface CreateDeckBody {
   format?: unknown;
   cards?: unknown;
   coverCardId?: unknown;
+  versionLabel?: unknown;
 }
 
 function hydrateCards(db: DatabaseService, deckCards: DeckCardRow[]) {
@@ -245,7 +246,8 @@ export const updateDeck: Handler<Services> = async (ctx) => {
 
   // Fire-and-forget version snapshot — does not block response
   const snapshotCards = cards.map((c) => ({ cardId: c.card_id, quantity: c.quantity }));
-  pg.createVersionSnapshot(ctx.params.id, snapshotCards).catch(console.error);
+  const snapshotLabel = typeof body.versionLabel === 'string' ? body.versionLabel : undefined;
+  pg.createVersionSnapshot(ctx.params.id, snapshotCards, snapshotLabel).catch(console.error);
 
   return ctx.json({ data: formatDeck(updated!, hydrateCards(db, cards)) });
 };

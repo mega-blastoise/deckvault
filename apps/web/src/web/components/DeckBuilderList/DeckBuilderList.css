@@ -1,0 +1,112 @@
+.deck-builder-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.deck-builder-list__empty {
+  padding: 2rem;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
+.deck-builder-list__item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.375rem 0.5rem;
+  border-radius: 6px;
+  border-top: 2px solid transparent;
+  transition: background 0.15s, border-color 0.15s;
+  cursor: grab;
+}
+
+.deck-builder-list__item:hover {
+  background: var(--surface-hover);
+}
+
+.deck-builder-list__item[draggable="true"]:active {
+  opacity: 0.5;
+  cursor: grabbing;
+}
+
+.deck-builder-list__item--drag-over {
+  border-top: 2px solid var(--focus-ring);
+}
+
+.deck-builder-list__card-image {
+  width: 32px;
+  height: 44px;
+  object-fit: cover;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.deck-builder-list__card-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.deck-builder-list__card-name {
+  font-size: 0.8125rem;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.deck-builder-list__legality-badge {
+  font-size: 0.75rem;
+  flex-shrink: 0;
+  cursor: help;
+}
+
+.deck-builder-list__legality-badge--rotated,
+.deck-builder-list__legality-badge--banned,
+.deck-builder-list__legality-badge--format-illegal {
+  color: #f97316;
+}
+
+.deck-builder-list__legality-badge--over-limit {
+  color: #ef4444;
+}
+
+.deck-builder-list__controls {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
+.deck-builder-list__qty-btn {
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  border: 1px solid var(--border-color);
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: background 0.15s;
+}
+
+.deck-builder-list__qty-btn:hover {
+  background: var(--surface-hover);
+}
+
+.deck-builder-list__qty {
+  min-width: 1.25rem;
+  text-align: center;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
