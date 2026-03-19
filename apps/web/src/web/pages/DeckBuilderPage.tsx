@@ -302,7 +302,7 @@ function DeckBuilderPage() {
               cards={cards}
               onCardSelect={handleAddCard}
               loading={loading}
-              columns={3}
+              columns={2}
               emptyMessage={
                 searchQuery.trim()
                   ? filterByLegality

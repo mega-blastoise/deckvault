@@ -74,6 +74,30 @@ export interface MetaDeckCardRow {
   quantity: number;
 }
 
+export interface LgsReportRow {
+  id: string;
+  user_id: string;
+  archetype: string;
+  archetype_name: string;
+  format: string;
+  lgs_name: string | null;
+  region: string | null;
+  result: string | null;
+  reported_at: Date;
+}
+
+export interface ArchetypeFrequency {
+  archetype: string;
+  archetypeName: string;
+  format: string;
+  reportCount: number;
+  winCount: number;
+  lossCount: number;
+  tieCount: number;
+  winRate: number | null;
+  lastSeen: string;
+}
+
 export class PostgresService implements Service {
   private db: BunSQL | null = null;
 
@@ -453,5 +477,95 @@ export class PostgresService implements Service {
       UPDATE deck_versions SET label = ${label} WHERE id = ${versionId} RETURNING *
     `;
     return (rows[0] as DeckVersionRow) ?? null;
+  }
+
+  // ─── Local Meta ──────────────────────────────────────────
+
+  async checkLgsRateLimit(userId: string): Promise<boolean> {
+    const rows = await this.instance`
+      SELECT COUNT(*) as count FROM lgs_reports
+      WHERE user_id = ${userId}
+        AND reported_at >= DATE_TRUNC('day', NOW())
+    `;
+    const count = Number((rows[0] as { count: number } | undefined)?.count ?? 0);
+    return count < 10;
+  }
+
+  async createLgsReport(input: {
+    userId: string;
+    archetype: string;
+    archetypeName: string;
+    format: string;
+    lgsName?: string;
+    region?: string;
+    result?: string;
+  }): Promise<LgsReportRow> {
+    const rows = await this.instance`
+      INSERT INTO lgs_reports (user_id, archetype, archetype_name, format, lgs_name, region, result)
+      VALUES (
+        ${input.userId},
+        ${input.archetype},
+        ${input.archetypeName},
+        ${input.format},
+        ${input.lgsName ?? null},
+        ${input.region ?? null},
+        ${input.result ?? null}
+      )
+      RETURNING *
+    `;
+    return rows[0] as LgsReportRow;
+  }
+
+  async getLgsFrequency(opts: {
+    format?: string;
+    days?: number;
+    limit?: number;
+  }): Promise<ArchetypeFrequency[]> {
+    const days = opts.days ?? 30;
+    const limit = opts.limit ?? 20;
+
+    let rows: unknown[];
+    if (opts.format) {
+      rows = await this.instance`
+        SELECT archetype, archetype_name, format,
+               report_count, win_count, loss_count, tie_count, last_seen
+        FROM local_meta_frequency
+        WHERE format = ${opts.format}
+          AND last_seen >= NOW() - (${days} * INTERVAL '1 day')
+        LIMIT ${limit}
+      `;
+    } else {
+      rows = await this.instance`
+        SELECT archetype, archetype_name, format,
+               report_count, win_count, loss_count, tie_count, last_seen
+        FROM local_meta_frequency
+        WHERE last_seen >= NOW() - (${days} * INTERVAL '1 day')
+        LIMIT ${limit}
+      `;
+    }
+
+    return (rows as Array<{
+      archetype: string;
+      archetype_name: string;
+      format: string;
+      report_count: number;
+      win_count: number;
+      loss_count: number;
+      tie_count: number;
+      last_seen: string;
+    }>).map((r) => {
+      const total = Number(r.win_count) + Number(r.loss_count) + Number(r.tie_count);
+      return {
+        archetype: r.archetype,
+        archetypeName: r.archetype_name,
+        format: r.format,
+        reportCount: Number(r.report_count),
+        winCount: Number(r.win_count),
+        lossCount: Number(r.loss_count),
+        tieCount: Number(r.tie_count),
+        winRate: total > 0 ? Math.round((Number(r.win_count) / total) * 100) / 100 : null,
+        lastSeen: String(r.last_seen)
+      };
+    });
   }
 }

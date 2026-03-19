@@ -20,7 +20,7 @@ function AppContent(props: AppProps) {
 export function App(props: AppProps) {
   useEffect(() => {
     console.log(
-      'Welcome to the Pokemon TCG Collection & Deck Manager!-React mounted on client'
+      'DeckVault — React mounted on client'
     );
   }, []);
   return (
@@ -45,7 +45,7 @@ export function withDocument<P extends {} = React.JSX.IntrinsicAttributes>(
 ) {
   return function AppWithDocument(props: P) {
     return (
-      <Document description="Pokemon TCG Deck Manager" title="Pokemon TCG">
+      <Document description="DeckVault — The competitive Pokemon TCG deck builder" title="DeckVault">
         <App {...props} />
       </Document>
     );

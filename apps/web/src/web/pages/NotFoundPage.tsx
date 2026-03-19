@@ -16,8 +16,8 @@ function NotFoundPage() {
         <h2>Page Not Found</h2>
         <p>The page you're looking for doesn't exist or has been moved.</p>
         <div className="not-found-page__actions">
-          <Link to={ROUTES.DASHBOARD} className="button button--primary">
-            Go to Dashboard
+          <Link to={ROUTES.HOME} className="button button--primary">
+            Go Home
           </Link>
           <button
             type="button"

@@ -6,6 +6,7 @@ import { AppLayout } from '../components/AppLayout';
 import { ProtectedRoute } from '../components/ProtectedRoute';
 import { LandingPage } from '../pages/LandingPage';
 import { MetaDeckBrowserPage } from '../pages/MetaDeckBrowserPage';
+import { LocalMetaPage } from '../pages/LocalMetaPage';
 import BrowsePage from '../pages/BrowsePage';
 import CollectionPage from '../pages/CollectionPage';
 import DashboardPage from '../pages/DashboardPage';
@@ -16,6 +17,7 @@ import DeckDetailPage from '../pages/DeckDetailPage';
 import { DeckAnalyticsPage } from '../pages/DeckAnalyticsPage';
 import CardPage from '../pages/CardPage';
 import SignInPage from '../pages/SignInPage';
+import NotFoundPage from '../pages/NotFoundPage';
 
 export const REACT_ROUTER_ROUTES: RouteObject[] = [
   // Standalone routes — no Navbar, no AppLayout
@@ -43,6 +45,10 @@ export const REACT_ROUTER_ROUTES: RouteObject[] = [
       {
         path: '/meta-decks',
         element: <MetaDeckBrowserPage />
+      },
+      {
+        path: '/local-meta',
+        element: <LocalMetaPage />
       },
       {
         path: '/dashboard',
@@ -107,6 +113,10 @@ export const REACT_ROUTER_ROUTES: RouteObject[] = [
             <CollectionPage />
           </ProtectedRoute>
         )
+      },
+      {
+        path: '*',
+        Component: NotFoundPage
       }
     ]
   }

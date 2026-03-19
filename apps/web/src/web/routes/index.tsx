@@ -20,5 +20,6 @@ export const ROUTES = {
   DECK_ANALYTICS: (deckId: string) => `/decks/${deckId}/analytics`,
   CARD: (cardId: string) => `/cards/${cardId}`,
   COLLECTION: '/collection',
-  COLLECTION_CARD: (cardId: string) => `/collection/${cardId}`
+  COLLECTION_CARD: (cardId: string) => `/collection/${cardId}`,
+  LOCAL_META: '/local-meta'
 } as const;

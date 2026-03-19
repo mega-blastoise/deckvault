@@ -57,7 +57,9 @@ export const initiateGoogleAuth: Handler<Services> = async (ctx) => {
   const config = ctx.services.config;
   const { verifier, challenge } = generatePKCE();
 
-  const returnTo = ctx.query.get('returnTo') ?? '/';
+  const rawReturnTo = ctx.query.get('returnTo') ?? '/';
+  // Only allow same-origin paths — reject anything with a scheme or protocol-relative URLs
+  const returnTo = rawReturnTo.startsWith('/') && !rawReturnTo.startsWith('//') ? rawReturnTo : '/';
   const state = Buffer.from(JSON.stringify({ returnTo })).toString('base64url');
 
   const authUrl = buildGoogleAuthURL(config, state, challenge);
@@ -93,12 +95,15 @@ export const handleGoogleCallback: Handler<Services> = async (ctx) => {
     return ctx.badRequest('Missing authorization code');
   }
 
-  // Parse returnTo from state
+  // Parse returnTo from state — enforce same-origin path regardless of state contents
   let returnTo = '/';
   if (stateParam) {
     try {
       const parsed = JSON.parse(Buffer.from(stateParam, 'base64url').toString());
-      returnTo = parsed.returnTo ?? '/';
+      const candidate = parsed.returnTo ?? '/';
+      if (typeof candidate === 'string' && candidate.startsWith('/') && !candidate.startsWith('//')) {
+        returnTo = candidate;
+      }
     } catch {
       // ignore
     }
@@ -172,10 +177,9 @@ export const handleGoogleCallback: Handler<Services> = async (ctx) => {
 
   // Use absolute URL in Location — relative paths cause Bun's fetch (redirect: 'manual')
   // to return an opaque response (status 0) that the BFF proxy cannot forward.
+  // returnTo is guaranteed to be a same-origin path at this point.
   const appOrigin = new URL(config.google.redirectUri).origin;
-  const absoluteReturnTo = returnTo.startsWith('http')
-    ? returnTo
-    : `${appOrigin}${returnTo}`;
+  const absoluteReturnTo = `${appOrigin}${returnTo}`;
 
   return new Response(null, {
     status: 302,

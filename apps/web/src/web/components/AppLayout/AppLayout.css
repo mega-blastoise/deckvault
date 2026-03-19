@@ -31,8 +31,9 @@
   background-size: 256px 256px;
 }
 
-/* Ensure main content sits above the noise layer */
-[data-theme="nebula"] .app-layout__main {
+/* Ensure main content and footer sit above the noise layer */
+[data-theme="nebula"] .app-layout__main,
+[data-theme="nebula"] .app-footer {
   position: relative;
   z-index: 1;
 }

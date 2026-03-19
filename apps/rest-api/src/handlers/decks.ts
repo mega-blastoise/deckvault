@@ -181,6 +181,12 @@ export const createDeck: Handler<Services> = async (ctx) => {
   if (!body.name || typeof body.name !== 'string') {
     return ctx.badRequest('name is required and must be a string');
   }
+  if (body.name.length > 120) {
+    return ctx.badRequest('name must be 120 characters or fewer');
+  }
+  if (typeof body.description === 'string' && body.description.length > 500) {
+    return ctx.badRequest('description must be 500 characters or fewer');
+  }
 
   const row = await pg.createDeck({
     userId: user.id,

@@ -67,10 +67,24 @@
 .deck-builder-visual__legality-badge--rotated,
 .deck-builder-visual__legality-badge--banned,
 .deck-builder-visual__legality-badge--format-illegal {
-  color: #fb923c;
+  color: #ea580c;
 }
 
 .deck-builder-visual__legality-badge--over-limit {
+  color: #dc2626;
+}
+
+[data-theme="nebula"] .deck-builder-visual__legality-badge--rotated,
+[data-theme="catppuccin"] .deck-builder-visual__legality-badge--rotated,
+[data-theme="nebula"] .deck-builder-visual__legality-badge--banned,
+[data-theme="catppuccin"] .deck-builder-visual__legality-badge--banned,
+[data-theme="nebula"] .deck-builder-visual__legality-badge--format-illegal,
+[data-theme="catppuccin"] .deck-builder-visual__legality-badge--format-illegal {
+  color: #fb923c;
+}
+
+[data-theme="nebula"] .deck-builder-visual__legality-badge--over-limit,
+[data-theme="catppuccin"] .deck-builder-visual__legality-badge--over-limit {
   color: #f87171;
 }
 

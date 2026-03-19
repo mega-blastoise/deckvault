@@ -3,6 +3,7 @@ import {
   createContainer,
   createRouter,
   cors,
+  rateLimit,
   securityHeaders,
   type Middleware
 } from '@pokemon/framework';
@@ -45,6 +46,7 @@ import {
   removeCollectionCard
 } from './handlers/collection';
 import { listMetaDecks, getMetaDeck } from './handlers/meta-decks';
+import { createReport, getFrequency } from './handlers/local-meta';
 import {
   listVersions,
   getVersion,
@@ -142,6 +144,14 @@ const metaDecksList = createRouter<Services>('/api/v1/meta-decks')
 const metaDecksDetail = createRouter<Services>('/api/v1/meta-decks')
   .get('/:id', getMetaDeck);
 
+// Local meta — POST requires auth, GET is public
+const localMetaReports = createRouter<Services>('/api/v1/local-meta')
+  .use(authRequired)
+  .post('/reports', createReport);
+
+const localMetaFrequency = createRouter<Services>('/api/v1/local-meta')
+  .get('/frequency', getFrequency);
+
 // ============================================================
 // 3. Application assembly
 // ============================================================
@@ -162,6 +172,7 @@ const log_middleware: Middleware<Services> = (ctx, next) => {
 const app = createApp({ container })
   .use(log_middleware)
   .use(securityHeaders)
+  .use(rateLimit({ windowMs: config.rateLimit.windowMs, max: config.rateLimit.maxRequests }))
   .use(
     cors({
       origins: config.cors.origins,
@@ -180,7 +191,9 @@ const app = createApp({ container })
   .routes(deckVersions)
   .routes(collection)
   .routes(metaDecksList)
-  .routes(metaDecksDetail);
+  .routes(metaDecksDetail)
+  .routes(localMetaReports)
+  .routes(localMetaFrequency);
 
 // ============================================================
 // 4. Start

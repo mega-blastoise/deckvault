@@ -124,6 +124,26 @@
   gap: 0.75rem;
 }
 
+.navbar__report-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  border: 1px solid var(--pico-muted-border-color);
+  border-radius: 8px;
+  color: var(--pico-muted-color);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.navbar__report-btn:hover {
+  background-color: var(--surface-hover);
+  border-color: var(--pico-primary);
+  color: var(--pico-color);
+}
+
 /* User menu */
 .navbar__user-menu {
   position: relative;

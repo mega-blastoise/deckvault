@@ -258,12 +258,6 @@ function DeckDetailPage() {
         >
           Overview
         </button>
-        <Link
-          to={ROUTES.DECK_ANALYTICS(deckId!)}
-          className="deck-detail-page__tab"
-        >
-          Analytics ▶
-        </Link>
         <button
           type="button"
           className={`deck-detail-page__tab${activeTab === 'history' ? ' deck-detail-page__tab--active' : ''}`}

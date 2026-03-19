@@ -68,9 +68,14 @@
 
   /* Extended semantic tokens (used across components) */
   --bg-sunken: #080810;
+  --text-primary: var(--nebula-text-primary);
   --text-secondary: rgba(255, 255, 255, 0.55);
+  --surface-1: var(--nebula-bg-secondary);
+  --surface-2: var(--nebula-bg-tertiary);
   --surface-hover: rgba(255, 255, 255, 0.06);
   --surface-active: rgba(255, 255, 255, 0.08);
+  --accent: var(--nebula-accent-primary);
+  --border-color: var(--nebula-surface-border);
   --contrast-text: #0a0a0f;
   --focus-ring: var(--nebula-accent-primary);
   --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
@@ -149,9 +154,14 @@
 
   /* Extended semantic tokens (used across components) */
   --bg-sunken: var(--ctp-mantle);
+  --text-primary: var(--ctp-text);
   --text-secondary: var(--ctp-subtext1);
+  --surface-1: var(--ctp-surface0);
+  --surface-2: var(--ctp-surface1);
   --surface-hover: var(--ctp-surface1);
   --surface-active: var(--ctp-surface2);
+  --accent: var(--ctp-blue);
+  --border-color: var(--ctp-surface1);
   --contrast-text: var(--ctp-crust);
   --focus-ring: var(--ctp-blue);
   --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
@@ -214,9 +224,14 @@
 
   /* Extended semantic tokens */
   --bg-sunken: #f0f1f3;
+  --text-primary: var(--light-text-primary);
   --text-secondary: rgba(26, 26, 46, 0.55);
+  --surface-1: var(--light-bg-secondary);
+  --surface-2: var(--light-bg-tertiary);
   --surface-hover: rgba(0, 0, 0, 0.04);
   --surface-active: rgba(0, 0, 0, 0.07);
+  --accent: var(--light-accent-primary);
+  --border-color: var(--light-surface-border);
   --contrast-text: #ffffff;
   --focus-ring: var(--light-accent-primary);
   --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.06);

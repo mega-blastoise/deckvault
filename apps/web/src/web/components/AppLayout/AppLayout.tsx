@@ -1,5 +1,6 @@
 import React from 'react';
 import { Navbar } from '../Navbar';
+import { AppFooter } from '../AppFooter';
 import './AppLayout.css';
 
 export interface AppLayoutProps {
@@ -13,6 +14,7 @@ export function AppLayout({ children }: AppLayoutProps) {
       <main className="app-layout__main">
         <div className="app-layout__container">{children}</div>
       </main>
+      <AppFooter />
     </div>
   );
 }

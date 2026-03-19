@@ -18,13 +18,47 @@
 | SPEC_03 | Deck Analytics Engine | ✅ Complete | 2026-03-18 |
 | SPEC_04 | Deck Evolution Tracking | ✅ Complete | 2026-03-18 |
 | SPEC_05 | UX / Product-Level Differentiators | ✅ Complete | 2026-03-18 |
-| SPEC_06 | Local Meta Intelligence | ⬜ Not started | — |
+| SPEC_06 | Local Meta Intelligence | ✅ Complete | 2026-03-18 |
 
 **Status legend**: ⬜ Not started · 🔄 In progress · ✅ Complete · ⚠️ Deferred item(s)
 
 ---
 
 ## Session Log
+
+### 2026-03-18 — SPEC_06: Local Meta Intelligence
+
+**Completed**:
+
+1. **Migration** (`apps/rest-api/migrations/009_local_meta.sql`) — `lgs_reports` table with UUID PK, user FK, archetype slug + display name, format, optional lgs_name/region/result. 4 indexes. `local_meta_frequency` view: groups by archetype+format for last 30 days, includes win/loss/tie counts, ordered by report_count DESC.
+2. **PostgresService** — added `LgsReportRow`, `ArchetypeFrequency` interfaces; `checkLgsRateLimit()` (count today's reports per user, return false if ≥10), `createLgsReport()` (INSERT RETURNING), `getLgsFrequency()` (queries view, accepts optional format/days/limit, maps to `ArchetypeFrequency[]` with computed winRate).
+3. **Handler** (`apps/rest-api/src/handlers/local-meta.ts`):
+   - `POST /api/v1/local-meta/reports` — auth-required, validates body, rate-limit check → 429 if exceeded, inserts + returns `{ id, archetype, reportedAt }`
+   - `GET /api/v1/local-meta/frequency` — public, accepts `format?`, `days?`, `limit?` query params, returns `{ archetypes, generatedAt, dayRange, totalReports }`
+4. **Routes** — two routers wired in `index.ts`: `localMetaReports` (auth-required POST) and `localMetaFrequency` (public GET).
+5. **`LocalMetaPage`** at `/local-meta` — format filter pills (All/Standard/Expanded), ranked bar chart with CSS custom property `--count`/`--max-count` proportional bars, win rate badges, empty state with CTA, total reports footer. TanStack Query with 60s stale time.
+6. **`ReportMatchModal`** — standalone dialog (no external modal library), archetype free-text input with `<datalist>` populated from `/api/v1/meta-decks`, format select, win/loss/tie toggle buttons, LGS name field. Success/error toast, query invalidation on submit, Escape key to close.
+7. **Navbar** — added "Local Meta" link (MapPin icon, `/local-meta`). Auth-only "Report +" icon button in actions area opens `ReportMatchModal`.
+8. **Routes** — `LOCAL_META` constant added; `/local-meta` route registered in `routes.tsx`.
+
+**Acceptance criteria**:
+- [x] `POST /api/v1/local-meta/reports` creates a report for authenticated users
+- [x] Posting 11 reports in one day returns `429 Too Many Requests` on the 11th
+- [x] `GET /api/v1/local-meta/frequency` returns aggregated frequency for last 30 days
+- [x] `LocalMetaPage` renders at `/local-meta` with frequency bar chart
+- [x] Frequency bars are proportionally sized to the highest count value
+- [x] Format filter updates the list without page reload
+- [x] "Report a Match" button is visible in navbar for authenticated users only
+- [x] `ReportMatchModal` submits a report and shows a success toast
+- [x] Archetype input has datalist autocomplete from known archetypes
+- [x] Report count in page footer reflects actual total from API
+- [x] No TypeScript errors introduced (`apps/web` clean; `apps/rest-api` pre-existing 3 test errors only)
+
+**Notes**:
+- Migration is `009_local_meta.sql` (spec said 006 but that was already taken by meta_decks)
+- `local_meta_frequency` view has a built-in 30-day filter; `getLgsFrequency` adds an additional `days` filter on `last_seen` for sub-30 queries
+
+---
 
 ### 2026-03-18 — SPEC_05: UX / Product-Level Differentiators
 

@@ -1,0 +1,1 @@
+export { ReportMatchModal } from './ReportMatchModal';

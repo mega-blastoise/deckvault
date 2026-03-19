@@ -1,0 +1,116 @@
+.app-footer {
+  border-top: 1px solid var(--pico-muted-border-color);
+  background: var(--pico-background-color);
+  margin-top: auto;
+  padding: 2.5rem 0 1.25rem;
+  transition: var(--theme-transition);
+}
+
+.app-footer__container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+  display: flex;
+  gap: 3rem;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.app-footer__brand {
+  flex: 1;
+  min-width: 160px;
+}
+
+.app-footer__logo {
+  display: inline-block;
+  font-size: 1.125rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--pico-color);
+  text-decoration: none;
+  margin-bottom: 0.375rem;
+}
+
+.app-footer__logo:hover {
+  color: var(--pico-primary);
+}
+
+.app-footer__tagline {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--pico-muted-color);
+  line-height: 1.4;
+}
+
+.app-footer__nav {
+  display: flex;
+  gap: 2.5rem;
+  flex-wrap: wrap;
+}
+
+.app-footer__col {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 120px;
+}
+
+.app-footer__col-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--pico-muted-color);
+  margin: 0 0 0.25rem 0;
+}
+
+.app-footer__link {
+  font-size: 0.8125rem;
+  color: var(--pico-muted-color);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.app-footer__link:hover {
+  color: var(--pico-color);
+}
+
+.app-footer__bottom {
+  max-width: 1280px;
+  margin: 1.75rem auto 0;
+  padding: 1rem 1.5rem 0;
+  border-top: 1px solid var(--pico-muted-border-color);
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.app-footer__copy {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--pico-muted-color);
+}
+
+.app-footer__domain {
+  font-weight: 600;
+  color: var(--pico-primary);
+}
+
+.app-footer__disclaimer {
+  margin: 0;
+  font-size: 0.6875rem;
+  color: var(--pico-muted-color);
+  opacity: 0.6;
+}
+
+@media (max-width: 640px) {
+  .app-footer__container {
+    flex-direction: column;
+    gap: 1.5rem;
+    padding: 0 1rem;
+  }
+
+  .app-footer__bottom {
+    padding: 1rem 1rem 0;
+  }
+}

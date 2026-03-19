@@ -1,10 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Layers, Search, LogIn, TrendingUp } from 'lucide-react';
+import { Layers, Search, LogIn, TrendingUp, MapPin, Plus } from 'lucide-react';
 import { ROUTES } from '@/web/routes';
 import { useCollectionQuery } from '@/web/hooks/useCollectionQuery';
 import { useDecks } from '@/web/contexts/Deck';
 import { useAuth } from '@/web/contexts/Auth';
 import { ThemeToggle } from '@/web/components/ThemeToggle';
+import { ReportMatchModal } from '@/web/components/ReportMatchModal';
 import './Navbar.css';
 
 function getPathname(): string {
@@ -36,6 +37,7 @@ export function Navbar() {
   const { user, signOut } = useAuth();
   const pathname = getPathname();
   const [showDropdown, setShowDropdown] = useState(false);
+  const [reportModalOpen, setReportModalOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -54,7 +56,7 @@ export function Navbar() {
     <nav className="navbar">
       <div className="navbar__container">
         <a href="/" className="navbar__logo">
-          <span className="navbar__logo-text">Pokemon TCG</span>
+          <span className="navbar__logo-text">DeckVault</span>
         </a>
 
         <div className="navbar__links">
@@ -82,11 +84,29 @@ export function Navbar() {
             <TrendingUp size={18} />
             <span>Meta</span>
           </a>
+          <a
+            href={ROUTES.LOCAL_META}
+            className={`navbar__link ${isActive(ROUTES.LOCAL_META) ? 'navbar__link--active' : ''}`}
+          >
+            <MapPin size={18} />
+            <span>Local Meta</span>
+          </a>
           <NavLinkGated label="Collection" tooltip="Coming Soon" />
           <NavLinkGated label="Dashboard" tooltip="Coming Soon" />
         </div>
 
         <div className="navbar__actions">
+          {isAuthenticated && (
+            <button
+              type="button"
+              className="navbar__report-btn"
+              onClick={() => setReportModalOpen(true)}
+              title="Report a Match"
+              aria-label="Report a Match"
+            >
+              <Plus size={16} />
+            </button>
+          )}
           <ThemeToggle />
           {isAuthenticated && user ? (
             <div className="navbar__user-menu" ref={dropdownRef}>
@@ -128,6 +148,12 @@ export function Navbar() {
           )}
         </div>
       </div>
+      {isAuthenticated && (
+        <ReportMatchModal
+          isOpen={reportModalOpen}
+          onClose={() => setReportModalOpen(false)}
+        />
+      )}
     </nav>
   );
 }

@@ -39,13 +39,19 @@ function parseOrigins(value: string | undefined): string[] {
   return value.split(',').map((s) => s.trim());
 }
 
+function requireEnv(key: string): string {
+  const value = process.env[key];
+  if (!value) throw new Error(`Missing required environment variable: ${key}`);
+  return value;
+}
+
 export function loadConfig(): Config {
   return {
     port: parseInt(process.env.REST_API_PORT || '3001', 10),
     host: process.env.REST_API_HOST || '0.0.0.0',
     database: {
       path: process.env.DATABASE_PATH || './database/pokemon-data.sqlite3.db',
-      readonly: process.env.DATABASE_READONLY !== 'false'
+      readonly: process.env.DATABASE_READONLY === 'true'
     },
     deckDatabase: {
       path:
@@ -60,14 +66,14 @@ export function loadConfig(): Config {
       redirectUri: process.env.GOOGLE_REDIRECT_URI || 'http://localhost:3001/auth/callback'
     },
     jwt: {
-      secret: process.env.JWT_SECRET || 'dev-jwt-secret-change-in-production'
+      secret: requireEnv('JWT_SECRET')
     },
     cors: {
       origins: parseOrigins(process.env.CORS_ORIGINS)
     },
     rateLimit: {
       windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '60000', 10),
-      maxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '1000', 10)
+      maxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100', 10)
     },
     logging: {
       level: process.env.LOG_LEVEL || 'info',

@@ -14,7 +14,9 @@
     "build": "bun run build.ts",
     "dev": "bun run --hot src/dev.ts",
     "storybook": "storybook dev -p 6006",
-    "build-storybook": "storybook build"
+    "build-storybook": "storybook build",
+    "e2e": "playwright test",
+    "e2e:ui": "playwright test --ui"
   },
   "devDependencies": {
     "@babel/core": "^7.26.0",
@@ -23,6 +25,7 @@
     "@babel/preset-typescript": "^7.26.0",
     "@chromatic-com/storybook": "^5.0.0",
     "@eslint/js": "^9.15.0",
+    "@playwright/test": "^1.58.2",
     "@pokemon/build": "workspace:*",
     "@storybook/addon-docs": "10.2.1",
     "@storybook/addon-onboarding": "10.2.1",

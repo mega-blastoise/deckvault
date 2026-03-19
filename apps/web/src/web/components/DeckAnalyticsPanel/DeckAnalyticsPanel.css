@@ -168,53 +168,83 @@
 
 .analytics-panel__badge--critical {
   background: rgba(239, 68, 68, 0.15);
-  color: #f87171;
+  color: #dc2626;
 }
 
 .analytics-panel__badge--high {
   background: rgba(245, 158, 11, 0.15);
-  color: #fbbf24;
+  color: #d97706;
 }
 
 .analytics-panel__badge--medium {
   background: rgba(234, 179, 8, 0.15);
-  color: #facc15;
+  color: #ca8a04;
 }
 
 .analytics-panel__badge--low {
   background: rgba(34, 197, 94, 0.15);
-  color: #4ade80;
+  color: #16a34a;
 }
 
 .analytics-panel__badge--neutral {
-  background: var(--surface-2, rgba(255, 255, 255, 0.08));
-  color: var(--text-primary, #fff);
+  background: var(--surface-2);
+  color: var(--text-primary);
 }
 
 /* energy recommendation badges */
 .analytics-panel__badge--energy-too-few {
   background: rgba(239, 68, 68, 0.15);
-  color: #f87171;
+  color: #dc2626;
 }
 
 .analytics-panel__badge--energy-lean {
   background: rgba(245, 158, 11, 0.15);
-  color: #fbbf24;
+  color: #d97706;
 }
 
 .analytics-panel__badge--energy-standard {
   background: rgba(34, 197, 94, 0.15);
-  color: #4ade80;
+  color: #16a34a;
 }
 
 .analytics-panel__badge--energy-heavy {
   background: rgba(245, 158, 11, 0.15);
-  color: #fbbf24;
+  color: #d97706;
 }
 
 .analytics-panel__badge--energy-too-many {
   background: rgba(239, 68, 68, 0.15);
+  color: #dc2626;
+}
+
+[data-theme="nebula"] .analytics-panel__badge--critical,
+[data-theme="catppuccin"] .analytics-panel__badge--critical,
+[data-theme="nebula"] .analytics-panel__badge--energy-too-few,
+[data-theme="catppuccin"] .analytics-panel__badge--energy-too-few,
+[data-theme="nebula"] .analytics-panel__badge--energy-too-many,
+[data-theme="catppuccin"] .analytics-panel__badge--energy-too-many {
   color: #f87171;
+}
+
+[data-theme="nebula"] .analytics-panel__badge--high,
+[data-theme="catppuccin"] .analytics-panel__badge--high,
+[data-theme="nebula"] .analytics-panel__badge--energy-lean,
+[data-theme="catppuccin"] .analytics-panel__badge--energy-lean,
+[data-theme="nebula"] .analytics-panel__badge--energy-heavy,
+[data-theme="catppuccin"] .analytics-panel__badge--energy-heavy {
+  color: #fbbf24;
+}
+
+[data-theme="nebula"] .analytics-panel__badge--medium,
+[data-theme="catppuccin"] .analytics-panel__badge--medium {
+  color: #facc15;
+}
+
+[data-theme="nebula"] .analytics-panel__badge--low,
+[data-theme="catppuccin"] .analytics-panel__badge--low,
+[data-theme="nebula"] .analytics-panel__badge--energy-standard,
+[data-theme="catppuccin"] .analytics-panel__badge--energy-standard {
+  color: #4ade80;
 }
 
 /* ── Callout ─────────────────────────────────────────────────────────────── */
@@ -674,10 +704,20 @@
 }
 
 .sim-status__basic--ok {
-  color: #4ade80;
+  color: #16a34a;
 }
 
 .sim-status__basic--fail {
+  color: #dc2626;
+}
+
+[data-theme="nebula"] .sim-status__basic--ok,
+[data-theme="catppuccin"] .sim-status__basic--ok {
+  color: #4ade80;
+}
+
+[data-theme="nebula"] .sim-status__basic--fail,
+[data-theme="catppuccin"] .sim-status__basic--fail {
   color: #f87171;
 }
 
@@ -780,16 +820,33 @@
 .sim-card__placeholder-type--pokmon,
 .sim-card__placeholder-type--pok-mon {
   background: rgba(129, 140, 248, 0.2);
-  color: #818cf8;
+  color: #4f46e5;
 }
 
 .sim-card__placeholder-type--trainer {
   background: rgba(52, 211, 153, 0.2);
-  color: #34d399;
+  color: #059669;
 }
 
 .sim-card__placeholder-type--energy {
   background: rgba(251, 146, 60, 0.2);
+  color: #ea580c;
+}
+
+[data-theme="nebula"] .sim-card__placeholder-type--pokmon,
+[data-theme="catppuccin"] .sim-card__placeholder-type--pokmon,
+[data-theme="nebula"] .sim-card__placeholder-type--pok-mon,
+[data-theme="catppuccin"] .sim-card__placeholder-type--pok-mon {
+  color: #818cf8;
+}
+
+[data-theme="nebula"] .sim-card__placeholder-type--trainer,
+[data-theme="catppuccin"] .sim-card__placeholder-type--trainer {
+  color: #34d399;
+}
+
+[data-theme="nebula"] .sim-card__placeholder-type--energy,
+[data-theme="catppuccin"] .sim-card__placeholder-type--energy {
   color: #fb923c;
 }
 
