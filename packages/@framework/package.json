@@ -22,7 +22,7 @@
     "build-types": "tsc -p tsconfig.json && tsc-alias -p tsconfig.json",
     "prebuild": "run-s clean",
     "build": "run-p bundle build-types",
-    "lint": "eslint src/"
+    "lint": "eslint lib/"
   },
   "dependencies": {},
   "devDependencies": {

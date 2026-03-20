@@ -18,7 +18,7 @@
   "packageManager": "bun@1.3.5",
   "scripts": {
     "show-typescript-config": "tsc -p tsconfig.json --showConfig",
-    "check-types": "tsc -p tsconfig.json --noEmit --emitDeclarationOnly=false",
+    "check-types": "tsc -p tsconfig.check.json",
     "build-types": "tsc -p tsconfig.json",
     "bundle": "bun run build.ts",
     "build": "run-s bundle build-types",
