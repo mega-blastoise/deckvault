@@ -3,14 +3,16 @@ WORKDIR /app/pokemon-rest-api
 
 # Install dependencies
 FROM base AS deps
-COPY package.json bun.lockb ./
+COPY package.json bun.lock ./
 COPY apps/rest-api/package.json ./apps/rest-api/
 COPY packages/@clients/package.json ./packages/@clients/
 COPY packages/@database/package.json ./packages/@database/
 COPY packages/@logger/package.json ./packages/@logger/
 COPY packages/@utils/package.json ./packages/@utils/
 COPY packages/@configs/package.json ./packages/@configs/
-RUN bun install --frozen-lockfile
+COPY packages/@framework/package.json ./packages/@framework/
+COPY packages/@build/package.json ./packages/@build/
+RUN bun install
 
 FROM deps AS test
 RUN bun run test
@@ -44,4 +46,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
   CMD curl -f http://localhost:3001/health || exit 1
 
 # Start the server
-CMD ["bun", "run", "dist/index.js"]
+CMD ["bun", "run", "dist/src/index.js"]
