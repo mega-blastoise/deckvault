@@ -1,0 +1,67 @@
+---
+title: Running Services
+description: How to start services for local development.
+---
+
+# Running Services
+
+## All Services (recommended)
+
+```bash
+docker compose up
+```
+
+Starts web, rest-api, graphql-api, and PostgreSQL in one command. Logs are interleaved in the terminal. Use `docker compose up -d` to run in the background.
+
+## Individual Services
+
+If you want faster restarts or need to debug a single service, run it outside Docker.
+
+### Web
+
+```bash
+cd apps/web
+bun run dev
+```
+
+Starts the SSR dev server on port `3000` with hot reload.
+
+### REST API
+
+```bash
+cd apps/rest-api
+bun run dev
+```
+
+Starts the REST API on port `3001` with file watching.
+
+### GraphQL API
+
+```bash
+cd apps/graphql-api
+bun run dev
+```
+
+Starts the GraphQL API on port `3002`.
+
+<Callout variant="info">
+  When running services individually outside Docker, you still need PostgreSQL running. The easiest way is `docker compose up postgres` while running the other services natively.
+</Callout>
+
+## All Apps via Turborepo
+
+```bash
+bun run dev
+```
+
+Runs `turbo dev` across all workspaces in parallel. This is equivalent to `docker compose up` but runs the Bun processes natively (no Docker layer). PostgreSQL must be running separately.
+
+## Watching Logs (Docker)
+
+```bash
+# All services
+docker compose logs -f
+
+# Single service
+docker compose logs -f rest-api
+```

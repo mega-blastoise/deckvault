@@ -1,0 +1,37 @@
+---
+title: API Overview
+description: REST and GraphQL API reference for DeckVault.
+---
+
+# API Overview
+
+DeckVault exposes two APIs, both accessible through nginx at the same origin.
+
+<CardGrid>
+  <Card title="REST API" href="/rest-auth">
+    `Bun.serve()` REST API at `/api/v1/`. Handles auth, decks, collections, meta, and card browsing.
+  </Card>
+  <Card title="GraphQL API" href="/graphql">
+    Apollo Server 5 at `/graphql`. Read-only card and set queries with cursor-based pagination.
+  </Card>
+</CardGrid>
+
+## Base URLs
+
+| API | Public (browser) | Internal (BFF / Docker) |
+|-----|-----------------|------------------------|
+| REST | `https://yourdomain.com/api/v1/` | `http://rest-api:3001/api/v1/` |
+| GraphQL | `https://yourdomain.com/graphql` | `http://graphql-api:3002/graphql` |
+
+## Authentication
+
+REST API endpoints that require authentication use a session cookie set by the Google OAuth flow. Pass the cookie on all authenticated requests — it is `HttpOnly` and `SameSite=Lax`.
+
+GraphQL is entirely public (read-only card data). No authentication is required.
+
+## Health Endpoints
+
+```
+GET /health    → { "status": "ok" }
+GET /ready     → deeper check including database connectivity
+```

@@ -1,0 +1,88 @@
+---
+title: Cards & Sets
+description: REST endpoints for browsing Pokemon cards and sets.
+---
+
+# Cards & Sets
+
+All endpoints are public. Data is served from the read-only SQLite database.
+
+## Cards
+
+### `GET /api/v1/cards`
+
+Returns a paginated list of cards.
+
+**Query parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `page` | number | Page number (default: 1) |
+| `limit` | number | Results per page (default: 60) |
+
+### `GET /api/v1/cards/search`
+
+Full-text search across card names.
+
+**Query parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `q` | string | Search query |
+| `limit` | number | Max results |
+
+### `GET /api/v1/cards/batch`
+
+Fetch multiple cards by ID in a single request.
+
+**Query parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `ids` | string | Comma-separated card IDs |
+
+### `GET /api/v1/cards/:id`
+
+Fetch a single card by its ID (e.g., `sv3-123`).
+
+**Response:**
+```json
+{
+  "id": "sv3-123",
+  "name": "Charizard ex",
+  "supertype": "Pokémon",
+  "subtypes": ["Basic", "ex"],
+  "hp": 330,
+  "types": ["Fire"],
+  "rarity": "Double Rare",
+  "set": { "id": "sv3", "name": "Obsidian Flames" },
+  "images": {
+    "small": "https://images.pokemontcg.io/sv3/123.png",
+    "large": "https://images.pokemontcg.io/sv3/123_hires.png"
+  }
+}
+```
+
+## Sets
+
+### `GET /api/v1/sets`
+
+Returns all sets ordered by release date descending.
+
+### `GET /api/v1/sets/:id`
+
+Returns a single set by ID.
+
+### `GET /api/v1/sets/:id/cards`
+
+Returns all cards in a set.
+
+### `GET /api/v1/sets/series/:series`
+
+Returns all sets belonging to a series (e.g., `Scarlet & Violet`).
+
+## Discovery
+
+### `GET /api/v1/endpoints`
+
+Returns a machine-readable list of all available API endpoints.

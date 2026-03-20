@@ -3,7 +3,8 @@
   "private": true,
   "workspaces": [
     "apps/*",
-    "packages/*"
+    "packages/*",
+    "docsites/*"
   ],
   "scripts": {
     "build": "turbo build",
@@ -21,7 +22,9 @@
     "db:missing": "bun run scripts/db-missing-cards.ts",
     "db:export": "bun run scripts/db-export-report.ts",
     "db:replicate": "bun run scripts/db-replicate.ts",
-    "db:replicate:force": "SQLITE_REPLICATE_OVERWRITE_DATABASES=1 bun run scripts/db-replicate.ts"
+    "db:replicate:force": "SQLITE_REPLICATE_OVERWRITE_DATABASES=1 bun run scripts/db-replicate.ts",
+    "docs:build": "turbo docs:build",
+    "docs:dev": "turbo docs:dev"
   },
   "engines": {
     "bun": "1.3.5"

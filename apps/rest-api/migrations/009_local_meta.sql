@@ -1,21 +1,21 @@
-CREATE TABLE lgs_reports (
-  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id      UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  archetype    VARCHAR(80) NOT NULL,
+CREATE TABLE IF NOT EXISTS lgs_reports (
+  id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id        UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  archetype      VARCHAR(80) NOT NULL,
   archetype_name VARCHAR(120) NOT NULL,
-  format       VARCHAR(20) NOT NULL,
-  lgs_name     VARCHAR(200),
-  region       VARCHAR(100),
-  result       VARCHAR(10),
-  reported_at  TIMESTAMPTZ DEFAULT NOW()
+  format         VARCHAR(20) NOT NULL,
+  lgs_name       VARCHAR(200),
+  region         VARCHAR(100),
+  result         VARCHAR(10),
+  reported_at    TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_lgs_reports_archetype ON lgs_reports(archetype);
-CREATE INDEX idx_lgs_reports_format ON lgs_reports(format);
-CREATE INDEX idx_lgs_reports_reported_at ON lgs_reports(reported_at);
-CREATE INDEX idx_lgs_reports_user_id ON lgs_reports(user_id);
+CREATE INDEX IF NOT EXISTS idx_lgs_reports_archetype   ON lgs_reports(archetype);
+CREATE INDEX IF NOT EXISTS idx_lgs_reports_format      ON lgs_reports(format);
+CREATE INDEX IF NOT EXISTS idx_lgs_reports_reported_at ON lgs_reports(reported_at);
+CREATE INDEX IF NOT EXISTS idx_lgs_reports_user_id     ON lgs_reports(user_id);
 
-CREATE VIEW local_meta_frequency AS
+CREATE OR REPLACE VIEW local_meta_frequency AS
 SELECT
   archetype,
   archetype_name,

@@ -1,0 +1,133 @@
+---
+title: PostgreSQL (User Data)
+description: RDS PostgreSQL schema for all mutable user data in DeckVault.
+---
+
+# PostgreSQL — User Data
+
+## Overview
+
+RDS PostgreSQL stores all mutable application state. Only the `rest-api` container connects to it. The connection string is provided via `DATABASE_URL` in `.env.prod`.
+
+## Tables
+
+### `users`
+
+Created by migration `001_users.sql`.
+
+```sql
+CREATE TABLE IF NOT EXISTS users (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  google_id   TEXT NOT NULL UNIQUE,
+  email       TEXT NOT NULL UNIQUE,
+  name        TEXT NOT NULL,
+  avatar_url  TEXT,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+```
+
+User accounts are created on first Google OAuth sign-in. `google_id` is the stable identifier from Google's OAuth token.
+
+### `decks`
+
+Created by migration `002_decks.sql`.
+
+```sql
+CREATE TABLE IF NOT EXISTS decks (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id       UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  name          TEXT NOT NULL,
+  description   TEXT,
+  format        TEXT NOT NULL DEFAULT 'standard',
+  cover_card_id TEXT,
+  is_public     BOOLEAN NOT NULL DEFAULT true,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+```
+
+Indexed on `user_id`, `is_public`, and `updated_at DESC`.
+
+### `deck_cards`
+
+Created by migration `003_deck_cards.sql`, constraint relaxed by `010_relax_deck_cards_quantity.sql`.
+
+```sql
+CREATE TABLE IF NOT EXISTS deck_cards (
+  deck_id   UUID     NOT NULL REFERENCES decks(id) ON DELETE CASCADE,
+  card_id   TEXT     NOT NULL,
+  quantity  SMALLINT NOT NULL DEFAULT 1 CHECK (quantity > 0 AND quantity <= 60),
+  PRIMARY KEY (deck_id, card_id)
+);
+```
+
+The `quantity <= 60` limit (up from the original `<= 4`) allows basic energy cards, which have no copy limit in the Pokemon TCG.
+
+### `user_collections`
+
+Created by migration `004_user_collections.sql`.
+
+```sql
+CREATE TABLE IF NOT EXISTS user_collections (
+  user_id   UUID     NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  card_id   TEXT     NOT NULL,
+  quantity  SMALLINT NOT NULL DEFAULT 1 CHECK (quantity > 0),
+  PRIMARY KEY (user_id, card_id)
+);
+```
+
+### `meta_decks` and `meta_deck_cards`
+
+Created by migration `006_meta_decks.sql`.
+
+`meta_decks` stores curated competitive deck lists with event placement metadata. `meta_deck_cards` holds the card list for each meta deck with quantity >= 1 (no upper limit — energy cards).
+
+### `card_substitutes`
+
+Created by migration `006_meta_decks.sql`. Maps a card to acceptable substitutes with optional notes.
+
+### `deck_versions`
+
+Created by migration `008_deck_versions.sql`.
+
+```sql
+CREATE TABLE IF NOT EXISTS deck_versions (
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  deck_id    UUID NOT NULL REFERENCES decks(id) ON DELETE CASCADE,
+  version    INTEGER NOT NULL,
+  label      VARCHAR(80),
+  cards      JSONB NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE (deck_id, version)
+);
+```
+
+Stores full deck snapshots as JSONB. Versions are immutable once created.
+
+### `lgs_reports`
+
+Created by migration `009_local_meta.sql`. Records match results submitted by users for local game store tracking.
+
+## Views
+
+### `local_meta_frequency`
+
+Created by migration `009_local_meta.sql`. Aggregates LGS reports over the last 30 days:
+
+```sql
+CREATE OR REPLACE VIEW local_meta_frequency AS
+SELECT
+  archetype,
+  archetype_name,
+  format,
+  COUNT(*)                                    AS report_count,
+  COUNT(*) FILTER (WHERE result = 'win')      AS win_count,
+  COUNT(*) FILTER (WHERE result = 'loss')     AS loss_count,
+  COUNT(*) FILTER (WHERE result = 'tie')      AS tie_count,
+  MAX(reported_at)                            AS last_seen
+FROM lgs_reports
+WHERE reported_at >= NOW() - INTERVAL '30 days'
+GROUP BY archetype, archetype_name, format
+ORDER BY report_count DESC;
+```

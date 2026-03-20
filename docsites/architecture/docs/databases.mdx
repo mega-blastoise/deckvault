@@ -1,0 +1,55 @@
+---
+title: Databases
+description: SQLite for card data and PostgreSQL for user data.
+---
+
+# Databases
+
+DeckVault uses two databases with distinct responsibilities.
+
+## SQLite — Pokemon Card Data
+
+| Property | Value |
+|----------|-------|
+| File | `pokemon-data.sqlite3.db` |
+| Location | `./database/` on host, `/data/` in containers |
+| Access | **Read-only** (`DATABASE_READONLY=true`) |
+| Consumers | `rest-api`, `graphql-api` |
+
+The SQLite database contains the full Pokemon TCG card catalog: cards, sets, images, attacks, abilities, legalities. It is populated offline by the `apps/scripts` data sync process and never written to at runtime.
+
+Both `rest-api` and `graphql-api` mount the same file via a shared Docker volume:
+
+```yaml
+volumes:
+  - ./database:/data
+```
+
+Updates to card data require a new SQLite file to be placed in `./database/` and the containers restarted.
+
+## PostgreSQL — User Data (RDS)
+
+| Property | Value |
+|----------|-------|
+| Host | RDS endpoint (via `DATABASE_URL`) |
+| Access | Read/write |
+| Consumer | `rest-api` only |
+
+All mutable application state lives in PostgreSQL:
+
+- `users` — Google OAuth accounts
+- `decks` and `deck_cards` — user-created decks
+- `deck_versions` — version history with JSONB snapshots
+- `user_collections` — per-user card ownership
+- `meta_decks` and `meta_deck_cards` — curated competitive decks
+- `card_substitutes` — substitution suggestions
+- `lgs_reports` — local game store match reports
+- `local_meta_frequency` (view) — aggregated LGS win rates
+
+See the [Database docs](/postgres) for the full schema.
+
+## Why Two Databases?
+
+Card data is large, static, and read-heavy — SQLite on a local file is zero-latency and requires no network. User data is small, mutable, and needs durability guarantees — RDS provides that with managed backups and failover.
+
+Keeping them separate also means the `graphql-api` service has no credentials for user data, reducing the blast radius of any compromise.

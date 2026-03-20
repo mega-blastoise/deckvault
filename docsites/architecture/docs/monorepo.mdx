@@ -1,0 +1,67 @@
+---
+title: Monorepo Structure
+description: Turborepo workspace layout and shared packages.
+---
+
+# Monorepo Structure
+
+The project uses Turborepo 2.3 for orchestration and Bun workspaces for package management.
+
+## Directory Layout
+
+```
+Pokemon/
+├── apps/
+│   ├── web/                # React 19 SSR frontend
+│   ├── rest-api/           # Bun REST API
+│   ├── graphql-api/        # Apollo Server 5 GraphQL API
+│   ├── scripts/            # Data sync and database tooling
+│   └── distributed-ledger/ # Experimental Rust blockchain
+├── packages/
+│   ├── @clients/           # API client utilities
+│   ├── @configs/           # Shared TypeScript and ESLint configs
+│   ├── @database/          # Database connection utilities
+│   ├── @framework/         # Functional HTTP router (Bun.serve wrapper)
+│   ├── @logger/            # Centralized logging
+│   ├── @pokemon-data/      # TCG card and set JSON data
+│   ├── @utils/             # Shared utility functions
+│   └── @build/             # Shared build utilities
+├── docsites/
+│   ├── deployment/         # This site
+│   ├── architecture/       # System architecture docs
+│   ├── database/           # Database schema reference
+│   ├── api/                # REST and GraphQL API reference
+│   └── development/        # Developer workflow guide
+├── database/               # SQLite files (gitignored except schema)
+├── docker/                 # nginx config
+├── docker-compose.yml      # Local development compose
+├── docker-compose.prod.yml # Production compose
+└── turbo.json              # Turborepo task graph
+```
+
+## Turborepo Tasks
+
+| Task | Description |
+|------|-------------|
+| `build` | Builds all apps and packages (respects `^build` dependency order) |
+| `dev` | Starts all dev servers (persistent, no cache) |
+| `check-types` | TypeScript strict check across all workspaces |
+| `lint` | ESLint across all workspaces |
+| `test` | Runs all test suites |
+| `docs:build` | Builds all docsites to `site/` |
+| `docs:dev` | Starts docsite dev servers |
+
+## @pokemon/framework
+
+The `@pokemon/framework` package provides the functional HTTP router used by `rest-api`. It wraps `Bun.serve()` with a typed router, DI container, and middleware chain:
+
+```typescript
+createApp({ container })
+  .use(securityHeaders)
+  .use(cors({ origins, credentials: true }))
+  .routes(cards)
+  .routes(decks)
+  .listen(port, callback)
+```
+
+This avoids taking on Express or Fastify as a dependency while providing a structured request handling model.

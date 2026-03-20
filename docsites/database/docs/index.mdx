@@ -1,0 +1,45 @@
+---
+title: Database Overview
+description: Two-database architecture for DeckVault.
+---
+
+# Database Overview
+
+DeckVault uses two databases with a clear separation of concerns:
+
+<CardGrid>
+  <Card title="SQLite" href="/sqlite">
+    Read-only Pokemon card and set data. Shared volume between rest-api and graphql-api.
+  </Card>
+  <Card title="PostgreSQL" href="/postgres">
+    User accounts, decks, collections, and meta data. Managed by RDS.
+  </Card>
+  <Card title="Migrations" href="/migrations">
+    SQL files baked into the rest-api Docker image and applied automatically on startup.
+  </Card>
+  <Card title="Schema Reference" href="/schema">
+    Full table and view definitions for all 10 PostgreSQL migrations.
+  </Card>
+</CardGrid>
+
+## Quick Reference
+
+| Database | Tables / Objects | Writer | Readers |
+|----------|-----------------|--------|---------|
+| SQLite | `pokemon_cards`, `pokemon_card_sets` | offline scripts | rest-api, graphql-api |
+| PostgreSQL | 9 tables + 1 view | rest-api | rest-api |
+
+## Connection Strings
+
+SQLite path is configured via environment variable:
+
+```
+DATABASE_PATH=/data/pokemon-data.sqlite3.db
+DATABASE_READONLY=true
+```
+
+PostgreSQL connection string:
+
+```
+DATABASE_URL=postgresql://user:password@rds-endpoint:5432/deckvault
+```

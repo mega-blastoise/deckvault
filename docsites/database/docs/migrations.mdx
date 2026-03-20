@@ -1,0 +1,74 @@
+---
+title: Migration System
+description: How database migrations are tracked, applied, and written.
+---
+
+# Migration System
+
+## Overview
+
+Migrations are SQL files in `apps/rest-api/migrations/`, numbered sequentially. They are baked into the `rest-api` Docker image and applied automatically on container startup via `runMigrations()` in `PostgresService`.
+
+Applied migrations are tracked in the `_migrations` table. A migration that has already been recorded is skipped without re-execution.
+
+## Rules
+
+<Steps>
+  <Step title="Always idempotent">
+    Every migration must be safe to run multiple times. Use `IF NOT EXISTS`, `DROP CONSTRAINT IF EXISTS`, and `DO $$ EXCEPTION WHEN duplicate_object` patterns.
+  </Step>
+  <Step title="Never apply manually">
+    Do not run migration SQL directly against RDS. Always go through the runner by (re)deploying the rest-api container. This keeps `_migrations` in sync with actual schema state.
+  </Step>
+  <Step title="No rollback scripts">
+    The runner does not support rollbacks. To undo a migration, write a new forward migration that reverses the change.
+  </Step>
+</Steps>
+
+## Idempotency Patterns
+
+```sql
+-- Safe table creation
+CREATE TABLE IF NOT EXISTS my_table (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid()
+);
+
+-- Safe index creation
+CREATE INDEX IF NOT EXISTS idx_name ON my_table(col);
+
+-- Safe constraint addition (won't error if already exists)
+DO $$ BEGIN
+  ALTER TABLE my_table
+    ADD CONSTRAINT my_constraint CHECK (col > 0);
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+-- Safe constraint removal before re-adding
+ALTER TABLE my_table DROP CONSTRAINT IF EXISTS old_constraint;
+```
+
+## Migration File Naming
+
+Files follow the pattern `NNN_description.sql` where `NNN` is zero-padded to three digits:
+
+```
+001_users.sql
+002_decks.sql
+003_deck_cards.sql
+...
+010_relax_deck_cards_quantity.sql
+```
+
+The runner applies files in lexicographic order, so the numbering must be globally monotonic.
+
+## Tracking Table
+
+```sql
+CREATE TABLE IF NOT EXISTS _migrations (
+  id         SERIAL PRIMARY KEY,
+  name       TEXT NOT NULL UNIQUE,
+  applied_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+```
+
+The `name` column stores the filename (e.g., `001_users.sql`). Querying this table shows exactly which migrations have been applied and when.

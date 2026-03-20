@@ -1,0 +1,56 @@
+---
+title: Getting Started
+description: Prerequisites and initial setup for local development.
+---
+
+# Getting Started
+
+## Prerequisites
+
+| Tool | Version | Install |
+|------|---------|---------|
+| Bun | 1.3.5 | `mise install` or [bun.sh](https://bun.sh) |
+| Docker | 24+ | [docs.docker.com](https://docs.docker.com/get-docker/) |
+| Docker Compose | v2 | bundled with Docker Desktop |
+
+Tool versions are pinned in `mise.toml` at the monorepo root. If you use mise, `mise install` from the root will install the correct versions automatically.
+
+## First-time Setup
+
+```bash
+# 1. Install dependencies
+bun install
+
+# 2. Copy environment template and fill in values
+cp .env.example .env
+
+# 3. Start all services
+docker compose up
+```
+
+That's it. The following will be running:
+
+| Service | URL |
+|---------|-----|
+| Web (SSR) | http://localhost:3000 |
+| REST API | http://localhost:3001 |
+| GraphQL API | http://localhost:3002 |
+| PostgreSQL | localhost:5432 |
+
+<Callout variant="info">
+  On first boot, `rest-api` automatically applies all pending migrations to the local PostgreSQL instance. No manual migration step is required.
+</Callout>
+
+## Monorepo Structure
+
+```
+Pokemon/
+├── apps/web/           # React 19 SSR frontend
+├── apps/rest-api/      # Bun REST API
+├── apps/graphql-api/   # Apollo Server 5 GraphQL API
+├── apps/scripts/       # Data sync tooling
+├── packages/           # Shared libraries
+└── docsites/           # Documentation sites
+```
+
+See the [Architecture docs](/architecture) for a full breakdown.

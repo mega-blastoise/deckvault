@@ -39,6 +39,20 @@ yarn-error.log*
 # Misc
 .DS_Store
 *.pem
+*.key
+*.p12
+*.pfx
+
+# SQLite sidecars
+*.db-shm
+*.db-wal
+
+# Local dev scripts and scratch files
+chat.sh
+
+# Debug screenshots and documents (root-level)
+/*.png
+/*.pdf
 
 apps/bot-cli
 apps/bot-cli-auth-server
@@ -51,3 +65,7 @@ data/pokemon-json
 
 # Temporary Files
 tmp/
+
+# Docsite build outputs
+docsites/*/site/*
+!docsites/*/site/.gitkeep

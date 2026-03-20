@@ -1,0 +1,60 @@
+---
+title: Frontend (apps/web)
+description: React 19 SSR frontend with Bun and BFF pattern.
+---
+
+# Frontend (apps/web)
+
+## Overview
+
+The web app is a server-side rendered React 19 application. Bun runs the SSR server. Webpack 5 with Babel and the React Compiler produces the client bundle.
+
+## SSR Model
+
+The server renders the initial HTML response and streams it to the client. React hydrates on the client side for interactivity. This gives fast first-contentful-paint and full SEO indexability.
+
+## BFF Pattern
+
+The web server acts as a Backend for Frontend (BFF) for server-rendered pages. Rather than exposing API credentials to the browser, the SSR layer makes authenticated requests to the internal APIs using Docker service hostnames:
+
+```
+http://rest-api:3001      (internal Docker network)
+http://graphql-api:3002   (internal Docker network)
+```
+
+These hostnames resolve only inside the `pika` Docker network and are never reachable from the public internet.
+
+Client-side data fetching (after hydration) calls the public-facing endpoints through nginx:
+
+```
+${window.location.origin}/api/v1/...   → rest-api via nginx
+${window.location.origin}/graphql      → graphql-api via nginx
+```
+
+## Configuration
+
+Environment variables injected at runtime:
+
+| Variable | Value in production |
+|----------|-------------------|
+| `PORT` | `3000` |
+| `API_URL` | `http://rest-api:3001/api/v1` |
+| `REST_API_URL` | `http://rest-api:3001` |
+| `GRAPHQL_API_URL` | `http://graphql-api:3002` |
+
+## Component Architecture
+
+Components follow a container/view separation pattern:
+
+```
+ComponentName/
+├── index.ts              # Barrel export
+├── ComponentName.tsx     # Logic + hooks (container)
+├── View.tsx              # Presentational (pure)
+├── ComponentName.css     # Component styles (BEM)
+└── types.ts              # TypeScript types
+```
+
+## Styling
+
+Vanilla CSS with BEM naming. No CSS-in-JS. Global design tokens are CSS custom properties defined in `public/css/index.css`. Two themes are supported: Nebula (default) and Catppuccin (legacy), selected via `data-theme` on `<html>`.

@@ -1,4 +1,4 @@
-FROM oven/bun:1.3.5-alpine AS base
+FROM oven/bun:1.3.8-alpine AS base
 WORKDIR /app/pokemon-rest-api
 
 # Install dependencies
@@ -14,9 +14,6 @@ COPY packages/@framework/package.json ./packages/@framework/
 COPY packages/@build/package.json ./packages/@build/
 RUN bun install
 
-FROM deps AS test
-RUN bun run test
-
 # Build
 FROM deps AS build
 COPY packages/ ./packages/
@@ -24,26 +21,18 @@ COPY apps/rest-api/ ./apps/rest-api/
 WORKDIR /app/pokemon-rest-api/apps/rest-api
 RUN bun run build
 
-# Production
+# Production — only the bundled output, nothing else needed
 FROM base AS production
 WORKDIR /app/pokemon-rest-api
 
-# Copy built artifacts
 COPY --from=build /app/pokemon-rest-api/apps/rest-api/dist ./dist
-COPY --from=build /app/pokemon-rest-api/apps/rest-api/package.json ./
+COPY --from=build /app/pokemon-rest-api/apps/rest-api/migrations ./migrations
 
-# Copy required packages
-COPY --from=deps /app/pokemon-rest-api/node_modules ./node_modules
-COPY --from=build /app/pokemon-rest-api/packages ./packages
-# Create non-root user
 USER bun
 
-# Expose port
 EXPOSE 3001
 
-# Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:3001/health || exit 1
+  CMD wget -qO- http://localhost:3001/health || exit 1
 
-# Start the server
 CMD ["bun", "run", "dist/src/index.js"]

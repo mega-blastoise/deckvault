@@ -1,0 +1,180 @@
+---
+title: GraphQL Schema & Queries
+description: Complete GraphQL schema and example queries for the DeckVault card API.
+---
+
+# GraphQL Schema & Queries
+
+The GraphQL API is available at `/graphql`. It is read-only and requires no authentication.
+
+## Queries
+
+### `card(id: ID!): Card`
+
+Fetch a single card by ID.
+
+```graphql
+query {
+  card(id: "sv3-123") {
+    id
+    name
+    supertype
+    hp
+    types
+    rarity
+    attacks {
+      name
+      cost
+      damage
+      text
+    }
+    abilities {
+      name
+      type
+      text
+    }
+    set {
+      id
+      name
+      series
+    }
+    images {
+      small
+      large
+    }
+  }
+}
+```
+
+### `cards(...): CardConnection`
+
+Paginated card list with optional filters.
+
+**Arguments:**
+
+| Argument | Type | Default | Description |
+|----------|------|---------|-------------|
+| `limit` | Int | 60 | Results per page |
+| `offset` | Int | 0 | Pagination offset |
+| `name` | String | — | Partial name match |
+| `types` | [String!] | — | Filter by energy types |
+| `rarity` | String | — | Exact rarity match |
+| `setId` | String | — | Filter by set ID |
+
+```graphql
+query {
+  cards(limit: 20, name: "Charizard", types: ["Fire"]) {
+    totalCount
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    edges {
+      node {
+        id
+        name
+        rarity
+        set { name }
+      }
+    }
+  }
+}
+```
+
+### `cardsByName(name: String!): [Card!]!`
+
+Returns all cards matching the given name (exact substring match).
+
+### `cardsBySet(setId: ID!, limit: Int, offset: Int): [Card!]!`
+
+Returns cards in a specific set.
+
+### `set(id: ID!): Set`
+
+Fetch a single set by ID.
+
+### `sets(limit: Int, offset: Int): SetConnection`
+
+Paginated set list ordered by release date descending.
+
+### `setsBySeries(series: String!): [Set!]!`
+
+All sets in a series (e.g., `"Scarlet & Violet"`).
+
+### `stats: Stats`
+
+Database statistics.
+
+```graphql
+query {
+  stats {
+    totalCards
+    totalSets
+    lastUpdated
+  }
+}
+```
+
+### `health: HealthCheck`
+
+Service health status.
+
+```graphql
+query {
+  health {
+    status
+    database
+    uptime
+    timestamp
+  }
+}
+```
+
+## Types
+
+### `Card`
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | ID! | Canonical card ID (e.g., `sv3-123`) |
+| `name` | String! | Card name |
+| `supertype` | String! | `Pokémon`, `Trainer`, or `Energy` |
+| `hp` | Int | Hit points (Pokémon only) |
+| `types` | [String!] | Energy types |
+| `attacks` | [Attack!] | Attack definitions |
+| `abilities` | [Ability!] | Ability definitions |
+| `set` | Set! | The set this card belongs to |
+| `rarity` | String | Rarity string |
+| `legalities` | Legalities | Format legalities |
+| `images` | CardImages | `small` and `large` image URLs |
+
+### `Set`
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | ID! | Set ID (e.g., `sv3`) |
+| `name` | String! | Set name |
+| `series` | String! | Series name |
+| `printedTotal` | Int! | Card count on packaging |
+| `total` | Int! | Total cards including secrets |
+| `releaseDate` | String! | `YYYY/MM/DD` |
+| `cards(limit, offset)` | [Card!]! | Cards in this set |
+| `cardCount` | Int! | Total card count |
+
+## Pagination
+
+`CardConnection` and `SetConnection` use offset-based pagination (not Relay cursor-based despite the `edges`/`cursor` shape):
+
+```graphql
+query {
+  cards(limit: 60, offset: 120) {
+    totalCount
+    pageInfo { hasNextPage hasPreviousPage }
+    edges { node { id name } }
+  }
+}
+```
+
+<Callout variant="info">
+  The `cursor` field on edges encodes the offset index as a base64 string. It is provided for forward compatibility but the API does not currently support `after`/`before` cursor arguments.
+</Callout>

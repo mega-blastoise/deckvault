@@ -1,0 +1,47 @@
+---
+title: Collection
+description: REST endpoints for managing a user's card collection.
+---
+
+# Collection
+
+All collection endpoints require an authenticated session cookie.
+
+## Endpoints
+
+### `GET /api/v1/collection`
+
+Returns the authenticated user's full collection.
+
+**Response:**
+```json
+[
+  { "cardId": "sv3-123", "quantity": 4 },
+  { "cardId": "sv1-25",  "quantity": 2 }
+]
+```
+
+### `PUT /api/v1/collection/:cardId`
+
+Set the quantity of a card in the collection. Creates the record if it doesn't exist; updates if it does.
+
+**Request body:**
+```json
+{ "quantity": 3 }
+```
+
+`quantity` must be >= 1. To remove a card, use DELETE.
+
+**Response:**
+```json
+{ "cardId": "sv3-123", "quantity": 3 }
+```
+
+### `DELETE /api/v1/collection/:cardId`
+
+Remove a card entirely from the collection.
+
+**Response:**
+```json
+{ "success": true }
+```

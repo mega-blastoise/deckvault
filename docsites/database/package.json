@@ -1,0 +1,22 @@
+{
+  "name": "@pokemon/docs-database",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "docs:build": "bunx bun-dxdocs build",
+    "docs:dev": "bunx bun-dxdocs dev"
+  },
+  "dependencies": {
+    "@bundt/dxdocs": "^0.2.1",
+    "@mdx-js/mdx": "^3.1.0",
+    "gray-matter": "^4.0.3",
+    "lucide-react": "^0.575.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "remark-gfm": "^4.0.1",
+    "shiki": "^3.0.0",
+    "unist-util-visit": "^5.0.0",
+    "zod": "^4.0.0"
+  }
+}

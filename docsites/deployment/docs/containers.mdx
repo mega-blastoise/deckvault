@@ -1,0 +1,90 @@
+---
+title: Containers & Services
+description: The four Docker containers that make up the DeckVault production stack.
+---
+
+# Containers & Services
+
+Four containers are defined in `docker-compose.prod.yml` on the `pika` network.
+
+## pokemon-nginx
+
+| Property | Value |
+|----------|-------|
+| Image | `nginx:1.27-alpine` |
+| Ports | `80:80`, `443:443` |
+| Config | `./docker/nginx/nginx.conf`, `./docker/nginx/conf.d/default.conf` |
+
+The only container with externally exposed ports. Routes requests to the three application containers. Depends on `rest-api` (healthy) and `graphql-api` (healthy) before starting.
+
+## pokemon-web
+
+| Property | Value |
+|----------|-------|
+| Image | `ghcr.io/mega-blastoise/deckvault-web:latest` |
+| Exposed port | `3000` (internal only) |
+| Runtime | Bun SSR |
+
+Environment variables injected at runtime:
+
+```
+PORT=3000
+API_URL=http://rest-api:3001/api/v1
+REST_API_URL=http://rest-api:3001
+GRAPHQL_API_URL=http://graphql-api:3002
+```
+
+The web container communicates with both APIs over the `pika` Docker network using service names as hostnames. It never goes through nginx internally.
+
+## pokemon-rest-api
+
+| Property | Value |
+|----------|-------|
+| Image | `ghcr.io/mega-blastoise/deckvault-rest-api:latest` |
+| Exposed port | `3001` (internal only) |
+| Healthcheck | `wget -qO- http://localhost:3001/health` |
+| Volume | `./database:/data` (read-only SQLite) |
+
+Key environment variables:
+
+```
+REST_API_PORT=3001
+REST_API_HOST=0.0.0.0
+DATABASE_PATH=/data/pokemon-data.sqlite3.db
+DATABASE_READONLY=true
+DECK_DATABASE_PATH=/tmp/decks.sqlite3.db
+```
+
+Additional secrets (`DATABASE_URL`, `GOOGLE_CLIENT_ID`, etc.) come from `.env.prod` via `env_file`.
+
+## pokemon-graphql-api
+
+| Property | Value |
+|----------|-------|
+| Image | `ghcr.io/mega-blastoise/deckvault-graphql-api:latest` |
+| Exposed port | `3002` (internal only) |
+| Healthcheck | `wget -qO- http://localhost:3002/health` |
+| Volume | `./database:/data` (read-only SQLite) |
+
+Key environment variables:
+
+```
+GRAPHQL_API_PORT=3002
+GRAPHQL_API_HOST=0.0.0.0
+DATABASE_PATH=/data/pokemon-data.sqlite3.db
+DATABASE_READONLY=true
+```
+
+The GraphQL API only reads from SQLite — it has no connection to RDS.
+
+## Startup Order
+
+```
+postgres (RDS, external)
+    └── rest-api (healthy)
+    └── graphql-api (healthy)
+            └── web (started)
+            └── nginx (started, after web + rest-api + graphql-api)
+```
+
+Healthchecks poll every 30 seconds with a 10 second timeout and 3 retries. `start_period` is 10 seconds to allow Bun to boot before the first check.

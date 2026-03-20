@@ -41,6 +41,14 @@
     "scripts:json:sync": {
       "dependsOn": ["^scripts:json:sync"],
       "cache": false
+    },
+    "docs:build": {
+      "inputs": ["docs/**", "dxdocs.config.ts"],
+      "outputs": ["site/**"]
+    },
+    "docs:dev": {
+      "cache": false,
+      "persistent": true
     }
   }
 }

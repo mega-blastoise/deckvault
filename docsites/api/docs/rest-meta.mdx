@@ -1,0 +1,98 @@
+---
+title: Meta & Local Meta
+description: REST endpoints for competitive meta decks and local game store reporting.
+---
+
+# Meta & Local Meta
+
+## Meta Decks
+
+Curated competitive deck lists sourced from tournament results.
+
+### `GET /api/v1/meta-decks`
+
+List all meta decks. Optionally authenticated — if a session cookie is present, each deck is enriched with the user's collection coverage data.
+
+**Query parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `format` | string | Filter by format |
+| `archetype` | string | Filter by archetype |
+
+**Response:**
+```json
+[
+  {
+    "id": "uuid",
+    "name": "Charizard ex / Pidgeot ex",
+    "archetype": "charizard-ex",
+    "format": "standard",
+    "placement": "1st",
+    "eventName": "Regional Championship",
+    "eventDate": "2024-03-15",
+    "sourceUrl": "https://limitlesstcg.com/..."
+  }
+]
+```
+
+### `GET /api/v1/meta-decks/:id`
+
+Get a single meta deck with its full card list.
+
+**Response includes:**
+```json
+{
+  "id": "uuid",
+  "name": "...",
+  "cards": [
+    { "cardId": "sv3-6", "quantity": 3 },
+    { "cardId": "sv3-123", "quantity": 4 }
+  ],
+  "substitutes": [
+    { "cardId": "sv3-6", "substituteId": "sv2-6", "notes": "Older art, same card" }
+  ]
+}
+```
+
+## Local Meta
+
+Community-submitted match reports from local game stores. Aggregated into win-rate frequency data.
+
+### `POST /api/v1/local-meta/reports`
+
+Submit a match report. Requires authentication.
+
+**Request body:**
+```json
+{
+  "archetype": "charizard-ex",
+  "archetypeName": "Charizard ex / Pidgeot ex",
+  "format": "standard",
+  "lgsName": "Game Haven",
+  "region": "Pacific Northwest",
+  "result": "win"
+}
+```
+
+`result` must be one of `win`, `loss`, or `tie`.
+
+### `GET /api/v1/local-meta/frequency`
+
+Returns aggregated match data from the last 30 days. Public endpoint.
+
+**Response:**
+```json
+[
+  {
+    "archetype": "charizard-ex",
+    "archetypeName": "Charizard ex / Pidgeot ex",
+    "format": "standard",
+    "reportCount": 47,
+    "winCount": 28,
+    "lossCount": 15,
+    "tieCount": 4,
+    "lastSeen": "2024-03-19T14:22:00Z"
+  }
+]
+```

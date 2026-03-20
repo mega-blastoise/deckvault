@@ -1,0 +1,62 @@
+---
+title: Environment Variables
+description: All environment variables used across DeckVault services.
+---
+
+# Environment Variables
+
+## Web (`apps/web`)
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `PORT` | No | HTTP port (default: `3000`) |
+| `API_URL` | Yes | REST API base URL including `/api/v1` |
+| `REST_API_URL` | Yes | REST API base URL without path prefix |
+| `GRAPHQL_API_URL` | Yes | GraphQL API base URL |
+
+**Local dev values:**
+```
+API_URL=http://localhost:3001/api/v1
+REST_API_URL=http://localhost:3001
+GRAPHQL_API_URL=http://localhost:3002
+```
+
+**Production values (injected by docker-compose.prod.yml):**
+```
+API_URL=http://rest-api:3001/api/v1
+REST_API_URL=http://rest-api:3001
+GRAPHQL_API_URL=http://graphql-api:3002
+```
+
+## REST API (`apps/rest-api`)
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `REST_API_PORT` | No | HTTP port (default: `3001`) |
+| `REST_API_HOST` | No | Bind address (default: `localhost`) |
+| `DATABASE_URL` | Yes | PostgreSQL connection string |
+| `DATABASE_PATH` | Yes | Path to SQLite file |
+| `DATABASE_READONLY` | No | Set `true` to open SQLite read-only |
+| `DECK_DATABASE_PATH` | No | Path for deck SQLite (default: in-memory) |
+| `GOOGLE_CLIENT_ID` | Yes | Google OAuth client ID |
+| `GOOGLE_CLIENT_SECRET` | Yes | Google OAuth client secret |
+| `SESSION_SECRET` | Yes | Secret for signing session cookies |
+| `LOG_LEVEL` | No | Logging level (default: `info`) |
+
+## GraphQL API (`apps/graphql-api`)
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `GRAPHQL_API_PORT` | No | HTTP port (default: `3002`) |
+| `GRAPHQL_API_HOST` | No | Bind address (default: `localhost`) |
+| `DATABASE_PATH` | Yes | Path to SQLite file |
+| `DATABASE_READONLY` | No | Set `true` to open SQLite read-only |
+| `LOG_LEVEL` | No | Logging level (default: `info`) |
+
+## Production Secrets
+
+In production, secrets are stored in `~/deckvault/.env.prod` on the EC2 instance. This file is referenced by `env_file` in `docker-compose.prod.yml`. It is never committed to the repository.
+
+<Callout variant="warning">
+  Never commit `.env`, `.env.prod`, or any file containing real credentials. The `.gitignore` already excludes `.env*` files.
+</Callout>

@@ -1,0 +1,46 @@
+---
+title: Deployment Overview
+description: How DeckVault is deployed to production.
+---
+
+# Deployment Overview
+
+DeckVault runs on a single EC2 instance behind CloudFront and Route53. Four Docker containers are orchestrated with `docker compose` and images are distributed via GHCR.
+
+<CardGrid>
+  <Card title="Infrastructure" href="/infrastructure">
+    EC2 arm64, CloudFront CDN, Route53 DNS, and RDS PostgreSQL.
+  </Card>
+  <Card title="Containers & Services" href="/containers">
+    Nginx, web SSR, REST API, and GraphQL API containers.
+  </Card>
+  <Card title="Deploying" href="/deploy">
+    Step-by-step: build locally, push to GHCR, SCP config, pull on EC2.
+  </Card>
+  <Card title="Database Migrations" href="/migrations">
+    Migrations are baked into the rest-api image and run automatically on start.
+  </Card>
+</CardGrid>
+
+## Stack at a Glance
+
+| Component | Technology |
+|-----------|-----------|
+| Compute | EC2 `t4g.small` (arm64, Amazon Linux 2023) |
+| CDN | CloudFront |
+| DNS | Route53 |
+| Database | RDS PostgreSQL |
+| Container registry | GHCR (`ghcr.io/mega-blastoise/`) |
+| Reverse proxy | nginx:1.27-alpine |
+| Orchestration | docker compose (prod profile) |
+
+## No Git on EC2
+
+The EC2 instance has no git checkout. Deployment works by:
+
+1. Building images locally
+2. Pushing to GHCR
+3. SCPing any changed compose/config files
+4. SSHing in and running `docker compose pull && up -d`
+
+This keeps the instance lean and ensures the image is the single source of truth.

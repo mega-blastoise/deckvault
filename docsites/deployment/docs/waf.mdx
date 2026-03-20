@@ -1,0 +1,49 @@
+---
+title: WAF & Security
+description: CloudFront WAF configuration and the rule overrides required for JSON APIs.
+---
+
+# WAF & Security
+
+## WAF ACL
+
+The CloudFront distribution is associated with WAF ACL `CreatedByCloudFront-60a758c0`.
+
+The ACL uses AWS Managed Rules. Most rules are in **Block** mode. Two rule groups require overrides because the REST API and GraphQL endpoint accept JSON request bodies.
+
+## Rule Overrides
+
+| Rule | Mode | Reason |
+|------|------|--------|
+| `SQLi_BODY` | Count | SQL-like syntax in GraphQL query strings triggers this rule. Set to Count to prevent blocking legitimate requests. |
+| CommonRuleSet body rules | Count | Several `SizeRestrictions_BODY` and `GenericRFI_BODY` rules fire on large JSON payloads (deck import, batch card requests). |
+
+<Callout variant="warning">
+  Setting rules to Count rather than Block means those specific rule matches are logged but not blocked. Review WAF logs periodically to confirm no actual attacks are being counted through.
+</Callout>
+
+All other managed rule groups remain in Block mode, including:
+
+- IP reputation lists
+- Known bad inputs
+- Linux OS rule set
+- Anonymous IP list
+
+## Security Headers
+
+Nginx adds the following headers on all responses (see [Nginx Routing](/nginx)):
+
+- `X-Frame-Options: SAMEORIGIN`
+- `X-Content-Type-Options: nosniff`
+- `X-XSS-Protection: 1; mode=block`
+- `Referrer-Policy: strict-origin-when-cross-origin`
+
+## GHCR Authentication
+
+The EC2 instance must be authenticated to GHCR to pull images. Log in once per instance lifetime (or after token rotation):
+
+```bash
+echo TOKEN | docker login ghcr.io -u USERNAME --password-stdin
+```
+
+Store the token in AWS Secrets Manager or a secure note — do not commit it anywhere.

@@ -1,0 +1,79 @@
+---
+title: Adding a Migration
+description: Step-by-step guide to adding a new PostgreSQL migration.
+---
+
+# Adding a Migration
+
+Migrations are SQL files in `apps/rest-api/migrations/`. They are baked into the Docker image and applied automatically when the container starts.
+
+<Steps>
+  <Step title="Create the migration file">
+    Name the file `0NN_description.sql` where `NN` is the next sequential number (zero-padded to 3 digits):
+
+    ```bash
+    touch apps/rest-api/migrations/011_add_deck_tags.sql
+    ```
+  </Step>
+
+  <Step title="Write idempotent SQL">
+    Every migration must be safe to run multiple times. Use `IF NOT EXISTS` and `DO $$ EXCEPTION` patterns:
+
+    ```sql
+    CREATE TABLE IF NOT EXISTS deck_tags (
+      deck_id UUID NOT NULL REFERENCES decks(id) ON DELETE CASCADE,
+      tag     TEXT NOT NULL,
+      PRIMARY KEY (deck_id, tag)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_deck_tags_deck_id ON deck_tags(deck_id);
+    ```
+
+    For constraints:
+    ```sql
+    DO $$ BEGIN
+      ALTER TABLE decks ADD CONSTRAINT decks_name_length CHECK (length(name) > 0);
+    EXCEPTION WHEN duplicate_object THEN NULL;
+    END $$;
+    ```
+  </Step>
+
+  <Step title="Test locally">
+    Restart the rest-api container (or process) to apply the migration:
+
+    ```bash
+    docker compose restart rest-api
+    docker compose logs rest-api | grep migration
+    ```
+
+    Check that the migration was applied:
+
+    ```bash
+    docker compose exec postgres psql -U postgres -d deckvault \
+      -c "SELECT name, applied_at FROM _migrations ORDER BY applied_at DESC LIMIT 5;"
+    ```
+  </Step>
+
+  <Step title="Deploy">
+    Rebuild and push the rest-api image:
+
+    ```bash
+    docker build -t ghcr.io/mega-blastoise/deckvault-rest-api:latest \
+      -f apps/rest-api/Dockerfile .
+    docker push ghcr.io/mega-blastoise/deckvault-rest-api:latest
+    ```
+
+    On EC2, pull and restart:
+
+    ```bash
+    docker compose -f docker-compose.prod.yml pull rest-api
+    docker compose -f docker-compose.prod.yml up -d rest-api
+    ```
+
+    The migration runs automatically on container start.
+  </Step>
+</Steps>
+
+<Callout variant="warning">
+  Never run migration SQL manually against the RDS instance. Always go through the runner. Running SQL directly bypasses the `_migrations` tracking table and puts the schema out of sync with what the runner believes has been applied.
+</Callout>

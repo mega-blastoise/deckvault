@@ -1,0 +1,89 @@
+---
+title: Deploying
+description: Step-by-step process to build and deploy a new version to production.
+---
+
+# Deploying
+
+There is no CI/CD pipeline — deployments are manual. Images are built locally, pushed to GHCR, and pulled onto the EC2 instance.
+
+## Full Deployment (all services)
+
+### 1. Build images locally
+
+Run from the monorepo root. The build context is the repo root so each Dockerfile can `COPY` from the workspace it needs.
+
+```bash
+docker build -t ghcr.io/mega-blastoise/deckvault-web:latest \
+  -f apps/web/Dockerfile .
+
+docker build -t ghcr.io/mega-blastoise/deckvault-rest-api:latest \
+  -f apps/rest-api/Dockerfile .
+
+docker build -t ghcr.io/mega-blastoise/deckvault-graphql-api:latest \
+  -f apps/graphql-api/Dockerfile .
+```
+
+### 2. Push to GHCR
+
+```bash
+docker push ghcr.io/mega-blastoise/deckvault-web:latest
+docker push ghcr.io/mega-blastoise/deckvault-rest-api:latest
+docker push ghcr.io/mega-blastoise/deckvault-graphql-api:latest
+```
+
+### 3. SCP changed config files
+
+Only copy files that have changed. Common candidates:
+
+```bash
+# Updated compose file
+scp -i $EC2_KEY docker-compose.prod.yml \
+  $EC2_USER@$ELASTIC_IP:~/deckvault/
+
+# Updated nginx config
+scp -i $EC2_KEY docker/nginx/conf.d/default.conf \
+  $EC2_USER@$ELASTIC_IP:~/deckvault/docker/nginx/conf.d/default.conf
+```
+
+### 4. Pull and restart on EC2
+
+```bash
+ssh -i $EC2_KEY $EC2_USER@$ELASTIC_IP
+
+cd ~/deckvault
+docker compose -f docker-compose.prod.yml pull
+docker compose -f docker-compose.prod.yml up -d
+docker compose -f docker-compose.prod.yml ps
+```
+
+`up -d` recreates only containers whose image has changed. Containers with unchanged images are left running.
+
+## Partial Deployment (single service)
+
+To redeploy only one service, build and push just that image, then on EC2:
+
+```bash
+docker compose -f docker-compose.prod.yml pull rest-api
+docker compose -f docker-compose.prod.yml up -d rest-api
+```
+
+<Callout variant="info">
+  Restarting `rest-api` runs migrations automatically. No manual migration step is needed.
+</Callout>
+
+## Rollback
+
+GHCR does not retain previous `:latest` tags once overwritten. For rollback:
+
+1. Rebuild from the previous git commit locally
+2. Push as `:latest`
+3. Pull and restart on EC2
+
+If you need to maintain a stable rollback target, tag releases explicitly (e.g., `:v1.2.3`) before pushing `:latest`.
+
+## Environment File
+
+Secrets are stored in `~/deckvault/.env.prod` on EC2. This file is never committed to the repository. It is referenced by `rest-api` and `graphql-api` via `env_file` in the compose file.
+
+Update it on EC2 directly if environment variables need to change, then restart the affected service.

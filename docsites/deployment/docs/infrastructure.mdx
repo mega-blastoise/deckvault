@@ -1,0 +1,40 @@
+---
+title: Infrastructure
+description: EC2, CloudFront, Route53, and RDS configuration.
+---
+
+# Infrastructure
+
+## EC2
+
+The application runs on a single EC2 instance with the following properties:
+
+- **Architecture:** arm64 (Graviton)
+- **OS:** Amazon Linux 2023
+- **Purpose:** Hosts all four Docker containers via `docker-compose.prod.yml`
+
+All services communicate over the `pika` Docker network. Only nginx exposes ports to the host (80 and 443).
+
+## CloudFront
+
+CloudFront sits in front of EC2 and provides:
+
+- Global edge caching for static assets
+- TLS termination
+- WAF integration (see [WAF & Security](/waf))
+
+The distribution origin points to the EC2 Elastic IP. The default cache behavior passes `Cookie` and `Authorization` headers to the origin so session-based requests (auth, deck mutations) are not incorrectly cached.
+
+## Route53
+
+DNS is managed in Route53. The apex domain and `www` subdomain both alias to the CloudFront distribution. Route53 health checks are not configured — CloudFront handles origin failover.
+
+## RDS PostgreSQL
+
+User data (accounts, decks, collections, meta) is stored in RDS PostgreSQL. The connection string is provided at runtime via the `DATABASE_URL` environment variable, injected from `.env.prod` on the EC2 instance.
+
+The rest-api container is the only service that connects to RDS. It runs migrations automatically on startup.
+
+<Callout variant="info">
+  Pokemon card and set data lives in a SQLite file (`pokemon-data.sqlite3.db`) mounted as a read-only Docker volume. This database is never written to at runtime — it is updated offline and replicated manually.
+</Callout>

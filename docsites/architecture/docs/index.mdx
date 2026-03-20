@@ -1,0 +1,58 @@
+---
+title: Architecture Overview
+description: System architecture of the DeckVault Pokemon TCG platform.
+---
+
+# Architecture Overview
+
+DeckVault is a Turborepo monorepo. Three Bun services handle HTTP traffic; a shared SQLite file serves read-only Pokemon card data; RDS PostgreSQL stores all mutable user data.
+
+<CardGrid>
+  <Card title="Frontend" href="/frontend">
+    React 19 SSR with Bun. BFF pattern for server-side API calls.
+  </Card>
+  <Card title="REST API" href="/rest-api">
+    Bun.serve() with a functional router. OAuth, decks, collections, meta.
+  </Card>
+  <Card title="GraphQL API" href="/graphql-api">
+    Apollo Server 5 on Bun. Read-only card and set queries via SQLite.
+  </Card>
+  <Card title="Databases" href="/databases">
+    SQLite for card data (read-only). PostgreSQL/RDS for user data.
+  </Card>
+</CardGrid>
+
+## Request Flow
+
+```
+User Browser
+    │
+    ▼
+CloudFront (CDN + WAF)
+    │
+    ▼
+nginx:1.27-alpine (reverse proxy)
+    ├── /graphql        → pokemon-graphql-api :3002
+    ├── /(auth|api)/    → pokemon-rest-api    :3001
+    └── /               → pokemon-web         :3000
+                              │
+                    (server-side BFF calls)
+                    ├── http://rest-api:3001
+                    └── http://graphql-api:3002
+```
+
+Client-side GraphQL calls go through `${window.location.origin}/graphql`, which routes through nginx. Server-side calls from the web SSR layer use the Docker internal hostnames directly.
+
+## Technology Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Frontend runtime | Bun 1.3.5 |
+| Frontend framework | React 19, Webpack 5 + Babel |
+| REST API | Bun.serve(), `@pokemon/framework` |
+| GraphQL API | Apollo Server 5, Bun |
+| Auth | Google OAuth 2.0, cookie sessions |
+| SQLite driver | `bun:sqlite` (built-in) |
+| PostgreSQL driver | `pg` |
+| Monorepo | Turborepo 2.3 |
+| Containers | Docker, GHCR |

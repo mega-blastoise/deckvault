@@ -1,0 +1,53 @@
+---
+title: REST API (apps/rest-api)
+description: Bun HTTP server handling auth, decks, collections, and meta data.
+---
+
+# REST API (apps/rest-api)
+
+## Overview
+
+The REST API is built on `Bun.serve()` using the `@pokemon/framework` functional router pattern. It owns all mutable state: user accounts, decks, collections, and meta reporting.
+
+## Framework Pattern
+
+Routes are defined with a typed functional router:
+
+```typescript
+createRouter<Services>('/api/v1/cards')
+  .get('/search', searchCards)
+  .get('/:id', getCardById)
+  .get('/', getCards)
+```
+
+A DI container wires services to handlers:
+
+```typescript
+const container = createContainer()
+  .register('db', (c) => new DatabaseService(c.get('config').database))
+  .register('pg', (c) => new PostgresService(c.get('config').postgres.url));
+```
+
+## Data Sources
+
+| Data | Source | Access |
+|------|--------|--------|
+| Pokemon cards & sets | SQLite (`pokemon-data.sqlite3.db`) | Read-only |
+| Users, decks, collections | RDS PostgreSQL | Read/write |
+| Meta decks | RDS PostgreSQL | Read/write |
+| LGS reports | RDS PostgreSQL | Read/write |
+
+The SQLite database is mounted as a read-only Docker volume at `/data`. The `DATABASE_READONLY=true` flag is set to prevent any accidental writes.
+
+## Authentication
+
+Google OAuth 2.0. The `/auth/google` endpoint initiates the OAuth flow; `/auth/callback` exchanges the code for a session cookie. The session is an HTTP-only cookie forwarded through nginx.
+
+`authRequired` and `authOptional` middleware are applied per-router:
+
+- Deck mutations, collection management, and LGS reporting require authentication.
+- Card/set browsing, deck detail, and meta browsing are public or optionally authenticated.
+
+## Port
+
+`3001` (internal Docker network only — not exposed to the host).

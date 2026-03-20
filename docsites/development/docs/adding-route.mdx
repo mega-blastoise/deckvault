@@ -1,0 +1,82 @@
+---
+title: Adding a REST Route
+description: How to add a new endpoint to the REST API.
+---
+
+# Adding a REST Route
+
+## 1. Create the handler
+
+Add a handler function in `apps/rest-api/src/handlers/`. Handlers receive a typed context object with `services`, `params`, `query`, `body`, and `request`:
+
+```typescript
+// apps/rest-api/src/handlers/decks.ts
+
+import type { Handler } from '@pokemon/framework';
+import type { Services } from '../types';
+
+export const myNewHandler: Handler<Services> = async (ctx) => {
+  const { pg } = ctx.services;
+  const { id } = ctx.params;
+
+  const result = await pg.query(
+    'SELECT * FROM decks WHERE id = $1',
+    [id]
+  );
+
+  return ctx.json(result.rows[0] ?? null, result.rows.length === 0 ? 404 : 200);
+};
+```
+
+## 2. Register the route
+
+Add the handler to the appropriate router in `apps/rest-api/src/index.ts`:
+
+```typescript
+const decksProtected = createRouter<Services>('/api/v1/decks')
+  .use(authRequired)
+  .get('/', listDecks)
+  .post('/', createDeck)
+  .put('/:id', updateDeck)
+  .delete('/:id', deleteDeck)
+  .get('/:id/my-new-path', myNewHandler);  // add here
+```
+
+Import the handler at the top of the file with the other handler imports.
+
+## 3. Apply auth middleware if needed
+
+- Public endpoints: no middleware
+- Optional auth (enriches response if logged in): `.use(authOptional)`
+- Required auth: `.use(authRequired)`
+
+Middleware is applied at the router level and affects all routes registered after it on that router. If you need mixed auth on the same path prefix, create separate routers as the existing code does.
+
+## 4. Type the request body
+
+If the handler reads a request body, add a Zod schema to validate it:
+
+```typescript
+import { z } from 'zod';
+
+const CreateTagSchema = z.object({
+  tag: z.string().min(1).max(30)
+});
+
+export const createTag: Handler<Services> = async (ctx) => {
+  const parsed = CreateTagSchema.safeParse(await ctx.request.json());
+  if (!parsed.success) {
+    return ctx.json({ error: 'Invalid request' }, 400);
+  }
+  // ...
+};
+```
+
+## 5. Test it
+
+```bash
+cd apps/rest-api
+bun test
+```
+
+Add a test in `src/app.test.ts` or a co-located `__tests__/` directory for the handler.

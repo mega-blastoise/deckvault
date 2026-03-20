@@ -1,0 +1,71 @@
+---
+title: Testing & Linting
+description: Running tests and code quality checks.
+---
+
+# Testing & Linting
+
+## Tests
+
+### All workspaces
+
+```bash
+bun run test
+```
+
+Runs `turbo test` across all workspaces in dependency order.
+
+### Single workspace
+
+```bash
+cd apps/rest-api
+bun test
+```
+
+Bun's built-in test runner discovers `*.test.ts` and `*.spec.ts` files.
+
+### Watch mode
+
+```bash
+cd apps/rest-api
+bun test --watch
+```
+
+## Linting
+
+```bash
+# Lint all workspaces
+bun run lint
+
+# Lint a single workspace
+cd apps/web && bun run lint
+```
+
+ESLint 9 with flat config. Import ordering is enforced via `simple-import-sort`.
+
+## Formatting
+
+```bash
+# Format everything
+bun run format
+```
+
+Prettier with: `tabWidth: 2`, `singleQuote: true`, `trailingComma: "none"`, `semi: true`.
+
+## Type Checking
+
+```bash
+bun run check-types
+```
+
+TypeScript strict mode with `noImplicitAny`, `noImplicitReturns`, and `noUncheckedIndexedAccess`.
+
+## Pre-PR Checklist
+
+Before opening a pull request:
+
+```bash
+bun run check-types
+bun run lint
+bun run test
+```

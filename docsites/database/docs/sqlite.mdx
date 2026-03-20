@@ -1,0 +1,60 @@
+---
+title: SQLite (Pokemon Data)
+description: The read-only SQLite database containing all Pokemon TCG card and set data.
+---
+
+# SQLite — Pokemon Data
+
+## Overview
+
+The SQLite database (`pokemon-data.sqlite3.db`) contains the complete Pokemon TCG card catalog. It is populated offline by the `apps/scripts` data sync process and mounted read-only into the `rest-api` and `graphql-api` containers at runtime.
+
+## Tables
+
+### `pokemon_cards`
+
+Stores individual card records. Key columns:
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | TEXT | Canonical card ID (e.g., `sv3-123`) |
+| `name` | TEXT | Card name |
+| `supertype` | TEXT | `Pokémon`, `Trainer`, or `Energy` |
+| `subtypes` | TEXT | JSON array |
+| `hp` | INTEGER | Hit points (Pokémon only) |
+| `types` | TEXT | JSON array of energy types |
+| `set_id` | TEXT | Foreign key to `pokemon_card_sets.id` |
+| `rarity` | TEXT | Rarity string |
+| `number` | TEXT | Collector number within the set |
+| `attacks` | TEXT | JSON array |
+| `abilities` | TEXT | JSON array |
+
+### `pokemon_card_sets`
+
+Stores set (expansion) records. Key columns:
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | TEXT | Set ID (e.g., `sv3`) |
+| `name` | TEXT | Set name |
+| `series` | TEXT | Series name (e.g., `Scarlet & Violet`) |
+| `printed_total` | INTEGER | Card count printed on packaging |
+| `total` | INTEGER | Total cards including secret rares |
+| `release_date` | TEXT | `YYYY/MM/DD` |
+| `ptcgo_code` | TEXT | PTCGO set code |
+
+## Access Pattern
+
+Both `rest-api` and `graphql-api` open the database with `bun:sqlite` in read-only mode. Writes at runtime are not possible — `DATABASE_READONLY=true` is enforced in the environment.
+
+## Updating Card Data
+
+To update the card catalog:
+
+1. Run the data sync scripts in `apps/scripts` to produce a new `pokemon-data.sqlite3.db`
+2. Copy the file to `./database/` on EC2
+3. Restart `rest-api` and `graphql-api` containers to pick up the new file
+
+<Callout variant="warning">
+  The database file is mounted as a volume, not baked into the image. Updating it does not require rebuilding the Docker images.
+</Callout>

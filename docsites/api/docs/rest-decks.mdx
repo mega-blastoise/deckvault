@@ -1,0 +1,89 @@
+---
+title: Decks
+description: REST endpoints for creating, viewing, and managing decks.
+---
+
+# Decks
+
+## Public Endpoints
+
+### `GET /api/v1/decks/browse`
+
+Browse public decks. No authentication required.
+
+**Query parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `format` | string | Filter by format (e.g., `standard`) |
+| `page` | number | Page number |
+| `limit` | number | Results per page |
+
+### `GET /api/v1/decks/:id`
+
+Get a single deck by ID. Public decks are accessible to anyone. Private decks return 403 for non-owners.
+
+## Authenticated Endpoints
+
+All endpoints below require an authenticated session cookie.
+
+### `GET /api/v1/decks`
+
+List the authenticated user's decks.
+
+### `POST /api/v1/decks`
+
+Create a new deck.
+
+**Request body:**
+```json
+{
+  "name": "Charizard ex / Pidgeot ex",
+  "description": "Consistent setup via Pidgeot ex's Unfair Stamp",
+  "format": "standard",
+  "coverCardId": "sv3-6",
+  "isPublic": true
+}
+```
+
+### `PUT /api/v1/decks/:id`
+
+Update an existing deck. Only the owner can update.
+
+**Request body:** Same shape as POST, all fields optional.
+
+### `DELETE /api/v1/decks/:id`
+
+Delete a deck. Cascades to `deck_cards` and `deck_versions`.
+
+## Deck Versions
+
+Deck versions are snapshots saved when a deck is published or manually versioned.
+
+### `GET /api/v1/decks/:id/versions`
+
+List all versions for a deck.
+
+### `GET /api/v1/decks/:id/versions/:versionId`
+
+Get a specific version by ID.
+
+### `GET /api/v1/decks/:id/versions/diff`
+
+Returns a diff between two versions.
+
+**Query parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `from` | string | Version ID to diff from |
+| `to` | string | Version ID to diff to |
+
+### `PUT /api/v1/decks/:id/versions/:versionId/label`
+
+Update the label on a version.
+
+**Request body:**
+```json
+{ "label": "Tournament ready" }
+```

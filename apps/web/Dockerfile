@@ -1,4 +1,4 @@
-FROM oven/bun:1.3.5-alpine AS base
+FROM oven/bun:1.3.8-alpine AS base
 
 FROM base AS workspace
 
@@ -52,4 +52,5 @@ USER bun
 
 EXPOSE 3000
 
-CMD ["bun", "run", "docker:web:start"]
+WORKDIR /home/bun/runtime-workspace/apps/web
+CMD ["bun", "run", "src/index.tsx"]

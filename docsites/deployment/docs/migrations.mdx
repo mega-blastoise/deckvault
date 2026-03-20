@@ -1,0 +1,53 @@
+---
+title: Database Migrations
+description: How PostgreSQL migrations are managed and applied in production.
+---
+
+# Database Migrations
+
+## How It Works
+
+Migrations are SQL files in `apps/rest-api/migrations/`. They are **baked into the Docker image** at build time and applied automatically when the `rest-api` container starts.
+
+The `PostgresService` calls `runMigrations()` during startup, before the HTTP server begins accepting requests. It tracks applied migrations in the `_migrations` table and skips any file that has already been recorded.
+
+## Migration Tracking
+
+Migration state is tracked in `_migrations` (created by `005_migrations_tracking.sql`):
+
+```sql
+CREATE TABLE IF NOT EXISTS _migrations (
+  id         SERIAL PRIMARY KEY,
+  name       TEXT NOT NULL UNIQUE,
+  applied_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+```
+
+Each migration filename is inserted on successful execution. Re-running the same migration is a no-op.
+
+## Idempotency Requirements
+
+Every migration **must be idempotent**. The runner does not wrap migrations in transactions that roll back on failure — a partially applied migration can leave the schema in a bad state. Use these patterns:
+
+```sql
+-- Tables
+CREATE TABLE IF NOT EXISTS my_table (...);
+CREATE INDEX IF NOT EXISTS idx_name ON my_table(col);
+
+-- Constraints (add)
+DO $$ BEGIN
+  ALTER TABLE my_table ADD CONSTRAINT my_check CHECK (col > 0);
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+-- Constraints (drop before re-adding)
+ALTER TABLE my_table DROP CONSTRAINT IF EXISTS old_check;
+```
+
+<Callout variant="warning">
+  Never apply migrations manually against the RDS instance. Always go through the runner by redeploying the `rest-api` container. This ensures `_migrations` stays in sync with the actual schema state.
+</Callout>
+
+## Adding a New Migration
+
+See [Adding a Migration](/adding-migration) in the Development docs for the full walkthrough.

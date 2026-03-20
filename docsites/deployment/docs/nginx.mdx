@@ -1,0 +1,63 @@
+---
+title: Nginx Routing
+description: How nginx routes requests across the three application containers.
+---
+
+# Nginx Routing
+
+Nginx acts as the single entry point. All external traffic hits port 80 (and 443 with TLS) and is proxied to the appropriate upstream based on the request path.
+
+## Upstreams
+
+```nginx
+upstream web        { server web:3000; }
+upstream rest_api   { server rest-api:3001; }
+upstream graphql_api { server graphql-api:3002; }
+```
+
+Container hostnames resolve via Docker's internal DNS on the `pika` network.
+
+## Routing Rules
+
+| Pattern | Upstream | Notes |
+|---------|----------|-------|
+| `= /nginx-health` | none — returns 200 directly | Used for ALB/CloudFront health checks |
+| `/graphql` | `graphql_api` | Exact prefix match |
+| `~ ^/(auth\|api)/` | `rest_api` | Regex match — catches `/auth/*` and `/api/*` |
+| `/` | `web` | Catch-all for SSR pages |
+
+Rules are evaluated in nginx's standard priority order: exact matches first, then regex, then prefix. The `/graphql` location is a prefix match and takes priority over the catch-all `/`.
+
+## Security Headers
+
+Applied on all responses:
+
+```
+X-Frame-Options: SAMEORIGIN
+X-Content-Type-Options: nosniff
+X-XSS-Protection: 1; mode=block
+Referrer-Policy: strict-origin-when-cross-origin
+```
+
+## Gzip Compression
+
+Enabled for `text/plain`, `text/css`, `application/javascript`, `application/json`, `application/xml`, and `image/svg+xml` at compression level 5.
+
+## Request Size
+
+Maximum request body: `2m`. JSON payloads for deck imports and GraphQL mutations stay well within this limit.
+
+## Proxy Timeouts
+
+Both `proxy_connect_timeout` and `proxy_read_timeout` are 10s and 30s respectively. GraphQL queries against the SQLite database are fast (sub-millisecond); the longer read timeout exists for pathological cases.
+
+## Cookie Forwarding
+
+The `rest_api` upstream location explicitly forwards cookies and passes `Set-Cookie` response headers back to the client — required for the Google OAuth session flow:
+
+```nginx
+proxy_set_header Cookie $http_cookie;
+proxy_pass_header Set-Cookie;
+```
+
+The other upstreams do not need this.

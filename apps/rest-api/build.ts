@@ -1,3 +1,3 @@
 import { server, build } from '@pokemon/build';
 
-await build(server());
+await build(server({ packages: 'bundle', external: [], env: 'disable' }));

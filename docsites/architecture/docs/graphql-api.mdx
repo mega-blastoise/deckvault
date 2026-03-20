@@ -1,0 +1,55 @@
+---
+title: GraphQL API (apps/graphql-api)
+description: Apollo Server 5 on Bun for read-only Pokemon card and set queries.
+---
+
+# GraphQL API (apps/graphql-api)
+
+## Overview
+
+The GraphQL API is built with Apollo Server 5 running on Bun. It provides a read-only view of the SQLite Pokemon card and set database. It has no connection to PostgreSQL — it serves only card data.
+
+## Endpoint
+
+`/graphql` — accepts `POST` requests with `application/json` bodies.
+
+## Data Source
+
+SQLite `pokemon-data.sqlite3.db` mounted read-only at `/data`. Queries use `bun:sqlite` synchronously (SQLite is fast enough; async overhead is not warranted for a local file).
+
+## DataLoader Batching
+
+Field resolvers for `Card.set` and `Set.cards` use DataLoader to batch and cache SQLite lookups within a single request:
+
+- `setLoader` — batches set fetches by ID
+- `cardsBySetLoader` — batches card fetches by set ID
+- `cardCountBySetLoader` — batches card count queries by set ID
+
+## Schema
+
+The schema is defined in `src/schema/typeDefs.ts`. Key types: `Card`, `Set`, `CardConnection`, `SetConnection`, `Stats`, `HealthCheck`.
+
+See [GraphQL Schema & Queries](/graphql) in the API docs for the full schema and example queries.
+
+## Port
+
+`3002` (internal Docker network only — not exposed to the host).
+
+## Health Check
+
+```
+GET http://localhost:3002/health
+```
+
+Also available via GraphQL:
+
+```graphql
+query {
+  health {
+    status
+    database
+    uptime
+    timestamp
+  }
+}
+```

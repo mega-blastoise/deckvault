@@ -1,0 +1,84 @@
+---
+title: Health Checks
+description: How to verify all services are running correctly after a deployment.
+---
+
+# Health Checks
+
+After deploying, verify each service is healthy before considering the deployment complete.
+
+## Container Status
+
+```bash
+docker compose -f docker-compose.prod.yml ps
+```
+
+All four containers should show `running (healthy)` for rest-api and graphql-api, and `running` for nginx and web.
+
+## Application Health Endpoints
+
+Check from inside EC2 (bypasses CloudFront and WAF):
+
+```bash
+# REST API
+curl http://localhost:3001/health
+
+# GraphQL API
+curl http://localhost:3002/health
+
+# GraphQL via nginx
+curl -X POST http://localhost/graphql \
+  -H "Content-Type: application/json" \
+  -d '{"query":"{ health { status database uptime } }"}'
+
+# Nginx self-check (no upstream proxy)
+curl http://localhost/nginx-health
+```
+
+## Expected Responses
+
+**REST API `/health`:**
+```json
+{ "status": "ok" }
+```
+
+**GraphQL `health` query:**
+```json
+{
+  "data": {
+    "health": {
+      "status": "healthy",
+      "database": "connected",
+      "uptime": 42
+    }
+  }
+}
+```
+
+**Nginx `/nginx-health`:**
+```
+ok
+```
+
+## Docker Compose Healthcheck Configuration
+
+Both `rest-api` and `graphql-api` define healthchecks in the compose file:
+
+```yaml
+healthcheck:
+  test: ["CMD", "wget", "-qO-", "http://localhost:{PORT}/health"]
+  interval: 30s
+  timeout: 10s
+  retries: 3
+  start_period: 10s
+```
+
+Nginx depends on both services reporting healthy before it starts, so a failed healthcheck will prevent nginx from routing traffic to an unhealthy upstream.
+
+## Readiness Endpoint
+
+The REST API also exposes `/ready`, which performs a deeper check (database connectivity). Use this to confirm the service is fully initialized before sending traffic:
+
+```bash
+curl http://localhost:3001/ready
+```

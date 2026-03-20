@@ -29,6 +29,44 @@ interface CreateDeckBody {
   versionLabel?: unknown;
 }
 
+function validateCardQuantities(
+  db: DatabaseService,
+  cards: DeckCardInput[]
+): string | null {
+  if (cards.length === 0) return null;
+
+  const cardIds = cards.map((c) => c.card.id);
+  const placeholders = cardIds.map(() => '?').join(',');
+  const rows = db.query<{ id: string; supertype: string; subtypes: string }>(
+    `SELECT id, supertype, subtypes FROM pokemon_cards WHERE id IN (${placeholders})`,
+    ...cardIds
+  );
+
+  const dbCardMap = new Map<string, { supertype: string; subtypes: string[] }>();
+  for (const row of rows) {
+    const subtypes = JSON.parse(row.subtypes || '[]') as string[];
+    dbCardMap.set(row.id, { supertype: row.supertype, subtypes });
+  }
+
+  for (const input of cards) {
+    const dbCard = dbCardMap.get(input.card.id);
+    const supertype = dbCard?.supertype ?? input.card.supertype;
+    const subtypes = dbCard?.subtypes ?? input.card.subtypes ?? [];
+
+    const isBasicEnergy = supertype === 'Energy' && subtypes.includes('Basic');
+    const limit = isBasicEnergy ? 60 : 4;
+
+    if (input.quantity > limit) {
+      return `"${input.card.name}" exceeds the maximum allowed quantity of ${limit}`;
+    }
+    if (input.quantity < 1) {
+      return `"${input.card.name}" must have a quantity of at least 1`;
+    }
+  }
+
+  return null;
+}
+
 function hydrateCards(db: DatabaseService, deckCards: DeckCardRow[]) {
   if (deckCards.length === 0) return [];
 
@@ -198,6 +236,9 @@ export const createDeck: Handler<Services> = async (ctx) => {
 
   if (Array.isArray(body.cards)) {
     const cardInputs = body.cards as DeckCardInput[];
+    const validationError = validateCardQuantities(db, cardInputs);
+    if (validationError) return ctx.badRequest(validationError);
+
     const dbCards = cardInputs.map((c) => ({
       cardId: c.card.id,
       quantity: c.quantity
@@ -241,6 +282,9 @@ export const updateDeck: Handler<Services> = async (ctx) => {
 
   if (Array.isArray(body.cards)) {
     const cardInputs = body.cards as DeckCardInput[];
+    const validationError = validateCardQuantities(db, cardInputs);
+    if (validationError) return ctx.badRequest(validationError);
+
     const dbCards = cardInputs.map((c) => ({
       cardId: c.card.id,
       quantity: c.quantity

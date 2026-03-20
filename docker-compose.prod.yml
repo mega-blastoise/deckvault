@@ -14,35 +14,34 @@ services:
         condition: service_started
       rest-api:
         condition: service_healthy
+      graphql-api:
+        condition: service_healthy
     restart: unless-stopped
     networks:
       - pika
 
   web:
-    image: pokemon-web:latest
+    image: ghcr.io/mega-blastoise/deckvault-web:latest
     container_name: pokemon-web
-    build:
-      context: .
-      dockerfile: apps/web/Dockerfile
     environment:
       - PORT=3000
       - API_URL=http://rest-api:3001/api/v1
       - REST_API_URL=http://rest-api:3001
+      - GRAPHQL_API_URL=http://graphql-api:3002
     expose:
       - "3000"
     depends_on:
       rest-api:
+        condition: service_healthy
+      graphql-api:
         condition: service_healthy
     restart: unless-stopped
     networks:
       - pika
 
   rest-api:
-    image: pokemon-rest-api:latest
+    image: ghcr.io/mega-blastoise/deckvault-rest-api:latest
     container_name: pokemon-rest-api
-    build:
-      context: .
-      dockerfile: apps/rest-api/Dockerfile
     env_file:
       - .env.prod
     environment:
@@ -50,13 +49,39 @@ services:
       - REST_API_HOST=0.0.0.0
       - DATABASE_PATH=/data/pokemon-data.sqlite3.db
       - DATABASE_READONLY=true
+      - DECK_DATABASE_PATH=/tmp/decks.sqlite3.db
       - LOG_LEVEL=info
     volumes:
-      - ./database:/data:ro
+      - ./database:/data
     expose:
       - "3001"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      test: ["CMD", "wget", "-qO-", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - pika
+
+  graphql-api:
+    image: ghcr.io/mega-blastoise/deckvault-graphql-api:latest
+    container_name: pokemon-graphql-api
+    env_file:
+      - .env.prod
+    environment:
+      - GRAPHQL_API_PORT=3002
+      - GRAPHQL_API_HOST=0.0.0.0
+      - DATABASE_PATH=/data/pokemon-data.sqlite3.db
+      - DATABASE_READONLY=true
+      - LOG_LEVEL=info
+    volumes:
+      - ./database:/data
+    expose:
+      - "3002"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3002/health"]
       interval: 30s
       timeout: 10s
       retries: 3

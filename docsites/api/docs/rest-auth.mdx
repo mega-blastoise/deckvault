@@ -1,0 +1,48 @@
+---
+title: Auth
+description: Google OAuth endpoints for sign-in and session management.
+---
+
+# Auth
+
+Authentication uses Google OAuth 2.0. Sessions are stored as HTTP-only cookies.
+
+## Endpoints
+
+### `GET /auth/google`
+
+Initiates the Google OAuth flow. Redirects to Google's authorization URL.
+
+### `GET /auth/callback`
+
+Handles the OAuth callback from Google. Exchanges the authorization code for a Google profile, creates or updates the user record in PostgreSQL, and sets the session cookie.
+
+On success, redirects to the frontend. On failure, redirects with an error query parameter.
+
+### `GET /auth/me`
+
+Returns the currently authenticated user. Returns `null` if not authenticated.
+
+**Response (authenticated):**
+```json
+{
+  "id": "uuid",
+  "email": "user@example.com",
+  "name": "Trainer Red",
+  "avatarUrl": "https://..."
+}
+```
+
+**Response (unauthenticated):**
+```json
+null
+```
+
+### `GET /auth/logout` or `POST /auth/logout`
+
+Clears the session cookie and logs out the user. Accepts both GET and POST for convenience (browser navigations and programmatic calls).
+
+**Response:**
+```json
+{ "success": true }
+```
