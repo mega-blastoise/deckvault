@@ -49,6 +49,7 @@ yarn-error.log*
 
 # Local dev scripts and scratch files
 chat.sh
+SESSION_CONTEXT.md
 
 # Debug screenshots and documents (root-level)
 /*.png

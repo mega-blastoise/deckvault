@@ -24,7 +24,7 @@
     "prebuild": "run-p clean",
     "build": "run-s bundle build-types",
     "bundle": "bun run build.ts",
-    "check-types": "tsc -p tsconfig.json --noEmit",
+    "check-types": "tsc -p tsconfig.check.json",
     "clean": "rm -rf dist",
     "show-typescript-config": "tsc -p tsconfig.json --showConfig"
   },
