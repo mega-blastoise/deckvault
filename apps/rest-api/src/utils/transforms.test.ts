@@ -194,14 +194,14 @@ describe('transformCardRow', () => {
       'It spits fire that is hot enough to melt boulders.'
     );
     expect(card.nationalPokedexNumbers).toEqual(['6']);
-    expect(card.legalities).toEqual({ unlimited: 'legal' });
+    expect(card.legalities).toEqual({ unlimited: 'legal' } as typeof card.legalities);
     expect(card.images).toEqual({
       small: 'https://example.com/small.png',
       large: 'https://example.com/large.png'
     });
     expect(card.tcgplayer).toEqual({ url: 'https://tcgplayer.com/card/123' });
     expect(card.cardmarket).toEqual({ url: 'https://cardmarket.com/card/456' });
-    expect(card.set).toEqual({ id: 'base1' });
+    expect(card.set).toEqual({ id: 'base1' } as typeof card.set);
   });
 
   it('hp is empty string when null (Trainer cards)', () => {
@@ -320,7 +320,7 @@ describe('transformCardRow', () => {
 
   it('set contains only the set_id stub', () => {
     const card = transformCardRow(fullCardRow());
-    expect(card.set).toEqual({ id: 'base1' });
+    expect(card.set).toEqual({ id: 'base1' } as typeof card.set);
   });
 });
 

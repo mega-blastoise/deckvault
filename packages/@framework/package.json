@@ -16,7 +16,7 @@
   },
   "scripts": {
     "clean": "rm -rf dist",
-    "check-types": "tsc --noEmit",
+    "check-types": "tsc -p tsconfig.check.json",
     "test": "bun test",
     "bundle": "bun run build.ts",
     "build-types": "tsc -p tsconfig.json && tsc-alias -p tsconfig.json",

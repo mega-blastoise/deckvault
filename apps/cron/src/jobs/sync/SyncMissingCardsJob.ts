@@ -51,6 +51,7 @@ interface SourceCard {
   cardmarket?: {
     url: string;
   };
+  regulationMark?: string;
 }
 
 /**
@@ -275,7 +276,8 @@ export class SyncMissingCardsJob extends Job {
       JSON.stringify(card.legalities ?? {}),
       JSON.stringify(card.images ?? {}),
       card.tcgplayer?.url ?? null,
-      card.cardmarket?.url ?? null
+      card.cardmarket?.url ?? null,
+      card.regulationMark ?? null
     );
   }
 

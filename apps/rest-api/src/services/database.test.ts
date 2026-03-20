@@ -4,7 +4,7 @@ import { DatabaseService } from './database';
 import { seedDatabase } from '../utils/test-utils';
 import type { Config } from '../config';
 import { join } from 'path';
-import { existsSync, unlinkSync, writeFileSync } from 'fs';
+import { existsSync, unlinkSync } from 'fs';
 
 // ---------------------------------------------------------------------------
 // Helpers

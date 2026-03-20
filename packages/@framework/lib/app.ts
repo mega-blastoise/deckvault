@@ -8,7 +8,6 @@ import type {
   Middleware,
   ServiceMap,
   CompiledRoute,
-  Context,
   HttpMethod
 } from './types';
 import type { Container } from './container';

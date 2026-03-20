@@ -2,7 +2,7 @@
  * @fileoverview Framework unit tests
  */
 
-import { describe, it, expect, beforeEach } from 'bun:test';
+import { describe, it, expect } from 'bun:test';
 import {
   createApp,
   createRouter,
@@ -10,8 +10,7 @@ import {
   compilePath,
   matchRoute,
   normalizePath,
-  cors,
-  logging
+  cors
 } from './index';
 import type { Service, Handler } from './types';
 

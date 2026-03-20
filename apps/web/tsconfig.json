@@ -9,5 +9,5 @@
     "types": ["react/canary", "react-dom/canary", "node", "bun"],
   },
   "include": ["src"],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules", "src/**/*.stories.tsx", "src/**/*.stories.ts"]
 }
