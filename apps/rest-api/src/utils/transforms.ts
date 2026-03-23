@@ -1,5 +1,5 @@
 import type { Pokemon } from '@pokemon/clients';
-import { sqlite } from '@pokemon/database';
+import * as sqlite from '@pokemon/database/sqlite';
 import type { CardRow, SetRow, Ability } from '../types';
 
 // Reuse utilities from @pokemon/database

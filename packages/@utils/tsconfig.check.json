@@ -3,6 +3,10 @@
   "compilerOptions": {
     "emitDeclarationOnly": false,
     "noEmit": true,
-    "listEmittedFiles": false
+    "listEmittedFiles": false,
+    "paths": {
+      "@/*": ["./src/*"],
+      "@pokemon/clients": ["../clients/lib/index.ts"]
+    }
   }
 }

@@ -3,7 +3,7 @@
  */
 
 import { Database } from 'bun:sqlite';
-import { sqlite } from '@pokemon/database';
+import * as sqlite from '@pokemon/database/sqlite';
 import {
   createApp,
   createContainer,

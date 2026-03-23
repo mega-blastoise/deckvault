@@ -13,8 +13,6 @@
         "emitDeclarationOnly": true,
         "outDir": "./out",
         "removeComments": false,
-        "module": "NodeNext",
-        "moduleResolution": "nodenext",
         "resolveJsonModule": true,
         "noEmitOnError": true,
         "preserveSymlinks": true,
