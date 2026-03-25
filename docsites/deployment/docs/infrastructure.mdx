@@ -1,40 +1,74 @@
 ---
 title: Infrastructure
-description: EC2, CloudFront, Route53, and RDS configuration.
+description: Self-hosted DGX Spark setup with Cloudflare Tunnel for inbound traffic.
 ---
 
 # Infrastructure
 
-## EC2
+## Host Machine
 
-The application runs on a single EC2 instance with the following properties:
+DeckVault runs self-hosted on an NVIDIA DGX Spark connected to a home network via ethernet.
 
-- **Architecture:** arm64 (Graviton)
-- **OS:** Amazon Linux 2023
-- **Purpose:** Hosts all four Docker containers via `docker-compose.prod.yml`
+| Property | Value |
+|----------|-------|
+| Machine | NVIDIA DGX Spark |
+| LAN IP (ethernet) | `10.0.0.11` |
+| Public IP | `75.71.208.15` (Comcast, no CGNAT) |
+| OS user | `deckvault` (uid=996, shell `/sbin/nologin`, in `docker` group) |
+| Prod directory | `/opt/deckvault/` |
 
-All services communicate over the `pika` Docker network. Only nginx exposes ports to the host (80 and 443).
+No inbound ports are open on the host. All external traffic enters through the Cloudflare Tunnel.
 
-## CloudFront
+## Cloudflare Tunnel
 
-CloudFront sits in front of EC2 and provides:
+The `cloudflared` container runs a persistent outbound connection to Cloudflare's edge. Cloudflare receives HTTPS requests for `deckvault.gg`, terminates TLS at the edge, and pushes the request down the tunnel to nginx.
 
-- Global edge caching for static assets
-- TLS termination
-- WAF integration (see [WAF & Security](/waf))
+| Property | Value |
+|----------|-------|
+| Tunnel ID | `2c46aae5-b852-44de-848d-70270744a156` |
+| DNS (authoritative) | `ben.ns.cloudflare.com`, `elisabeth.ns.cloudflare.com` |
+| TLS | Terminates at Cloudflare edge — nginx is HTTP-only internally |
+| Token | Stored in `/opt/deckvault/.env.prod` as `TUNNEL_TOKEN` |
 
-The distribution origin points to the EC2 Elastic IP. The default cache behavior passes `Cookie` and `Authorization` headers to the origin so session-based requests (auth, deck mutations) are not incorrectly cached.
+## systemd Unit
 
-## Route53
+The production stack is managed by a systemd unit at `/etc/systemd/system/deckvault.service`. It runs as the `deckvault` user and sets `COMPOSE_PROJECT_NAME=pokemon` to ensure the existing `pokemon_postgres_data` Docker volume is reused across restarts.
 
-DNS is managed in Route53. The apex domain and `www` subdomain both alias to the CloudFront distribution. Route53 health checks are not configured — CloudFront handles origin failover.
+```bash
+# Start / stop / restart
+sudo systemctl start deckvault
+sudo systemctl stop deckvault
+sudo systemctl restart deckvault
 
-## RDS PostgreSQL
+# Enable auto-start on boot
+sudo systemctl enable deckvault
 
-User data (accounts, decks, collections, meta) is stored in RDS PostgreSQL. The connection string is provided at runtime via the `DATABASE_URL` environment variable, injected from `.env.prod` on the EC2 instance.
+# View logs
+sudo journalctl -u deckvault -f
+```
 
-The rest-api container is the only service that connects to RDS. It runs migrations automatically on startup.
+The unit type is `oneshot RemainAfterExit=yes` — `active (exited)` with `Result: success` is the expected status after a clean start.
+
+## PostgreSQL
+
+User data (accounts, decks, collections, meta reports) is stored in a containerized PostgreSQL 17 instance (`pokemon-postgres`) running inside the same compose stack. Data is persisted in the `pokemon_postgres_data` Docker named volume.
+
+The `rest-api` container is the only service that connects to Postgres. It runs migrations automatically on startup.
+
+## SQLite (Card Data)
+
+Pokemon TCG card and set data lives in `pokemon-data.sqlite3.db`, mounted read-only into `rest-api` and `graphql-api` from `/opt/deckvault/database/`. This file is never written to at runtime.
 
 <Callout variant="info">
-  Pokemon card and set data lives in a SQLite file (`pokemon-data.sqlite3.db`) mounted as a read-only Docker volume. This database is never written to at runtime — it is updated offline and replicated manually.
+  When a new TCG set is released, the SQLite file must be regenerated and redeployed. See [Rolling Out a New Card Set](/rollout-sqlite).
 </Callout>
+
+## GHCR
+
+Application images are distributed via GHCR. The Spark pulls images locally during local builds — no push/pull to the registry is required for local deployments. The registry is used for CI builds and for sharing images.
+
+| Image | Tag |
+|-------|-----|
+| `ghcr.io/mega-blastoise/deckvault-web` | `latest` |
+| `ghcr.io/mega-blastoise/deckvault-rest-api` | `latest` |
+| `ghcr.io/mega-blastoise/deckvault-graphql-api` | `latest` |

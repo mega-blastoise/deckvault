@@ -7,21 +7,21 @@ description: All environment variables used across DeckVault services.
 
 ## Web (`apps/web`)
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `PORT` | No | HTTP port (default: `3000`) |
-| `API_URL` | Yes | REST API base URL including `/api/v1` |
-| `REST_API_URL` | Yes | REST API base URL without path prefix |
-| `GRAPHQL_API_URL` | Yes | GraphQL API base URL |
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `PORT` | No | `3000` | HTTP port |
+| `API_URL` | Yes | — | REST API base URL including `/api/v1` |
+| `REST_API_URL` | Yes | — | REST API base URL without path prefix |
+| `GRAPHQL_API_URL` | Yes | — | GraphQL API base URL |
 
-**Local dev values:**
+**Local dev (`apps/web/.env`):**
 ```
 API_URL=http://localhost:3001/api/v1
 REST_API_URL=http://localhost:3001
 GRAPHQL_API_URL=http://localhost:3002
 ```
 
-**Production values (injected by docker-compose.prod.yml):**
+**Production (injected by `docker-compose.prod.yml`):**
 ```
 API_URL=http://rest-api:3001/api/v1
 REST_API_URL=http://rest-api:3001
@@ -30,32 +30,34 @@ GRAPHQL_API_URL=http://graphql-api:3002
 
 ## REST API (`apps/rest-api`)
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `REST_API_PORT` | No | HTTP port (default: `3001`) |
-| `REST_API_HOST` | No | Bind address (default: `localhost`) |
-| `DATABASE_URL` | Yes | PostgreSQL connection string |
-| `DATABASE_PATH` | Yes | Path to SQLite file |
-| `DATABASE_READONLY` | No | Set `true` to open SQLite read-only |
-| `DECK_DATABASE_PATH` | No | Path for deck SQLite (default: in-memory) |
-| `GOOGLE_CLIENT_ID` | Yes | Google OAuth client ID |
-| `GOOGLE_CLIENT_SECRET` | Yes | Google OAuth client secret |
-| `SESSION_SECRET` | Yes | Secret for signing session cookies |
-| `LOG_LEVEL` | No | Logging level (default: `info`) |
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `POSTGRES_URL` | Yes | `""` | PostgreSQL connection string |
+| `JWT_SECRET` | Yes | — | Secret for signing JWTs (throws on startup if missing) |
+| `GOOGLE_CLIENT_ID` | No | `""` | Google OAuth client ID |
+| `GOOGLE_CLIENT_SECRET` | No | `""` | Google OAuth client secret |
+| `GOOGLE_REDIRECT_URI` | No | `http://localhost:3001/auth/callback` | OAuth callback URL |
+| `REST_API_PORT` | No | `3001` | HTTP port |
+| `REST_API_HOST` | No | `0.0.0.0` | Bind address |
+| `DATABASE_PATH` | No | `./database/pokemon-data.sqlite3.db` | Path to SQLite card data |
+| `DATABASE_READONLY` | No | `false` | Open SQLite read-only (`true` in prod) |
+| `DECK_DATABASE_PATH` | No | `./database/decks.sqlite3.db` | Path for deck SQLite |
+| `CORS_ORIGINS` | No | `http://localhost:3000` | Comma-separated allowed origins |
+| `LOG_LEVEL` | No | `info` | Logging verbosity |
 
 ## GraphQL API (`apps/graphql-api`)
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `GRAPHQL_API_PORT` | No | HTTP port (default: `3002`) |
-| `GRAPHQL_API_HOST` | No | Bind address (default: `localhost`) |
-| `DATABASE_PATH` | Yes | Path to SQLite file |
-| `DATABASE_READONLY` | No | Set `true` to open SQLite read-only |
-| `LOG_LEVEL` | No | Logging level (default: `info`) |
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `GRAPHQL_API_PORT` | No | `3002` | HTTP port |
+| `GRAPHQL_API_HOST` | No | `0.0.0.0` | Bind address |
+| `DATABASE_PATH` | No | `./database/pokemon-data.sqlite3.db` | Path to SQLite card data |
+| `DATABASE_READONLY` | No | `false` | Open SQLite read-only |
+| `LOG_LEVEL` | No | `info` | Logging verbosity |
 
 ## Production Secrets
 
-In production, secrets are stored in `~/deckvault/.env.prod` on the EC2 instance. This file is referenced by `env_file` in `docker-compose.prod.yml`. It is never committed to the repository.
+In production, secrets are stored in `/opt/deckvault/.env.prod` on the Spark (chmod 600, owned by `deckvault`). Referenced via `env_file` in `docker-compose.prod.yml`. Never committed to the repository.
 
 <Callout variant="warning">
   Never commit `.env`, `.env.prod`, or any file containing real credentials. The `.gitignore` already excludes `.env*` files.

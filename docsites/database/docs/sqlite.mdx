@@ -49,12 +49,17 @@ Both `rest-api` and `graphql-api` open the database with `bun:sqlite` in read-on
 
 ## Updating Card Data
 
-To update the card catalog:
+The database file is mounted as a volume, not baked into any image. Updating it does not require rebuilding Docker images.
 
-1. Run the data sync scripts in `apps/scripts` to produce a new `pokemon-data.sqlite3.db`
-2. Copy the file to `./database/` on EC2
-3. Restart `rest-api` and `graphql-api` containers to pick up the new file
+For the full step-by-step process including journal mode reset and production deployment, see the [Rolling Out a New Card Set](/deployment/rollout-sqlite) runbook.
+
+Summary:
+
+1. Run `bun run docker:scripts:db:sync` to produce a new `pokemon-data.sqlite3.db`
+2. Reset journal mode to `DELETE` (required — containers open the file read-only from a directory they cannot write to)
+3. Copy to `/opt/deckvault/database/` with `deckvault:deckvault` ownership and `644` permissions
+4. `docker compose restart rest-api graphql-api`
 
 <Callout variant="warning">
-  The database file is mounted as a volume, not baked into the image. Updating it does not require rebuilding the Docker images.
+  Never deploy a SQLite file that was last opened in WAL journal mode. The containers will fail with `SQLITE_READONLY_DIRECTORY` because WAL mode requires write access to the directory to create `-shm` sidecar files, which the `bun` process (uid=1000) cannot do in a directory owned by `deckvault` (uid=996).
 </Callout>

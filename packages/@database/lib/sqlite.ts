@@ -7,7 +7,9 @@ export const createDatabase = (
 ): Database => {
   const db = new Database(path, options);
   db.run('PRAGMA foreign_keys = ON');
-  db.run('PRAGMA journal_mode = WAL');
+  if (!options.readonly) {
+    db.run('PRAGMA journal_mode = WAL');
+  }
   return db;
 };
 

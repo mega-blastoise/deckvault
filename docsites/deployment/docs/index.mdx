@@ -5,17 +5,23 @@ description: How DeckVault is deployed to production.
 
 # Deployment Overview
 
-DeckVault runs on a single EC2 instance behind CloudFront and Route53. Four Docker containers are orchestrated with `docker compose` and images are distributed via GHCR.
+DeckVault runs self-hosted on an NVIDIA DGX Spark, routed through a Cloudflare Tunnel. Six Docker containers are orchestrated by `docker-compose.prod.yml`, managed by a systemd unit. Images are built locally and loaded directly — no registry push/pull required for local deployments.
 
 <CardGrid>
   <Card title="Infrastructure" href="/infrastructure">
-    EC2 arm64, CloudFront CDN, Route53 DNS, and RDS PostgreSQL.
+    DGX Spark, Cloudflare Tunnel, systemd unit, and containerized PostgreSQL.
   </Card>
   <Card title="Containers & Services" href="/containers">
-    Nginx, web SSR, REST API, and GraphQL API containers.
+    All six containers: cloudflared, nginx, web, rest-api, graphql-api, postgres.
   </Card>
   <Card title="Deploying" href="/deploy">
-    Step-by-step: build locally, push to GHCR, SCP config, pull on EC2.
+    Build locally, load image, restart via systemd.
+  </Card>
+  <Card title="Rolling Out a Service" href="/rollout-services">
+    Per-service rollout runbook for web, rest-api, and graphql-api.
+  </Card>
+  <Card title="Rolling Out a New Card Set" href="/rollout-sqlite">
+    Step-by-step process to ship a new Pokemon TCG set to production.
   </Card>
   <Card title="Database Migrations" href="/migrations">
     Migrations are baked into the rest-api image and run automatically on start.
@@ -26,21 +32,26 @@ DeckVault runs on a single EC2 instance behind CloudFront and Route53. Four Dock
 
 | Component | Technology |
 |-----------|-----------|
-| Compute | EC2 `t4g.small` (arm64, Amazon Linux 2023) |
-| CDN | CloudFront |
-| DNS | Route53 |
-| Database | RDS PostgreSQL |
+| Host | NVIDIA DGX Spark (self-hosted) |
+| Inbound traffic | Cloudflare Tunnel (`cloudflared`) |
+| TLS | Cloudflare edge (terminates before nginx) |
+| DNS | Cloudflare (`ben.ns.cloudflare.com`, `elisabeth.ns.cloudflare.com`) |
+| Reverse proxy | nginx 1.27-alpine (HTTP-only, internal) |
+| Orchestration | docker compose, managed by systemd |
+| User data | PostgreSQL 17 (Docker named volume `pokemon_postgres_data`) |
+| Card data | SQLite read-only volume (`/opt/deckvault/database/`) |
 | Container registry | GHCR (`ghcr.io/mega-blastoise/`) |
-| Reverse proxy | nginx:1.27-alpine |
-| Orchestration | docker compose (prod profile) |
 
-## No Git on EC2
+## No Git on Prod
 
-The EC2 instance has no git checkout. Deployment works by:
+The `/opt/deckvault/` directory has no git checkout. It contains only five files:
 
-1. Building images locally
-2. Pushing to GHCR
-3. SCPing any changed compose/config files
-4. SSHing in and running `docker compose pull && up -d`
+```
+/opt/deckvault/
+├── docker-compose.prod.yml   # copied from repo when changed
+├── .env.prod                 # secrets (chmod 600, never committed)
+└── database/
+    └── pokemon-data.sqlite3.db
+```
 
-This keeps the instance lean and ensures the image is the single source of truth.
+Config changes are deployed by copying the updated file to `/opt/deckvault/` and restarting the systemd unit. The image is the single source of truth for application code.

@@ -1,0 +1,142 @@
+---
+title: Local Development
+description: Running DeckVault locally outside of Docker using Bun directly.
+---
+
+# Local Development
+
+The recommended local workflow is to run the Bun services natively (`bun run build && bun run start`) with only the dev Postgres container running. This gives faster restarts, direct access to logs, and no Docker overhead on the application code.
+
+## Prerequisites
+
+Install the dev toolchain via mise:
+
+```bash
+mise install
+```
+
+This provisions **Bun 1.3.5**, **Node 24.6**, and **Rust 1.92.0**.
+
+Install workspace dependencies:
+
+```bash
+bun install
+```
+
+## Step 1 — Start the dev database
+
+A `docker-compose.dev.yml` at the repo root provides a dedicated dev Postgres instance. It is completely separate from the production stack — different container name, different Docker volume (`pokemon_dev_data`), and not reachable by the prod compose.
+
+```bash
+bun run db:dev
+```
+
+This starts `pokemon-postgres-dev` on `localhost:5432` with:
+
+| Property | Value |
+|----------|-------|
+| User | `pokemon` |
+| Password | `pokemon` |
+| Database | `pokemon_tcg` |
+| Volume | `pokemon_dev_data` (isolated from prod) |
+
+Wait for it to be healthy:
+
+```bash
+docker ps --format "table {{.Names}}\t{{.Status}}" | grep pokemon-postgres-dev
+# Expect: Up X seconds (healthy)
+```
+
+## Step 2 — Configure apps/rest-api/.env
+
+Create `apps/rest-api/.env` (gitignored) with the following contents. This file is never committed.
+
+```bash
+# Dev Postgres — local container from docker-compose.dev.yml
+POSTGRES_URL=postgresql://pokemon:pokemon@localhost:5432/pokemon_tcg
+
+# JWT — any value works locally
+JWT_SECRET=dev-secret-local
+
+# Google OAuth — get from Google Cloud Console, or leave blank to disable auth
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+GOOGLE_REDIRECT_URI=http://localhost:3001/auth/callback
+
+# Optional — these match the defaults in config/index.ts
+REST_API_PORT=3001
+DATABASE_PATH=./database/pokemon-data.sqlite3.db
+DATABASE_READONLY=true
+DECK_DATABASE_PATH=./database/decks.sqlite3.db
+LOG_LEVEL=info
+CORS_ORIGINS=http://localhost:3000
+```
+
+<Callout variant="info">
+  `JWT_SECRET` is the only variable that will throw on startup if missing. All others have safe defaults or degrade gracefully.
+</Callout>
+
+## Step 3 — Configure apps/web/.env (optional)
+
+The web app targets the APIs via environment variables. When running rest-api and graphql-api locally, create `apps/web/.env`:
+
+```bash
+API_URL=http://localhost:3001/api/v1
+REST_API_URL=http://localhost:3001
+GRAPHQL_API_URL=http://localhost:3002
+```
+
+If these are unset, the web app falls back to the Docker service names (`rest-api:3001`) which only resolve inside the Docker network.
+
+## Step 4 — Build and start
+
+```bash
+# Build all workspaces (compiles rest-api to dist/, etc.)
+bun run build
+
+# Start all Bun services via Turborepo
+bun run start
+```
+
+Or run a single service in watch mode during active development:
+
+```bash
+cd apps/rest-api && bun run dev   # port 3001, restarts on file change
+cd apps/web && bun run dev        # port 3000, hot reload
+cd apps/graphql-api && bun run dev # port 3002
+```
+
+## Service URLs
+
+| Service | URL |
+|---------|-----|
+| Web frontend | `http://localhost:3000` |
+| REST API | `http://localhost:3001` |
+| REST API health | `http://localhost:3001/health` |
+| GraphQL API | `http://localhost:3002` |
+| Postgres | `localhost:5432` |
+
+## Stopping / resetting the dev database
+
+```bash
+# Stop the container (keeps data)
+bun run db:dev:stop
+
+# Wipe all data and start fresh (drops the pokemon_dev_data volume)
+bun run db:dev:reset
+```
+
+<Callout variant="warning">
+  `db:dev:reset` destroys all local dev data. Migrations will re-run on next startup of `rest-api`.
+</Callout>
+
+## Production vs dev database isolation
+
+| | Dev | Prod |
+|-|-----|------|
+| Container | `pokemon-postgres-dev` | `pokemon-postgres` |
+| Volume | `pokemon_dev_data` | `pokemon_postgres_data` |
+| Host port | `5432` (mapped) | not mapped (internal only) |
+| Reachable from `bun run start` | ✅ | ❌ |
+
+The prod postgres is only accessible inside the `pika` Docker network. There is no path for a local `bun run start` to connect to it.

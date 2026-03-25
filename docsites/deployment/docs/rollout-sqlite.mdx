@@ -1,0 +1,102 @@
+---
+title: Rolling Out a New Card Set
+description: How to update the SQLite card database when a new Pokemon TCG set is released.
+---
+
+# Rolling Out a New Card Set
+
+When a new Pokemon TCG set is released, the card catalog in `pokemon-data.sqlite3.db` needs to be updated. This file is mounted read-only into `rest-api` and `graphql-api` — updating it does not require rebuilding any Docker images.
+
+## Step 1 — Sync new card data
+
+Add the new set's JSON data to `packages/@pokemon-data/data/cards/` and run the sync script:
+
+```bash
+bun run docker:scripts:db:sync
+```
+
+This writes the new set into `database/pokemon-data.sqlite3.db` in the repo.
+
+## Step 2 — Verify the data locally
+
+Spot-check the new set is present:
+
+```bash
+bun -e "
+import {Database} from 'bun:sqlite';
+const db = new Database('./database/pokemon-data.sqlite3.db');
+const sets = db.query('SELECT id, name, total FROM pokemon_card_sets ORDER BY release_date DESC LIMIT 5').all();
+console.table(sets);
+"
+```
+
+## Step 3 — Reset journal mode to DELETE
+
+The sync script opens the database in write mode, which may leave it in WAL journal mode. The containers open it read-only from a directory they cannot write to — WAL mode requires write access to create `-shm` sidecar files, which will cause `SQLITE_READONLY_DIRECTORY`. Reset to DELETE mode before deploying:
+
+```bash
+bun -e "
+import {Database} from 'bun:sqlite';
+const db = new Database('./database/pokemon-data.sqlite3.db');
+db.run('PRAGMA journal_mode = DELETE');
+console.log('journal mode reset');
+"
+```
+
+Verify:
+
+```bash
+bun -e "
+import {Database} from 'bun:sqlite';
+const db = new Database('./database/pokemon-data.sqlite3.db', {readonly: true});
+console.log(db.query('PRAGMA journal_mode').get());
+"
+# Expect: { journal_mode: 'delete' }
+```
+
+## Step 4 — Copy to /opt/deckvault
+
+```bash
+sudo cp database/pokemon-data.sqlite3.db \
+  /opt/deckvault/database/pokemon-data.sqlite3.db
+sudo chown deckvault:deckvault \
+  /opt/deckvault/database/pokemon-data.sqlite3.db
+sudo chmod 644 \
+  /opt/deckvault/database/pokemon-data.sqlite3.db
+```
+
+## Step 5 — Restart the API containers
+
+The SQLite file is opened once at process startup. Both API containers must be restarted to pick up the new file — no image rebuild required.
+
+```bash
+docker compose -f /opt/deckvault/docker-compose.prod.yml \
+  restart rest-api graphql-api
+```
+
+Wait for both to return to healthy:
+
+```bash
+docker ps --format "table {{.Names}}\t{{.Status}}" | grep -E "rest-api|graphql-api"
+# Expect: Up X seconds (healthy)
+```
+
+## Step 6 — Verify the new set is live
+
+```bash
+# Query the REST API for the new set (replace sv9 with actual set ID)
+curl -s "https://deckvault.gg/api/v1/sets/sv9" | jq '.name, .total'
+```
+
+## Step 7 — Commit the updated database
+
+The `pokemon-data.sqlite3.db` file is tracked in git. Commit the update:
+
+```bash
+git add database/pokemon-data.sqlite3.db
+git commit -m "chore: add <Set Name> card data"
+```
+
+<Callout variant="warning">
+  Always reset journal mode to DELETE (Step 3) before committing the file. If the WAL-mode database is committed, future deployments will hit `SQLITE_READONLY_DIRECTORY` when the containers try to open it.
+</Callout>

@@ -67,6 +67,14 @@ data/pokemon-json
 # Temporary Files
 tmp/
 
+# Sensitive / ephemeral root-level files
+.cloudflared-token
+*.dump
+CI_TRIAGE_HANDOFF.md
+
+# Claude session logs (accumulate chat history across sessions)
+.claude/custom/
+
 # Docsite build outputs
 docsites/*/site/*
 !docsites/*/site/.gitkeep

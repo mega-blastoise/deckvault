@@ -4,6 +4,7 @@ export default {
 
   navigation: [
     { type: 'page', path: '/', title: 'Getting Started' },
+    { type: 'page', path: '/local-dev', title: 'Local Development' },
     {
       type: 'group',
       title: 'Workflow',

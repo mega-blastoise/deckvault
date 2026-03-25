@@ -5,11 +5,13 @@ description: Step-by-step process to build and deploy a new version to productio
 
 # Deploying
 
-There is no CI/CD pipeline — deployments are manual. Images are built locally, pushed to GHCR, and pulled onto the EC2 instance.
+Deployments are manual. Images are built from the monorepo root on the Spark and loaded directly into Docker. No registry push is required for local deployments.
+
+For per-service rollouts, see [Rolling Out a Service](/rollout-services).
 
 ## Full Deployment (all services)
 
-### 1. Build images locally
+### 1. Build images
 
 Run from the monorepo root. The build context is the repo root so each Dockerfile can `COPY` from the workspace it needs.
 
@@ -24,66 +26,67 @@ docker build -t ghcr.io/mega-blastoise/deckvault-graphql-api:latest \
   -f apps/graphql-api/Dockerfile .
 ```
 
-### 2. Push to GHCR
+### 2. Copy updated compose file (if changed)
 
 ```bash
-docker push ghcr.io/mega-blastoise/deckvault-web:latest
-docker push ghcr.io/mega-blastoise/deckvault-rest-api:latest
-docker push ghcr.io/mega-blastoise/deckvault-graphql-api:latest
+sudo cp docker-compose.prod.yml /opt/deckvault/docker-compose.prod.yml
+sudo chown deckvault:deckvault /opt/deckvault/docker-compose.prod.yml
 ```
 
-### 3. SCP changed config files
-
-Only copy files that have changed. Common candidates:
+### 3. Restart via systemd
 
 ```bash
-# Updated compose file
-scp -i $EC2_KEY docker-compose.prod.yml \
-  $EC2_USER@$ELASTIC_IP:~/deckvault/
-
-# Updated nginx config
-scp -i $EC2_KEY docker/nginx/conf.d/default.conf \
-  $EC2_USER@$ELASTIC_IP:~/deckvault/docker/nginx/conf.d/default.conf
+sudo systemctl restart deckvault
+sudo systemctl status deckvault
 ```
 
-### 4. Pull and restart on EC2
+Expected status: `active (exited)` with `Result: success`. Then verify all containers are up:
 
 ```bash
-ssh -i $EC2_KEY $EC2_USER@$ELASTIC_IP
-
-cd ~/deckvault
-docker compose -f docker-compose.prod.yml pull
-docker compose -f docker-compose.prod.yml up -d
-docker compose -f docker-compose.prod.yml ps
+docker ps --format "table {{.Names}}\t{{.Status}}" | grep pokemon
 ```
 
-`up -d` recreates only containers whose image has changed. Containers with unchanged images are left running.
+Expect all six containers `Up` with `rest-api`, `graphql-api`, and `postgres` marked `(healthy)`.
 
-## Partial Deployment (single service)
-
-To redeploy only one service, build and push just that image, then on EC2:
+### 4. Smoke test
 
 ```bash
-docker compose -f docker-compose.prod.yml pull rest-api
-docker compose -f docker-compose.prod.yml up -d rest-api
-```
+curl -sI https://deckvault.gg/nginx-health | head -3
+# Expect: HTTP/2 200, server: cloudflare
 
-<Callout variant="info">
-  Restarting `rest-api` runs migrations automatically. No manual migration step is needed.
-</Callout>
+curl -s https://deckvault.gg/api/v1/health
+# Expect: {"status":"ok"} or similar
+```
 
 ## Rollback
 
-GHCR does not retain previous `:latest` tags once overwritten. For rollback:
+Docker does not retain previous `:latest` images once overwritten. For rollback:
 
-1. Rebuild from the previous git commit locally
-2. Push as `:latest`
-3. Pull and restart on EC2
+1. Check out the previous commit in git
+2. Rebuild the affected image(s)
+3. Restart via systemd
 
-If you need to maintain a stable rollback target, tag releases explicitly (e.g., `:v1.2.3`) before pushing `:latest`.
+If you need a reliable rollback target, tag images explicitly before overwriting `:latest`:
+
+```bash
+docker tag ghcr.io/mega-blastoise/deckvault-web:latest \
+  ghcr.io/mega-blastoise/deckvault-web:pre-deploy-$(date +%Y%m%d)
+```
 
 ## Environment File
 
-Secrets are stored in `~/deckvault/.env.prod` on EC2. This file is never committed to the repository. It is referenced by `rest-api` and `graphql-api` via `env_file` in the compose file.
+Secrets are stored in `/opt/deckvault/.env.prod` (chmod 600, owned by `deckvault`). This file is never committed to the repository. Update it directly on the Spark if environment variables need to change, then restart the affected service.
 
-Update it on EC2 directly if environment variables need to change, then restart the affected service.
+```bash
+sudo nano /opt/deckvault/.env.prod
+sudo systemctl restart deckvault
+```
+
+## nginx Config Changes
+
+nginx config is mounted from the repo directory at `/home/nicks-dgx/dev/.Project-Johto/Pokemon/docker/nginx/`. Editing the file on disk takes effect on the next container restart — no copy to `/opt/deckvault/` is needed since nginx mounts it directly from the repo.
+
+```bash
+# After editing docker/nginx/conf.d/default.conf:
+docker restart pokemon-nginx
+```

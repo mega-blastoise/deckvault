@@ -11,7 +11,7 @@ export default {
         { type: 'page', path: '/infrastructure', title: 'Infrastructure' },
         { type: 'page', path: '/containers', title: 'Containers & Services' },
         { type: 'page', path: '/nginx', title: 'Nginx Routing' },
-        { type: 'page', path: '/waf', title: 'WAF & Security' }
+        { type: 'page', path: '/waf', title: 'Security' }
       ]
     },
     {
@@ -19,6 +19,8 @@ export default {
       title: 'Processes',
       items: [
         { type: 'page', path: '/deploy', title: 'Deploying' },
+        { type: 'page', path: '/rollout-services', title: 'Rolling Out a Service' },
+        { type: 'page', path: '/rollout-sqlite', title: 'Rolling Out a New Card Set' },
         { type: 'page', path: '/migrations', title: 'Database Migrations' },
         { type: 'page', path: '/health', title: 'Health Checks' }
       ]

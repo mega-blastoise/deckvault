@@ -1,21 +1,31 @@
 ---
 title: Containers & Services
-description: The four Docker containers that make up the DeckVault production stack.
+description: The six Docker containers that make up the DeckVault production stack.
 ---
 
 # Containers & Services
 
-Four containers are defined in `docker-compose.prod.yml` on the `pika` network.
+Six containers are defined in `docker-compose.prod.yml`, all on the `pika` Docker network.
+
+## pokemon-cloudflared
+
+| Property | Value |
+|----------|-------|
+| Image | `cloudflare/cloudflared:latest` |
+| Ports | None (outbound tunnel only) |
+| Config | `TUNNEL_TOKEN` from `.env.prod` via `env_file` |
+
+Initiates and holds an outbound tunnel to Cloudflare's edge. All inbound traffic for `deckvault.gg` arrives through this tunnel — no open inbound ports on the host are required. Depends on `nginx`.
 
 ## pokemon-nginx
 
 | Property | Value |
 |----------|-------|
 | Image | `nginx:1.27-alpine` |
-| Ports | `80:80`, `443:443` |
+| Ports | `80:80` (host → container) |
 | Config | `./docker/nginx/nginx.conf`, `./docker/nginx/conf.d/default.conf` |
 
-The only container with externally exposed ports. Routes requests to the three application containers. Depends on `rest-api` (healthy) and `graphql-api` (healthy) before starting.
+The only container with an externally exposed port. Routes requests from the Cloudflare Tunnel to the three application containers. TLS terminates at Cloudflare — nginx is HTTP-only. Depends on `web` (started), `rest-api` (healthy), and `graphql-api` (healthy).
 
 ## pokemon-web
 
@@ -34,7 +44,7 @@ REST_API_URL=http://rest-api:3001
 GRAPHQL_API_URL=http://graphql-api:3002
 ```
 
-The web container communicates with both APIs over the `pika` Docker network using service names as hostnames. It never goes through nginx internally.
+Communicates with both APIs over the `pika` network using Docker service names as hostnames. Never routes through nginx internally.
 
 ## pokemon-rest-api
 
@@ -55,7 +65,7 @@ DATABASE_READONLY=true
 DECK_DATABASE_PATH=/tmp/decks.sqlite3.db
 ```
 
-Additional secrets (`DATABASE_URL`, `GOOGLE_CLIENT_ID`, etc.) come from `.env.prod` via `env_file`.
+Additional secrets (`DATABASE_URL`, `GOOGLE_CLIENT_ID`, etc.) come from `.env.prod` via `env_file`. Runs Postgres migrations automatically on startup. Depends on `postgres` (healthy).
 
 ## pokemon-graphql-api
 
@@ -75,16 +85,32 @@ DATABASE_PATH=/data/pokemon-data.sqlite3.db
 DATABASE_READONLY=true
 ```
 
-The GraphQL API only reads from SQLite — it has no connection to RDS.
+Reads only from SQLite — has no connection to Postgres.
+
+## pokemon-postgres
+
+| Property | Value |
+|----------|-------|
+| Image | `postgres:17-alpine` |
+| Exposed port | `5432` (internal only) |
+| Healthcheck | `pg_isready -U postgres -d pokemon` |
+| Volume | `pokemon_postgres_data` (Docker named volume) |
+
+Stores all user data (accounts, decks, collections, meta reports). The named volume `pokemon_postgres_data` persists across stack restarts and systemd unit restarts.
+
+<Callout variant="warning">
+  `COMPOSE_PROJECT_NAME=pokemon` is set in the systemd unit. This ensures Docker resolves the volume as `pokemon_postgres_data` regardless of which directory the compose command runs from. Do not change this.
+</Callout>
 
 ## Startup Order
 
 ```
-postgres (RDS, external)
+postgres (healthy)
     └── rest-api (healthy)
-    └── graphql-api (healthy)
             └── web (started)
             └── nginx (started, after web + rest-api + graphql-api)
+                    └── cloudflared (started, after nginx)
+graphql-api (healthy, parallel with rest-api)
 ```
 
-Healthchecks poll every 30 seconds with a 10 second timeout and 3 retries. `start_period` is 10 seconds to allow Bun to boot before the first check.
+Healthchecks poll every 30 seconds with a 10 second timeout and 3 retries. `start_period` gives Bun services 15 seconds to boot before the first check.
