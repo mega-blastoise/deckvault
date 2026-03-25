@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router';
 import { ROUTES } from '@/web/routes';
 import './AppFooter.css';
 
@@ -9,22 +10,22 @@ export function AppFooter() {
     <footer className="app-footer">
       <div className="app-footer__container">
         <div className="app-footer__brand">
-          <a href="/" className="app-footer__logo">DeckVault</a>
+          <Link to="/" className="app-footer__logo">DeckVault</Link>
           <p className="app-footer__tagline">The competitive Pokemon TCG platform.</p>
         </div>
 
         <nav className="app-footer__nav" aria-label="Footer navigation">
           <div className="app-footer__col">
             <h3 className="app-footer__col-title">Platform</h3>
-            <a href={ROUTES.BROWSE} className="app-footer__link">Browse Cards</a>
-            <a href={ROUTES.META_DECKS} className="app-footer__link">Meta Decks</a>
-            <a href={ROUTES.LOCAL_META} className="app-footer__link">Local Meta</a>
-            <a href={ROUTES.DECKS_BROWSE} className="app-footer__link">Community Decks</a>
+            <Link to={ROUTES.BROWSE} className="app-footer__link">Browse Cards</Link>
+            <Link to={ROUTES.META_DECKS} className="app-footer__link">Meta Decks</Link>
+            <Link to={ROUTES.LOCAL_META} className="app-footer__link">Local Meta</Link>
+            <Link to={ROUTES.DECKS_BROWSE} className="app-footer__link">Community Decks</Link>
           </div>
           <div className="app-footer__col">
             <h3 className="app-footer__col-title">Account</h3>
-            <a href={ROUTES.SIGN_IN} className="app-footer__link">Sign In</a>
-            <a href={ROUTES.DECKS} className="app-footer__link">My Decks</a>
+            <Link to={ROUTES.SIGN_IN} className="app-footer__link">Sign In</Link>
+            <Link to={ROUTES.DECKS} className="app-footer__link">My Decks</Link>
           </div>
         </nav>
       </div>

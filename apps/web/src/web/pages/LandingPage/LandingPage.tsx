@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { useNavigate } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 import { useAuth } from '@/web/contexts/Auth';
 import { ROUTES } from '@/web/routes';
 import './LandingPage.css';
@@ -58,9 +58,9 @@ function LandingHero() {
           The competitive DeckVault platform — meta decks, deck analytics,
           and personalized recommendations in one place.
         </p>
-        <a href={ROUTES.SIGN_IN} className="landing__cta-btn">
+        <Link to={ROUTES.SIGN_IN} className="landing__cta-btn">
           Get started free
-        </a>
+        </Link>
       </div>
       <div className="landing__hero-visual" aria-hidden="true">
         <div className="landing__card-fan">
@@ -109,9 +109,9 @@ function LandingCta() {
     <section className="landing__cta">
       <h2 className="landing__cta-title">Start building your best deck today</h2>
       <p className="landing__cta-sub">Free during alpha. No credit card required.</p>
-      <a href={ROUTES.SIGN_IN} className="landing__cta-btn landing__cta-btn--large">
+      <Link to={ROUTES.SIGN_IN} className="landing__cta-btn landing__cta-btn--large">
         Sign in with Google
-      </a>
+      </Link>
     </section>
   );
 }
@@ -129,8 +129,8 @@ export function LandingPage() {
   return (
     <div className="landing">
       <header className="landing__header">
-        <a href="/" className="landing__logo">DeckVault</a>
-        <a href={ROUTES.SIGN_IN} className="landing__header-signin">Sign in</a>
+        <Link to="/" className="landing__logo">DeckVault</Link>
+        <Link to={ROUTES.SIGN_IN} className="landing__header-signin">Sign in</Link>
       </header>
       <main>
         <LandingHero />

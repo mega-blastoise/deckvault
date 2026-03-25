@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router';
 import { ROUTES } from '../../routes';
 import { ThemeSwitcher } from '../ThemeSwitcher';
 import type { DashboardHeaderProps, Breadcrumb } from './types';
@@ -51,7 +52,7 @@ export function DashboardHeader({
           >
             <ol>
               <li>
-                <a href={ROUTES.DASHBOARD}>Home</a>
+                <Link to={ROUTES.DASHBOARD}>Home</Link>
               </li>
               {displayBreadcrumbs.map((crumb, index) => (
                 <li key={crumb.href || index}>
@@ -59,7 +60,7 @@ export function DashboardHeader({
                     /
                   </span>
                   {crumb.href ? (
-                    <a href={crumb.href}>{crumb.label}</a>
+                    <Link to={crumb.href}>{crumb.label}</Link>
                   ) : (
                     <span aria-current="page">{crumb.label}</span>
                   )}

@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { Link, useLocation } from 'react-router';
 import { Layers, Search, LogIn, TrendingUp, MapPin, Plus } from 'lucide-react';
 import { ROUTES } from '@/web/routes';
 import { useCollectionQuery } from '@/web/hooks/useCollectionQuery';
@@ -7,11 +8,6 @@ import { useAuth } from '@/web/contexts/Auth';
 import { ThemeToggle } from '@/web/components/ThemeToggle';
 import { ReportMatchModal } from '@/web/components/ReportMatchModal';
 import './Navbar.css';
-
-function getPathname(): string {
-  if (typeof window === 'undefined') return '/';
-  return window.location.pathname;
-}
 
 interface NavLinkGatedProps {
   label: string;
@@ -35,7 +31,7 @@ export function Navbar() {
   const { uniqueCards } = useCollectionQuery();
   const { deckCount } = useDecks();
   const { user, signOut } = useAuth();
-  const pathname = getPathname();
+  const { pathname } = useLocation();
   const [showDropdown, setShowDropdown] = useState(false);
   const [reportModalOpen, setReportModalOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -55,20 +51,20 @@ export function Navbar() {
   return (
     <nav className="navbar">
       <div className="navbar__container">
-        <a href="/" className="navbar__logo">
+        <Link to="/" className="navbar__logo">
           <span className="navbar__logo-text">DeckVault</span>
-        </a>
+        </Link>
 
         <div className="navbar__links">
-          <a
-            href={ROUTES.BROWSE}
+          <Link
+            to={ROUTES.BROWSE}
             className={`navbar__link ${isActive(ROUTES.BROWSE) ? 'navbar__link--active' : ''}`}
           >
             <Search size={18} />
             <span>Browse</span>
-          </a>
-          <a
-            href={ROUTES.DECKS}
+          </Link>
+          <Link
+            to={ROUTES.DECKS}
             className={`navbar__link ${isActive(ROUTES.DECKS) ? 'navbar__link--active' : ''}`}
           >
             <Layers size={18} />
@@ -76,21 +72,21 @@ export function Navbar() {
             {deckCount > 0 && (
               <span className="navbar__badge">{deckCount}</span>
             )}
-          </a>
-          <a
-            href={ROUTES.META_DECKS}
+          </Link>
+          <Link
+            to={ROUTES.META_DECKS}
             className={`navbar__link ${isActive(ROUTES.META_DECKS) ? 'navbar__link--active' : ''}`}
           >
             <TrendingUp size={18} />
             <span>Meta</span>
-          </a>
-          <a
-            href={ROUTES.LOCAL_META}
+          </Link>
+          <Link
+            to={ROUTES.LOCAL_META}
             className={`navbar__link ${isActive(ROUTES.LOCAL_META) ? 'navbar__link--active' : ''}`}
           >
             <MapPin size={18} />
             <span>Local Meta</span>
-          </a>
+          </Link>
           <NavLinkGated label="Collection" tooltip="Coming Soon" />
           <NavLinkGated label="Dashboard" tooltip="Coming Soon" />
         </div>
@@ -126,9 +122,9 @@ export function Navbar() {
               </button>
               {showDropdown && (
                 <div className="navbar__user-dropdown">
-                  <a href={ROUTES.DECKS} className="navbar__dropdown-item">
+                  <Link to={ROUTES.DECKS} className="navbar__dropdown-item">
                     My Decks
-                  </a>
+                  </Link>
                   <div className="navbar__dropdown-divider" />
                   <button
                     type="button"
@@ -141,10 +137,10 @@ export function Navbar() {
               )}
             </div>
           ) : (
-            <a href="/sign-in" className="button button--secondary">
+            <Link to="/sign-in" className="button button--secondary">
               <LogIn size={16} />
               <span style={{ marginLeft: '0.375rem' }}>Sign in</span>
-            </a>
+            </Link>
           )}
         </div>
       </div>
