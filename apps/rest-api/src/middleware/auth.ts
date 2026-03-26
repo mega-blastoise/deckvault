@@ -5,6 +5,7 @@ import type { Services } from '../types';
 export interface AuthUser {
   id: string;
   email: string;
+  role?: string;
 }
 
 const AUTH_COOKIE = '__session';
@@ -64,3 +65,20 @@ export function requireUser(ctx: Context<Services>): AuthUser {
   if (!user) throw new Error('User not found on context');
   return user;
 }
+
+export const adminRequired: Middleware<Services> = async (ctx, next) => {
+  const jwtSecret = ctx.services.config.jwt.secret;
+  const user = extractUser(ctx.request, jwtSecret);
+  if (!user) {
+    return ctx.error('Unauthorized', 401);
+  }
+
+  const pg = ctx.services.pg;
+  const fullUser = await pg.getUserById(user.id);
+  if (!fullUser || fullUser.role !== 'admin') {
+    return ctx.error('Forbidden', 403);
+  }
+
+  (ctx as { user?: AuthUser }).user = { ...user, role: fullUser.role };
+  return next();
+};

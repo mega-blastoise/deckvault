@@ -6,12 +6,14 @@ export interface AuthUser {
   email: string;
   name: string;
   avatarUrl: string | null;
+  role: 'user' | 'admin';
 }
 
 export interface AuthContextValue {
   user: AuthUser | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  isAdmin: boolean;
   signOut: () => Promise<void>;
 }
 
@@ -53,6 +55,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     user,
     isLoading,
     isAuthenticated: user !== null,
+    isAdmin: user?.role === 'admin',
     signOut
   };
 

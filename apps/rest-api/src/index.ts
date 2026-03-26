@@ -59,7 +59,29 @@ import {
   diffVersions,
   updateVersionLabel
 } from './handlers/deck-versions';
-import { authRequired, authOptional } from './middleware/auth';
+import { authRequired, authOptional, adminRequired } from './middleware/auth';
+import {
+  getAdminStats,
+  getAdminActivity,
+  listUsersAdmin,
+  getUserAdmin,
+  setUserRole,
+  deleteUserAdmin,
+  listMetaDecksAdmin,
+  deleteMetaDeckAdmin,
+  listReportsAdmin,
+  deleteReportAdmin,
+  getSystemHealth,
+  listAnnouncements,
+  createAnnouncement,
+  updateAnnouncement,
+  deleteAnnouncement,
+  getActiveAnnouncements,
+  listFlags,
+  toggleFlag,
+  createFlag,
+  deleteFlag
+} from './handlers/admin';
 
 const config = loadConfig();
 
@@ -172,6 +194,33 @@ const localMetaFrequency = createRouter<Services>('/api/v1/local-meta')
 // Scaffold — public, no auth required
 const scaffold = createRouter<Services>('/api/v1/scaffold').post('/', generateScaffold);
 
+// Admin — all admin-only except active announcements
+const admin = createRouter<Services>('/api/v1/admin')
+  .use(adminRequired)
+  .get('/stats', getAdminStats)
+  .get('/activity', getAdminActivity)
+  .get('/users/:id', getUserAdmin)
+  .get('/users', listUsersAdmin)
+  .put('/users/:id/role', setUserRole)
+  .delete('/users/:id', deleteUserAdmin)
+  .get('/content/meta-decks', listMetaDecksAdmin)
+  .delete('/content/meta-decks/:id', deleteMetaDeckAdmin)
+  .get('/content/reports', listReportsAdmin)
+  .delete('/content/reports/:id', deleteReportAdmin)
+  .get('/system', getSystemHealth)
+  .get('/announcements', listAnnouncements)
+  .post('/announcements', createAnnouncement)
+  .put('/announcements/:id', updateAnnouncement)
+  .delete('/announcements/:id', deleteAnnouncement)
+  .get('/flags', listFlags)
+  .put('/flags/:id', toggleFlag)
+  .post('/flags', createFlag)
+  .delete('/flags/:id', deleteFlag);
+
+// Public announcements (no auth)
+const publicAnnouncements = createRouter<Services>('/api/v1/announcements')
+  .get('/active', getActiveAnnouncements);
+
 // ============================================================
 // 3. Application assembly
 // ============================================================
@@ -215,7 +264,9 @@ const app = createApp({ container })
   .routes(cp)
   .routes(localMetaReports)
   .routes(localMetaFrequency)
-  .routes(scaffold);
+  .routes(scaffold)
+  .routes(admin)
+  .routes(publicAnnouncements);
 
 // ============================================================
 // 4. Start

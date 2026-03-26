@@ -26,5 +26,6 @@ export const ROUTES = {
   SET_DETAIL: (setId: string) => `/sets/${setId}`,
   ROTATION: '/rotation',
   CP: '/cp',
-  SCAFFOLD: '/scaffold'
+  SCAFFOLD: '/scaffold',
+  ADMIN: '/admin'
 } as const;

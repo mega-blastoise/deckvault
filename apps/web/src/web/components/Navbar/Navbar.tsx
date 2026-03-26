@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useLocation } from 'react-router';
-import { Layers, Search, LogIn, TrendingUp, MapPin, Plus, Grid3x3, CalendarDays, Trophy } from 'lucide-react';
+import { Layers, Search, LogIn, TrendingUp, MapPin, Plus, Grid3x3, CalendarDays, Trophy, Shield } from 'lucide-react';
 import { ROUTES } from '@/web/routes';
 import { useCollectionQuery } from '@/web/hooks/useCollectionQuery';
 import { useDecks } from '@/web/contexts/Deck';
@@ -31,7 +31,7 @@ function PokeballIcon({ size = 20 }: { size?: number }) {
 }
 
 export function Navbar() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isAdmin } = useAuth();
   const { uniqueCards } = useCollectionQuery();
   const { deckCount } = useDecks();
   const { user, signOut } = useAuth();
@@ -151,6 +151,12 @@ export function Navbar() {
                   <Link to={ROUTES.DECKS} className="navbar__dropdown-item">
                     My Decks
                   </Link>
+                  {isAdmin && (
+                    <Link to={ROUTES.ADMIN} className="navbar__dropdown-item navbar__dropdown-item--admin">
+                      <Shield size={14} />
+                      Admin
+                    </Link>
+                  )}
                   <div className="navbar__dropdown-divider" />
                   <button
                     type="button"

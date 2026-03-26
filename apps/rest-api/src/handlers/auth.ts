@@ -207,7 +207,8 @@ export const getMe: Handler<Services> = async (ctx) => {
       id: fullUser.id,
       email: fullUser.email,
       name: fullUser.name,
-      avatarUrl: fullUser.avatar_url
+      avatarUrl: fullUser.avatar_url,
+      role: fullUser.role ?? 'user'
     }
   });
 };

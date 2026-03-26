@@ -23,6 +23,8 @@ import { SetDetailPage } from '../pages/SetDetailPage';
 import { RotationPage } from '../pages/RotationPage';
 import { CpTrackerPage } from '../pages/CpTrackerPage';
 import { ScaffolderPage } from '../pages/ScaffolderPage';
+import { AdminPage } from '../pages/AdminPage';
+import { AdminRoute } from '../components/AdminRoute';
 
 export const REACT_ROUTER_ROUTES: RouteObject[] = [
   // Standalone routes — no Navbar, no AppLayout
@@ -126,6 +128,14 @@ export const REACT_ROUTER_ROUTES: RouteObject[] = [
       {
         path: '/scaffold',
         element: <ScaffolderPage />
+      },
+      {
+        path: '/admin',
+        element: (
+          <AdminRoute>
+            <AdminPage />
+          </AdminRoute>
+        )
       },
       {
         path: '/collection/:cardId',
