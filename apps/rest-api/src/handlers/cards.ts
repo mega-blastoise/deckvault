@@ -7,6 +7,8 @@ import {
 } from '../utils/pagination';
 import { transformCardRow, transformCardRowWithSet } from '../utils/transforms';
 import type { CardRow, SetRow } from '../types';
+import { TAG_PATTERNS, VALID_TAGS } from '../utils/card-tag-patterns';
+import type { CardFunctionalTag } from '../utils/card-tag-patterns';
 
 export const getCards: Handler<Services> = async (ctx) => {
   const db = ctx.services.db;
@@ -147,4 +149,55 @@ export const searchCards: Handler<Services> = async (ctx) => {
       total
     )
   });
+};
+
+export const getCardsByUseCase: Handler<Services> = async (ctx) => {
+  const tagsParam = ctx.query.get('tags') ?? '';
+  const rawTags = tagsParam
+    .split(',')
+    .map((t) => t.trim())
+    .filter(Boolean);
+
+  if (rawTags.length === 0) {
+    return ctx.badRequest(
+      `At least one tag is required. Valid tags: ${[...VALID_TAGS].join(', ')}`
+    );
+  }
+
+  const invalidTags = rawTags.filter((t) => !VALID_TAGS.has(t as CardFunctionalTag));
+  if (invalidTags.length > 0) {
+    return ctx.badRequest(
+      `Invalid tag(s): ${invalidTags.join(', ')}. Valid tags: ${[...VALID_TAGS].join(', ')}`
+    );
+  }
+
+  const tags = rawTags as CardFunctionalTag[];
+  const limit = Math.min(100, Math.max(1, Number(ctx.query.get('limit') ?? '60')));
+
+  const patterns = tags.flatMap((tag) => TAG_PATTERNS[tag] ?? []);
+  const cardRows = ctx.services.db.findCardsByTags(patterns, limit) as CardRow[];
+
+  if (cardRows.length === 0) {
+    return ctx.json({ data: [], tags });
+  }
+
+  const cardIds = cardRows.map((r) => r.id);
+  const usageMap = await ctx.services.pg.getMetaUsageCounts(cardIds);
+
+  const db = ctx.services.db;
+  const cards = cardRows
+    .map((row) => {
+      const setRow = db.findSetById(row.set_id) as SetRow | null;
+      const card = setRow
+        ? transformCardRowWithSet(row, setRow)
+        : transformCardRow(row);
+      return { ...card, metaUsageCount: usageMap.get(row.id) ?? 0 };
+    })
+    .sort(
+      (a, b) =>
+        (b.metaUsageCount ?? 0) - (a.metaUsageCount ?? 0) ||
+        a.name.localeCompare(b.name)
+    );
+
+  return ctx.json({ data: cards, tags });
 };

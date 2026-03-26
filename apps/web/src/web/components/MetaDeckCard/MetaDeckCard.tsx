@@ -1,4 +1,6 @@
 import React from 'react';
+import { Link } from 'react-router';
+import { ROUTES } from '@/web/routes';
 import './MetaDeckCard.css';
 
 export interface MetaDeckSummary {
@@ -89,13 +91,21 @@ export function MetaDeckCard({ deck, onClone }: MetaDeckCardProps) {
 
       <div className="meta-deck-card__footer">
         <span className="meta-deck-card__card-count">{deck.cardCount} cards</span>
-        <button
-          type="button"
-          className="meta-deck-card__build-btn"
-          onClick={() => onClone(deck.id)}
-        >
-          Build This Deck
-        </button>
+        <div className="meta-deck-card__actions">
+          <Link
+            to={`${ROUTES.SCAFFOLD}?archetype=${encodeURIComponent(deck.archetype)}&format=${deck.format}`}
+            className="meta-deck-card__scaffold-link"
+          >
+            Scaffold →
+          </Link>
+          <button
+            type="button"
+            className="meta-deck-card__build-btn"
+            onClick={() => onClone(deck.id)}
+          >
+            Build This Deck
+          </button>
+        </div>
       </div>
     </div>
   );

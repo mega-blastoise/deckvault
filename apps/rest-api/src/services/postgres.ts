@@ -466,6 +466,62 @@ export class PostgresService implements Service {
     return rows as MetaDeckCardRow[];
   }
 
+  async getMetaUsageCounts(cardIds: string[]): Promise<Map<string, number>> {
+    if (cardIds.length === 0) return new Map();
+    const placeholders = cardIds.map((_, i) => `$${i + 1}`).join(', ');
+    const rows = await this.instance.unsafe<{ card_id: string; usage_count: string }[]>(
+      `SELECT card_id, COUNT(*)::text AS usage_count
+       FROM meta_deck_cards
+       WHERE card_id IN (${placeholders})
+       GROUP BY card_id`,
+      cardIds
+    );
+    return new Map(rows.map((r) => [r.card_id, Number(r.usage_count)]));
+  }
+
+  async getArchetypeCluster(
+    archetype: string,
+    format: string,
+    variant?: string
+  ): Promise<MetaDeckRow[]> {
+    const lower = archetype.toLowerCase();
+    // Use trigram similarity with a substring fallback so both "dragapult" and
+    // "dragapullt" (typo) resolve correctly. Threshold 0.2 is intentionally
+    // permissive — the cluster is used for frequency analysis, not exact matching.
+    const rows = await this.instance<MetaDeckRow[]>`
+      SELECT md.*,
+             COALESCE((SELECT SUM(mdc.quantity) FROM meta_deck_cards mdc WHERE mdc.meta_deck_id = md.id), 0) AS card_count
+      FROM meta_decks md
+      WHERE md.format = ${format}
+        AND (
+          similarity(LOWER(md.archetype), ${lower}) > 0.2
+          OR LOWER(md.archetype) LIKE ${'%' + lower + '%'}
+        )
+      ORDER BY similarity(LOWER(md.archetype), ${lower}) DESC,
+               md.event_date DESC NULLS LAST
+    `;
+
+    if (variant) {
+      const filtered = rows.filter((r) =>
+        r.name.toLowerCase().includes(variant.toLowerCase())
+      );
+      if (filtered.length >= 3) return filtered;
+    }
+
+    return rows;
+  }
+
+  async getMetaDeckCardsBatch(
+    deckIds: string[]
+  ): Promise<{ deck_id: string; card_id: string; quantity: number }[]> {
+    if (deckIds.length === 0) return [];
+    const placeholders = deckIds.map((_, i) => `$${i + 1}`).join(', ');
+    return this.instance.unsafe<{ deck_id: string; card_id: string; quantity: number }[]>(
+      `SELECT deck_id, card_id, quantity FROM meta_deck_cards WHERE deck_id IN (${placeholders})`,
+      deckIds
+    );
+  }
+
   // ─── Deck Versions ──────────────────────────────────────
 
   async createVersionSnapshot(

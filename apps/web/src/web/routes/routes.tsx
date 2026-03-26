@@ -22,6 +22,7 @@ import { SetBrowserPage } from '../pages/SetBrowserPage';
 import { SetDetailPage } from '../pages/SetDetailPage';
 import { RotationPage } from '../pages/RotationPage';
 import { CpTrackerPage } from '../pages/CpTrackerPage';
+import { ScaffolderPage } from '../pages/ScaffolderPage';
 
 export const REACT_ROUTER_ROUTES: RouteObject[] = [
   // Standalone routes — no Navbar, no AppLayout
@@ -121,6 +122,10 @@ export const REACT_ROUTER_ROUTES: RouteObject[] = [
             <CpTrackerPage />
           </ProtectedRoute>
         )
+      },
+      {
+        path: '/scaffold',
+        element: <ScaffolderPage />
       },
       {
         path: '/collection/:cardId',

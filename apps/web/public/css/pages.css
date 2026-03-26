@@ -164,6 +164,133 @@
   color: var(--color-error);
 }
 
+/* Browse page — mode toggle */
+.browse-page__mode-toggle {
+  display: flex;
+  gap: 0.25rem;
+  margin-bottom: 1rem;
+  background: var(--bg-sunken);
+  border: 1px solid var(--pico-muted-border-color);
+  border-radius: 8px;
+  padding: 0.25rem;
+  width: fit-content;
+}
+
+.browse-page__mode-btn {
+  padding: 0.375rem 0.875rem;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.browse-page__mode-btn--active {
+  background: var(--pico-card-background-color);
+  color: var(--pico-color);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+}
+
+/* Browse page — tag filter input */
+.browse-page__tag-search {
+  padding: 0.4375rem 0.75rem;
+  background: var(--pico-card-background-color);
+  border: 1px solid var(--pico-muted-border-color);
+  border-radius: 8px;
+  color: var(--pico-color);
+  font-size: 0.875rem;
+  width: 100%;
+  max-width: 280px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.browse-page__tag-search:focus {
+  border-color: var(--focus-ring);
+}
+
+/* Browse page — use case panel */
+.browse-page__use-case-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  margin-bottom: 1.25rem;
+  padding: 1rem;
+  background: var(--bg-sunken);
+  border: 1px solid var(--pico-muted-border-color);
+  border-radius: 10px;
+}
+
+.browse-page__tag-group {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.browse-page__tag-group-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
+  padding-top: 0.3rem;
+  white-space: nowrap;
+  min-width: 80px;
+}
+
+.browse-page__tag-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+.browse-page__tag-pill {
+  padding: 0.25rem 0.625rem;
+  border: 1px solid var(--pico-muted-border-color);
+  border-radius: 20px;
+  background: var(--pico-card-background-color);
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+
+.browse-page__tag-pill:hover {
+  border-color: var(--focus-ring);
+  color: var(--pico-color);
+}
+
+.browse-page__tag-pill--active {
+  border-color: var(--focus-ring);
+  background: color-mix(in srgb, var(--focus-ring) 15%, transparent);
+  color: var(--pico-color);
+  font-weight: 500;
+}
+
+.browse-page__tag-pill-x {
+  opacity: 0.6;
+}
+
+.browse-page__tag-clear {
+  align-self: flex-start;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+  cursor: pointer;
+  padding: 0.25rem 0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.browse-page__tag-clear:hover {
+  color: var(--pico-color);
+}
+
 /* Collection page */
 .collection-page__card-detail {
   margin-bottom: 1.25rem;

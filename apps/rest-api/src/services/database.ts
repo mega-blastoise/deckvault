@@ -89,4 +89,27 @@ export class DatabaseService implements Service {
   findSetById(id: string): unknown | null {
     return (sqlite.findSetById(this.instance)(id) as unknown) ?? null;
   }
+
+  /** Find Standard-legal cards (G/H/I) whose rules or abilities text matches any of the given LIKE patterns, newest sets first */
+  findCardsByTags(patterns: string[], limit = 60): unknown[] {
+    if (patterns.length === 0) return [];
+
+    const clauses = patterns
+      .map(() => "(LOWER(COALESCE(pc.rules, '')) LIKE ? OR LOWER(COALESCE(pc.abilities, '')) LIKE ?)")
+      .join(' OR ');
+
+    const bindings = patterns.flatMap((p) => [p, p]);
+
+    return this.query<unknown>(
+      `SELECT DISTINCT pc.*
+       FROM pokemon_cards pc
+       JOIN pokemon_card_sets pcs ON pcs.id = pc.set_id
+       WHERE (${clauses})
+         AND pc.regulation_mark IN ('G', 'H', 'I')
+       ORDER BY pcs.release_date DESC
+       LIMIT ?`,
+      ...bindings,
+      limit
+    );
+  }
 }

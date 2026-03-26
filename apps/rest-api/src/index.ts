@@ -17,8 +17,10 @@ import {
   getCards,
   getCardById,
   getCardsBatch,
-  searchCards
+  searchCards,
+  getCardsByUseCase
 } from './handlers/cards';
+import { generateScaffold } from './handlers/scaffold';
 import {
   getSets,
   getSetById,
@@ -98,10 +100,11 @@ const auth = createRouter<Services>('/auth')
   .post('/magic-link', sendMagicLink)
   .get('/magic-link/verify', verifyMagicLink);
 
-// Cards — search must be registered before :id so it matches first
+// Cards — static paths must be registered before :id so they match first
 const cards = createRouter<Services>('/api/v1/cards')
   .get('/search', searchCards)
   .get('/batch', getCardsBatch)
+  .get('/use-case', getCardsByUseCase)
   .get('/:id', getCardById)
   .get('/', getCards);
 
@@ -166,6 +169,9 @@ const localMetaReports = createRouter<Services>('/api/v1/local-meta')
 const localMetaFrequency = createRouter<Services>('/api/v1/local-meta')
   .get('/frequency', getFrequency);
 
+// Scaffold — public, no auth required
+const scaffold = createRouter<Services>('/api/v1/scaffold').post('/', generateScaffold);
+
 // ============================================================
 // 3. Application assembly
 // ============================================================
@@ -208,7 +214,8 @@ const app = createApp({ container })
   .routes(metaDecksDetail)
   .routes(cp)
   .routes(localMetaReports)
-  .routes(localMetaFrequency);
+  .routes(localMetaFrequency)
+  .routes(scaffold);
 
 // ============================================================
 // 4. Start

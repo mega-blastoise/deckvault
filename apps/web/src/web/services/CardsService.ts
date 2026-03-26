@@ -1,5 +1,6 @@
 import { type Pokemon } from '@pokemon/clients';
 import { APIModel, getBaseAPIURL } from './APIModel';
+import type { CardFunctionalTag } from '../../types/card-tags';
 
 export class CardsService extends APIModel implements APIModel {
   constructor() {
@@ -32,5 +33,12 @@ export class CardsService extends APIModel implements APIModel {
     return this.get<{ data: Pokemon.Card[] }>('/cards/batch', {
       params: { ids: ids.join(',') }
     });
+  }
+
+  getByUseCases(tags: CardFunctionalTag[], limit = 60) {
+    return this.get<{ data: (Pokemon.Card & { metaUsageCount: number })[]; tags: string[] }>(
+      '/cards/use-case',
+      { params: { tags: tags.join(','), limit } }
+    );
   }
 }
