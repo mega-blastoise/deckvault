@@ -212,6 +212,115 @@ export const getMe: Handler<Services> = async (ctx) => {
   });
 };
 
+export const sendMagicLink: Handler<Services> = async (ctx) => {
+  const config = ctx.services.config;
+  const pg = ctx.services.pg;
+
+  let body: unknown;
+  try {
+    body = await ctx.request.json();
+  } catch {
+    return ctx.badRequest('Invalid JSON body');
+  }
+
+  if (typeof body !== 'object' || body === null) {
+    return ctx.badRequest('Invalid request body');
+  }
+
+  const { email: rawEmail, returnTo: rawReturnTo } = body as Record<string, unknown>;
+
+  if (typeof rawEmail !== 'string' || !rawEmail.trim()) {
+    return ctx.badRequest('Email is required');
+  }
+
+  const email = rawEmail.trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return ctx.badRequest('Invalid email address');
+  }
+
+  const returnTo =
+    typeof rawReturnTo === 'string' && rawReturnTo.startsWith('/') && !rawReturnTo.startsWith('//')
+      ? rawReturnTo
+      : '/';
+
+  const tokenBytes = new Uint8Array(32);
+  crypto.getRandomValues(tokenBytes);
+  const token = Buffer.from(tokenBytes).toString('base64url');
+  const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
+
+  await pg.createMagicLinkToken(email, token, expiresAt);
+
+  const magicUrl = `${config.email.appUrl}/auth/magic-link/verify?token=${token}&returnTo=${encodeURIComponent(returnTo)}`;
+
+  if (config.email.resendApiKey) {
+    const emailRes = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${config.email.resendApiKey}`
+      },
+      body: JSON.stringify({
+        from: config.email.fromEmail,
+        to: [email],
+        subject: 'Your DeckVault sign-in link',
+        html: `<p>Click the link below to sign in to DeckVault. This link expires in 30 minutes.</p><p><a href="${magicUrl}">${magicUrl}</a></p>`
+      })
+    });
+    if (!emailRes.ok) {
+      console.error('[auth] Failed to send magic link email:', await emailRes.text());
+      return ctx.error('Failed to send email', 500);
+    }
+  } else {
+    console.log(`[auth] Magic link (dev): ${magicUrl}`);
+  }
+
+  return ctx.json({ ok: true });
+};
+
+export const verifyMagicLink: Handler<Services> = async (ctx) => {
+  const config = ctx.services.config;
+  const pg = ctx.services.pg;
+
+  const token = ctx.query.get('token');
+  const rawReturnTo = ctx.query.get('returnTo') ?? '/';
+  const returnTo =
+    rawReturnTo.startsWith('/') && !rawReturnTo.startsWith('//')
+      ? rawReturnTo
+      : '/';
+
+  if (!token) {
+    return new Response('Missing token', { status: 400 });
+  }
+
+  const result = await pg.consumeMagicLinkToken(token);
+  if (!result) {
+    return new Response(null, {
+      status: 302,
+      headers: { Location: `${config.email.appUrl}/sign-in?error=invalid_token` }
+    });
+  }
+
+  // User creation happens here — only after proving ownership of the email address.
+  const user = await pg.upsertEmailUser(result.email);
+
+  const jwtToken = jwt.sign(
+    { sub: user.id, email: user.email },
+    config.jwt.secret,
+    { expiresIn: '7d' }
+  );
+
+  const isSecure = config.email.appUrl.startsWith('https');
+  const absoluteReturnTo = `${config.email.appUrl}${returnTo}`;
+
+  return new Response(null, {
+    status: 302,
+    headers: {
+      Location: absoluteReturnTo,
+      'Set-Cookie': setSessionCookie(jwtToken, isSecure)
+    }
+  });
+};
+
 export const logout: Handler<Services> = async (ctx) => {
   const config = ctx.services.config;
   const isSecure = config.google.redirectUri.startsWith('https');

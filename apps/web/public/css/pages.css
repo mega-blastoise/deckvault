@@ -1032,6 +1032,176 @@
   box-shadow: 0 4px 16px rgba(32, 129, 226, 0.2);
 }
 
+[data-theme="nebula"] .sign-in-page__card {
+  background: rgba(18, 18, 26, 0.7);
+  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+/* Sign-in logo */
+.sign-in-page__logo {
+  color: var(--pico-muted-color);
+  margin-bottom: -0.25rem;
+}
+
+/* Sign-in divider */
+.sign-in-page__divider {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  gap: 0.75rem;
+  color: var(--pico-muted-color);
+  font-size: 0.8125rem;
+}
+
+.sign-in-page__divider::before,
+.sign-in-page__divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background-color: var(--pico-muted-border-color);
+}
+
+/* Magic link form */
+.sign-in-page__magic-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  width: 100%;
+}
+
+.sign-in-page__email-label {
+  text-align: left;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--pico-muted-color);
+}
+
+.sign-in-page__email-input {
+  width: 100%;
+  height: 44px;
+  padding: 0 0.875rem;
+  background-color: var(--pico-form-element-background-color);
+  border: 1px solid var(--pico-muted-border-color);
+  border-radius: 10px;
+  color: var(--pico-color);
+  font-family: inherit;
+  font-size: 0.9375rem;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  box-sizing: border-box;
+}
+
+.sign-in-page__email-input:focus {
+  outline: none;
+  border-color: var(--focus-ring);
+  box-shadow: 0 0 0 3px rgba(32, 129, 226, 0.15);
+}
+
+.sign-in-page__email-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.sign-in-page__magic-error {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--color-error);
+  text-align: left;
+}
+
+.sign-in-page__magic-btn {
+  width: 100%;
+  height: 44px;
+  padding: 0 1.25rem;
+  background-color: var(--pico-primary);
+  border: none;
+  border-radius: 10px;
+  color: #fff;
+  font-family: inherit;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  margin-top: 0.25rem;
+}
+
+.sign-in-page__magic-btn:hover:not(:disabled) {
+  background-color: var(--pico-primary-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(32, 129, 226, 0.35);
+}
+
+.sign-in-page__magic-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Sent state */
+.sign-in-page__sent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 1.5rem;
+  background-color: rgba(32, 129, 226, 0.08);
+  border: 1px solid rgba(32, 129, 226, 0.2);
+  border-radius: 12px;
+  width: 100%;
+  color: var(--pico-primary);
+}
+
+.sign-in-page__sent-title {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--pico-color);
+}
+
+.sign-in-page__sent-body {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--pico-muted-color);
+  line-height: 1.5;
+  text-align: center;
+}
+
+.sign-in-page__sent-body strong {
+  color: var(--pico-color);
+  font-weight: 500;
+}
+
+.sign-in-page__resend-btn {
+  background: none;
+  border: none;
+  color: var(--pico-primary);
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  margin-top: 0.25rem;
+}
+
+.sign-in-page__resend-btn:hover {
+  color: var(--pico-primary-hover);
+}
+
+/* Nebula email input */
+[data-theme="nebula"] .sign-in-page__email-input {
+  background: var(--nebula-surface-glass);
+  border-color: var(--nebula-surface-border);
+}
+
+[data-theme="nebula"] .sign-in-page__email-input:focus {
+  border-color: var(--nebula-accent-primary);
+  box-shadow: 0 0 0 3px rgba(32, 129, 226, 0.15);
+}
+
 /* Decks browse page */
 .decks-browse-page__toolbar {
   display: flex;

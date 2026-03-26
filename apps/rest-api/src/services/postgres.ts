@@ -4,9 +4,19 @@ import type { Service } from '@pokemon/framework';
 
 type BunSQL = InstanceType<typeof Bun.SQL>;
 
+export interface MagicLinkTokenRow {
+  id: string;
+  user_id: string;
+  email: string;
+  token: string;
+  expires_at: Date;
+  used_at: Date | null;
+  created_at: Date;
+}
+
 export interface UserRow {
   id: string;
-  google_id: string;
+  google_id: string | null;
   email: string;
   name: string;
   avatar_url: string | null;
@@ -203,6 +213,43 @@ export class PostgresService implements Service {
   async getUserById(id: string): Promise<UserRow | null> {
     const rows = await this.instance`SELECT * FROM users WHERE id = ${id}`;
     return (rows[0] as UserRow) ?? null;
+  }
+
+  async getUserByEmail(email: string): Promise<UserRow | null> {
+    const rows = await this.instance`SELECT * FROM users WHERE email = ${email}`;
+    return (rows[0] as UserRow) ?? null;
+  }
+
+  async upsertEmailUser(email: string): Promise<UserRow> {
+    const name = email.split('@')[0] ?? email;
+    const rows = await this.instance`
+      INSERT INTO users (email, name)
+      VALUES (${email}, ${name})
+      ON CONFLICT (email) DO UPDATE SET updated_at = now()
+      RETURNING *
+    `;
+    return rows[0] as UserRow;
+  }
+
+  async createMagicLinkToken(email: string, token: string, expiresAt: Date): Promise<void> {
+    await this.instance`
+      INSERT INTO magic_link_tokens (email, token, expires_at)
+      VALUES (${email}, ${token}, ${expiresAt})
+    `;
+  }
+
+  async consumeMagicLinkToken(token: string): Promise<{ email: string } | null> {
+    const rows = await this.instance`
+      UPDATE magic_link_tokens
+      SET used_at = now()
+      WHERE token = ${token}
+        AND used_at IS NULL
+        AND expires_at > now()
+      RETURNING email
+    `;
+    if (rows.length === 0) return null;
+    const row = rows[0] as { email: string };
+    return { email: row.email };
   }
 
   // ─── Decks ──────────────────────────────────────────────

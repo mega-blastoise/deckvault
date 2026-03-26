@@ -87,7 +87,7 @@
 | `/sets/:id` | SetDetailPage | public | Cards in a set via CardGrid |
 | `/rotation` | RotationPage | public | Static rotation calendar, season selector |
 | `/cp` | CpTrackerPage | required | CP log, running total, Add Event form |
-| `/sign-in` | SignInPage | public | Google OAuth |
+| `/sign-in` | SignInPage | public | Google OAuth + Magic email link |
 
 ---
 
@@ -133,8 +133,8 @@
 - No default exports in new files. No `any` types. No `npm`/`yarn`.
 
 ### Migrations Applied (Postgres)
-001 users, 002 decks, 003 deck_cards, 004 user_collections, 005 migrations_tracking, 006 meta_decks, 007 fix_meta_deck_cards_quantity, 008 deck_versions, 009 local_meta, 010 relax_deck_cards_quantity, 011 meta_deck_tier, 012 cp_tracker
-**All migrations applied — next would be 013**
+001 users, 002 decks, 003 deck_cards, 004 user_collections, 005 migrations_tracking, 006 meta_decks, 007 fix_meta_deck_cards_quantity, 008 deck_versions, 009 local_meta, 010 relax_deck_cards_quantity, 011 meta_deck_tier, 012 cp_tracker, 013 magic_link_tokens, 014 magic_link_nullable_user_id
+**Applied in dev. 013+014 pending prod deploy — next would be 015**
 
 ---
 
@@ -145,6 +145,42 @@
 - 133/133 tests pass, 13/13 check-types clean after all Tier 1 changes
 - Tier 2 complete + QA remediation (2026-03-26): 133/133 tests pass, 13/13 check-types clean
 - Tier 3 complete (2026-03-27): 133/133 tests pass, 13/13 check-types clean — pending QA on dev stack
+
+## UI Polish Session (2026-03-26)
+
+### What shipped
+- **Favicon** — pokéball SVG at `apps/web/public/assets/favicon.svg`, linked in `Document.tsx`
+- **Navbar logo icon** — pokéball SVG inline left of "DeckVault" text; uses `currentColor`, adapts to both themes
+- **Navbar cleanup** — removed `NavLinkGated` for "Collection" and "Dashboard" (pre-release clutter); nav is now: Browse · Sets · Decks · Meta · Local Meta · Rotation · CP (auth-only)
+- **Glassmorphism push** — deeper glass on Navbar (blur 20px + saturate), Cards, MetaDeckCard, sign-in card (all Nebula theme)
+- **Card height standardization** — `CardGrid` items now `display:flex; flex-direction:column`; inner `pokemon-card--grid` gets `flex:1; height:100%` — cards in a row are always equal height
+- **Magic email link auth** — full stack implementation:
+  - Migration 013: `google_id` nullable, `magic_link_tokens` table (user_id nullable — account not created until link clicked)
+  - Migration 014: hotfix — drops NOT NULL on `user_id` after 013 was applied before the security fix
+  - `POST /auth/magic-link` — generates token, emails via Resend, returns 200. No user created yet.
+  - `GET /auth/magic-link/verify` — consumes token, calls `upsertEmailUser`, issues JWT, redirects
+  - `UserRow.google_id` typed as `string | null`
+  - Sign-in page: pokéball logo, Google button, OR divider, email form with loading/sent/error states
+  - Email provider: Resend via fetch (no SDK). Config: `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `APP_URL`. Falls back to console.log in dev when key absent.
+  - Domain `deckvault.gg` verified in Resend (Cloudflare auto-configure used for DNS records)
+  - Dev: set `APP_URL=http://localhost:3000` in `apps/rest-api/.env` to get links pointing at localhost
+
+### Key files changed
+- `apps/web/public/assets/favicon.svg` — NEW
+- `apps/web/src/web/components/Document/Document.tsx` — favicon link
+- `apps/web/src/web/components/Navbar/Navbar.tsx` — logo icon, removed gated links
+- `apps/web/src/web/components/Navbar/Navbar.css` — glass, icon styles, removed gated CSS
+- `apps/web/src/web/components/Card/Card.css` — nebula glass
+- `apps/web/src/web/components/CardGrid/CardGrid.css` — height stretch
+- `apps/web/src/web/components/MetaDeckCard/MetaDeckCard.css` — nebula glass
+- `apps/web/src/web/pages/SignInPage.tsx` — magic link UI
+- `apps/web/public/css/pages.css` — magic link styles
+- `apps/rest-api/migrations/013_magic_link_tokens.sql` — NEW
+- `apps/rest-api/migrations/014_magic_link_nullable_user_id.sql` — NEW
+- `apps/rest-api/src/config/index.ts` — email config block
+- `apps/rest-api/src/services/postgres.ts` — `MagicLinkTokenRow`, `getUserByEmail`, `upsertEmailUser`, `createMagicLinkToken`, `consumeMagicLinkToken`
+- `apps/rest-api/src/handlers/auth.ts` — `sendMagicLink`, `verifyMagicLink`
+- `apps/rest-api/src/index.ts` — routes registered
 
 ### Key Data-Shape Note (double-wrap)
 Services like `useSets()`, `useSet()`, `useSetCards()` return `APIResponse<T>` where `.data` is the raw API body `{ data: T[] }`. Consumers must do `(result.data?.data as unknown as { data: T[] }).data` to get the actual array. Consistent with how `CardPage` handles `useCard`.

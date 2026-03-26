@@ -38,7 +38,9 @@ import {
   initiateGoogleAuth,
   handleGoogleCallback,
   getMe,
-  logout
+  logout,
+  sendMagicLink,
+  verifyMagicLink
 } from './handlers/auth';
 import {
   getCollection,
@@ -92,7 +94,9 @@ const auth = createRouter<Services>('/auth')
   .get('/callback', handleGoogleCallback)
   .get('/me', getMe)
   .get('/logout', logout)
-  .post('/logout', logout);
+  .post('/logout', logout)
+  .post('/magic-link', sendMagicLink)
+  .get('/magic-link/verify', verifyMagicLink);
 
 // Cards — search must be registered before :id so it matches first
 const cards = createRouter<Services>('/api/v1/cards')

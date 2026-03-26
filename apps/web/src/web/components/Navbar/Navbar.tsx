@@ -9,20 +9,24 @@ import { ThemeToggle } from '@/web/components/ThemeToggle';
 import { ReportMatchModal } from '@/web/components/ReportMatchModal';
 import './Navbar.css';
 
-interface NavLinkGatedProps {
-  label: string;
-  tooltip: string;
-}
-
-function NavLinkGated({ label, tooltip }: NavLinkGatedProps) {
+function PokeballIcon({ size = 20 }: { size?: number }) {
   return (
-    <span
-      className="navbar__link navbar__link--gated"
-      aria-disabled="true"
-      data-tooltip={tooltip}
+    <svg
+      className="navbar__logo-icon"
+      width={size}
+      height={size}
+      viewBox="0 0 100 100"
+      aria-hidden="true"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
     >
-      <span>{label}</span>
-    </span>
+      <circle cx="50" cy="50" r="47" fill="#f5f5f5"/>
+      <path d="M3,50 A47,47 0 0,1 97,50 Z" fill="#cc2222"/>
+      <circle cx="50" cy="50" r="47" fill="none" stroke="currentColor" strokeWidth="6"/>
+      <rect x="3" y="44" width="94" height="12" fill="currentColor"/>
+      <circle cx="50" cy="50" r="13" fill="currentColor"/>
+      <circle cx="50" cy="50" r="9" fill="#f5f5f5"/>
+    </svg>
   );
 }
 
@@ -52,6 +56,7 @@ export function Navbar() {
     <nav className="navbar">
       <div className="navbar__container">
         <Link to="/" className="navbar__logo">
+          <PokeballIcon size={22} />
           <span className="navbar__logo-text">DeckVault</span>
         </Link>
 
@@ -110,8 +115,6 @@ export function Navbar() {
               <span>CP</span>
             </Link>
           )}
-          <NavLinkGated label="Collection" tooltip="Coming Soon" />
-          <NavLinkGated label="Dashboard" tooltip="Coming Soon" />
         </div>
 
         <div className="navbar__actions">

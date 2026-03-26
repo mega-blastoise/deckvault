@@ -1,11 +1,17 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Navigate, useSearchParams } from 'react-router';
 import { useAuth } from '../contexts/Auth';
+
+type MagicLinkStatus = 'idle' | 'loading' | 'sent' | 'error';
 
 function SignInPage() {
   const { isAuthenticated, isLoading } = useAuth();
   const [searchParams] = useSearchParams();
   const returnTo = searchParams.get('returnTo') ?? '/';
+
+  const [email, setEmail] = useState('');
+  const [magicLinkStatus, setMagicLinkStatus] = useState<MagicLinkStatus>('idle');
+  const [errorMessage, setErrorMessage] = useState('');
 
   if (isLoading) {
     return (
@@ -25,14 +31,49 @@ function SignInPage() {
 
   const googleAuthUrl = `/auth/google?returnTo=${encodeURIComponent(returnTo)}`;
 
+  async function handleMagicLink(e: React.FormEvent) {
+    e.preventDefault();
+    if (!email.trim()) return;
+    setMagicLinkStatus('loading');
+    setErrorMessage('');
+    try {
+      const res = await fetch('/auth/magic-link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim(), returnTo })
+      });
+      if (!res.ok) {
+        const body = (await res.json()) as { error?: string | { message?: string } };
+        const err = body.error;
+        const msg = typeof err === 'string' ? err : (err?.message ?? 'Something went wrong');
+        throw new Error(msg);
+      }
+      setMagicLinkStatus('sent');
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : 'Failed to send link');
+      setMagicLinkStatus('error');
+    }
+  }
+
   return (
     <div className="page sign-in-page">
       <div className="sign-in-page__container">
         <div className="sign-in-page__card">
-          <h1 className="sign-in-page__title">Welcome Back</h1>
+          <div className="sign-in-page__logo" aria-hidden="true">
+            <svg width="40" height="40" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="50" cy="50" r="47" fill="#f5f5f5"/>
+              <path d="M3,50 A47,47 0 0,1 97,50 Z" fill="#cc2222"/>
+              <circle cx="50" cy="50" r="47" fill="none" stroke="currentColor" strokeWidth="6"/>
+              <rect x="3" y="44" width="94" height="12" fill="currentColor"/>
+              <circle cx="50" cy="50" r="13" fill="currentColor"/>
+              <circle cx="50" cy="50" r="9" fill="#f5f5f5"/>
+            </svg>
+          </div>
+          <h1 className="sign-in-page__title">Welcome to DeckVault</h1>
           <p className="sign-in-page__subtitle">
             Sign in to manage your collection and decks
           </p>
+
           <a href={googleAuthUrl} className="sign-in-page__google-btn">
             <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
               <path
@@ -54,6 +95,57 @@ function SignInPage() {
             </svg>
             <span>Continue with Google</span>
           </a>
+
+          <div className="sign-in-page__divider">
+            <span>or</span>
+          </div>
+
+          {magicLinkStatus === 'sent' ? (
+            <div className="sign-in-page__sent">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M20 4H4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V6a2 2 0 00-2-2z" stroke="currentColor" strokeWidth="1.5"/>
+                <path d="M2 6l10 7 10-7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+              </svg>
+              <p className="sign-in-page__sent-title">Check your inbox</p>
+              <p className="sign-in-page__sent-body">
+                We sent a magic link to <strong>{email}</strong>. Click it to sign in — it expires in 30 minutes.
+              </p>
+              <button
+                type="button"
+                className="sign-in-page__resend-btn"
+                onClick={() => setMagicLinkStatus('idle')}
+              >
+                Use a different email
+              </button>
+            </div>
+          ) : (
+            <form className="sign-in-page__magic-form" onSubmit={handleMagicLink} noValidate>
+              <label className="sign-in-page__email-label" htmlFor="magic-link-email">
+                Email address
+              </label>
+              <input
+                id="magic-link-email"
+                type="email"
+                className="sign-in-page__email-input"
+                placeholder="you@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={magicLinkStatus === 'loading'}
+                required
+                autoComplete="email"
+              />
+              {magicLinkStatus === 'error' && (
+                <p className="sign-in-page__magic-error">{errorMessage}</p>
+              )}
+              <button
+                type="submit"
+                className="sign-in-page__magic-btn"
+                disabled={magicLinkStatus === 'loading' || !email.trim()}
+              >
+                {magicLinkStatus === 'loading' ? 'Sending…' : 'Send magic link'}
+              </button>
+            </form>
+          )}
         </div>
       </div>
     </div>

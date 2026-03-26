@@ -25,6 +25,16 @@
   color: var(--pico-color);
 }
 
+.navbar__logo-icon {
+  flex-shrink: 0;
+  opacity: 0.9;
+  transition: opacity 0.2s ease;
+}
+
+.navbar__logo:hover .navbar__logo-icon {
+  opacity: 1;
+}
+
 .navbar__logo-text {
   font-size: 1.125rem;
   font-weight: 700;
@@ -65,39 +75,6 @@
   background-color: var(--pico-primary-hover-background);
 }
 
-.navbar__link--gated {
-  opacity: 0.4;
-  cursor: not-allowed;
-  position: relative;
-}
-
-.navbar__link--gated:hover {
-  color: var(--pico-muted-color);
-  background-color: transparent;
-}
-
-.navbar__link--gated::after {
-  content: attr(data-tooltip);
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 50%;
-  transform: translateX(-50%);
-  background: var(--pico-color);
-  color: var(--pico-background-color);
-  font-size: 0.6875rem;
-  font-weight: 500;
-  white-space: nowrap;
-  padding: 4px 8px;
-  border-radius: 6px;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.15s ease;
-  z-index: 200;
-}
-
-.navbar__link--gated:hover::after {
-  opacity: 1;
-}
 
 .navbar__badge {
   display: inline-flex;
@@ -241,9 +218,11 @@
 
 /* Nebula theme - glassmorphism navbar */
 [data-theme="nebula"] .navbar {
-  background: rgba(18, 18, 26, 0.85);
-  backdrop-filter: blur(12px);
-  border-bottom-color: var(--nebula-surface-border);
+  background: rgba(10, 10, 15, 0.75);
+  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  border-bottom-color: rgba(255, 255, 255, 0.07);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04), 0 4px 24px rgba(0, 0, 0, 0.3);
 }
 
 [data-theme="nebula"] .navbar__link:hover {

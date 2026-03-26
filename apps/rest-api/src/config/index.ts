@@ -32,6 +32,11 @@ export interface Config {
     level: string;
     format: string;
   };
+  email: {
+    resendApiKey: string;
+    fromEmail: string;
+    appUrl: string;
+  };
 }
 
 function parseOrigins(value: string | undefined): string[] {
@@ -78,6 +83,11 @@ export function loadConfig(): Config {
     logging: {
       level: process.env.LOG_LEVEL || 'info',
       format: process.env.LOG_FORMAT || 'json'
+    },
+    email: {
+      resendApiKey: process.env.RESEND_API_KEY ?? '',
+      fromEmail: process.env.RESEND_FROM_EMAIL ?? 'noreply@deckvault.gg',
+      appUrl: process.env.APP_URL ?? 'http://localhost:3000'
     }
   };
 }

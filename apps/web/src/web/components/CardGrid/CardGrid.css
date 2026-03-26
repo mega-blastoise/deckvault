@@ -60,6 +60,14 @@
 /* Grid item wrapper (for overlay support) */
 .pokemon-card-grid__item {
   position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.pokemon-card-grid__item .pokemon-card--grid {
+  flex: 1;
+  height: 100%;
+  max-width: none;
 }
 
 /* Empty state */
