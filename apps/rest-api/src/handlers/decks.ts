@@ -105,7 +105,12 @@ function hydrateCards(db: DatabaseService, deckCards: DeckCardRow[]) {
         number: card.number,
         regulationMark: card.regulationMark,
         images: card.images,
-        set: card.set ?? { id: cardRow.set_id, name: '' }
+        set: {
+          id: card.set?.id ?? cardRow.set_id,
+          name: card.set?.name ?? '',
+          ptcgoCode: (card.set as { ptcgoCode?: string } | undefined)?.ptcgoCode
+        },
+        tcgplayer: (card as { tcgplayer?: { url: string } }).tcgplayer
       },
       quantity: dc.quantity
     };

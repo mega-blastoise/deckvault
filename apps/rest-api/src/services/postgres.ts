@@ -58,6 +58,7 @@ export interface MetaDeckRow {
   name: string;
   archetype: string;
   format: string;
+  tier: string | null;
   source_url: string | null;
   placement: string | null;
   event_name: string | null;
@@ -65,6 +66,18 @@ export interface MetaDeckRow {
   last_updated: Date;
   created_at: Date;
   card_count: number;
+}
+
+export interface CpEntryRow {
+  id: string;
+  user_id: string;
+  event_name: string;
+  event_date: string;
+  placement: string | null;
+  cp_earned: number;
+  format: string;
+  notes: string | null;
+  created_at: Date;
 }
 
 export interface MetaDeckCardRow {
@@ -567,5 +580,55 @@ export class PostgresService implements Service {
         lastSeen: String(r.last_seen)
       };
     });
+  }
+
+  // ─── CP Tracker ──────────────────────────────────────────
+
+  async listCpEntries(userId: string, season?: string): Promise<CpEntryRow[]> {
+    const rows = season
+      ? await this.instance`
+          SELECT * FROM cp_entries
+          WHERE user_id = ${userId}
+            AND date_part('year', event_date) = ${Number(season)}
+          ORDER BY event_date DESC, created_at DESC
+        `
+      : await this.instance`
+          SELECT * FROM cp_entries
+          WHERE user_id = ${userId}
+          ORDER BY event_date DESC, created_at DESC
+        `;
+    return rows as CpEntryRow[];
+  }
+
+  async createCpEntry(input: {
+    userId: string;
+    eventName: string;
+    eventDate: string;
+    placement?: string;
+    cpEarned: number;
+    format: string;
+    notes?: string;
+  }): Promise<CpEntryRow> {
+    const rows = await this.instance`
+      INSERT INTO cp_entries (user_id, event_name, event_date, placement, cp_earned, format, notes)
+      VALUES (
+        ${input.userId},
+        ${input.eventName},
+        ${input.eventDate}::date,
+        ${input.placement ?? null},
+        ${input.cpEarned},
+        ${input.format},
+        ${input.notes ?? null}
+      )
+      RETURNING *
+    `;
+    return rows[0] as CpEntryRow;
+  }
+
+  async deleteCpEntry(id: string, userId: string): Promise<boolean> {
+    const rows = await this.instance`
+      DELETE FROM cp_entries WHERE id = ${id} AND user_id = ${userId} RETURNING id
+    `;
+    return rows.length > 0;
   }
 }

@@ -37,6 +37,24 @@
   line-height: 1.3;
 }
 
+/* ── Tier badge ──────────────────────────────────────────── */
+.meta-deck-card__tier-badge {
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.1875rem 0.5rem;
+  border-radius: 6px;
+  letter-spacing: 0.03em;
+  min-width: 2rem;
+  text-align: center;
+}
+
+.meta-deck-card__tier-badge--s { background: rgba(245, 158, 11, 0.2); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.4); }
+.meta-deck-card__tier-badge--a { background: rgba(34, 197, 94, 0.2); color: #22c55e; border: 1px solid rgba(34, 197, 94, 0.4); }
+.meta-deck-card__tier-badge--b { background: rgba(59, 130, 246, 0.2); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.4); }
+.meta-deck-card__tier-badge--c { background: rgba(139, 92, 246, 0.2); color: #8b5cf6; border: 1px solid rgba(139, 92, 246, 0.4); }
+.meta-deck-card__tier-badge--d { background: rgba(107, 114, 128, 0.2); color: #6b7280; border: 1px solid rgba(107, 114, 128, 0.4); }
+
 .meta-deck-card__format-badge {
   flex-shrink: 0;
   font-size: 0.6875rem;

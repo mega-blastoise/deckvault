@@ -24,7 +24,7 @@ async function fetchMetaDecks(params: {
   if (params.format !== 'all') sp.set('format', params.format);
   if (params.archetype) sp.set('archetype', params.archetype);
   if (params.collectionOnly) sp.set('collectionOnly', 'true');
-  sp.set('limit', '50');
+  sp.set('limit', '100');
 
   const res = await fetch(`/api/v1/meta-decks?${sp}`, { credentials: 'include' });
   if (!res.ok) throw new Error('Failed to fetch meta decks');
@@ -44,6 +44,9 @@ const FORMAT_OPTIONS: { value: DeckFormat | 'all'; label: string }[] = [
   { value: 'unlimited', label: 'Unlimited' }
 ];
 
+const TIER_OPTIONS = ['all', 'S', 'A', 'B', 'C', 'D'] as const;
+type TierFilter = (typeof TIER_OPTIONS)[number];
+
 export function MetaDeckBrowserPage() {
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
@@ -51,6 +54,7 @@ export function MetaDeckBrowserPage() {
   const [format, setFormat] = useState<DeckFormat | 'all'>('all');
   const [archetype, setArchetype] = useState('');
   const [collectionOnly, setCollectionOnly] = useState(false);
+  const [tierFilter, setTierFilter] = useState<TierFilter>('all');
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['meta-decks', format, archetype, collectionOnly],
@@ -72,7 +76,10 @@ export function MetaDeckBrowserPage() {
     [navigate]
   );
 
-  const decks = data?.decks ?? [];
+  const allDecks = data?.decks ?? [];
+  const decks = tierFilter === 'all'
+    ? allDecks
+    : allDecks.filter((d) => d.tier === tierFilter);
 
   return (
     <div className="meta-browser">
@@ -86,17 +93,31 @@ export function MetaDeckBrowserPage() {
       </header>
 
       <div className="meta-browser__filters">
-        <div className="meta-browser__format-pills">
-          {FORMAT_OPTIONS.map((opt) => (
-            <button
-              key={opt.value}
-              type="button"
-              className={`meta-browser__pill ${format === opt.value ? 'meta-browser__pill--active' : ''}`}
-              onClick={() => setFormat(opt.value)}
-            >
-              {opt.label}
-            </button>
-          ))}
+        <div className="meta-browser__filter-left">
+          <div className="meta-browser__format-pills">
+            {FORMAT_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                className={`meta-browser__pill ${format === opt.value ? 'meta-browser__pill--active' : ''}`}
+                onClick={() => setFormat(opt.value)}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+          <div className="meta-browser__tier-pills">
+            {TIER_OPTIONS.map((t) => (
+              <button
+                key={t}
+                type="button"
+                className={`meta-browser__pill meta-browser__pill--tier${tierFilter === t ? ' meta-browser__pill--active' : ''}${t !== 'all' ? ` meta-browser__pill--tier-${t.toLowerCase()}` : ''}`}
+                onClick={() => setTierFilter(t)}
+              >
+                {t === 'all' ? 'All Tiers' : t}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="meta-browser__filter-right">
@@ -138,7 +159,7 @@ export function MetaDeckBrowserPage() {
 
       {!isLoading && decks.length > 0 && (
         <>
-          <p className="meta-browser__count">{data?.total ?? decks.length} decks</p>
+          <p className="meta-browser__count">{decks.length} decks</p>
           <div className="meta-browser__grid">
             {decks.map((deck) => (
               <MetaDeckCard key={deck.id} deck={deck} onClone={handleClone} />

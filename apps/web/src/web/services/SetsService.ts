@@ -25,6 +25,8 @@ export class SetsService extends APIModel implements APIModel {
   }
 
   getCardsInSet(set: string) {
-    return this.get<Pokemon.Card[]>(`/sets/${set}/cards`);
+    return this.get<Pokemon.Card[]>(`/sets/${set}/cards`, {
+      params: { limit: 500 }
+    });
   }
 }

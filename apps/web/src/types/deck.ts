@@ -19,7 +19,9 @@ export interface DeckCard {
     set: {
       id: string;
       name: string;
+      ptcgoCode?: string;
     };
+    tcgplayer?: { url: string };
   };
   quantity: number;
 }

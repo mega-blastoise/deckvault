@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useLocation } from 'react-router';
-import { Layers, Search, LogIn, TrendingUp, MapPin, Plus } from 'lucide-react';
+import { Layers, Search, LogIn, TrendingUp, MapPin, Plus, Grid3x3, CalendarDays, Trophy } from 'lucide-react';
 import { ROUTES } from '@/web/routes';
 import { useCollectionQuery } from '@/web/hooks/useCollectionQuery';
 import { useDecks } from '@/web/contexts/Deck';
@@ -64,6 +64,13 @@ export function Navbar() {
             <span>Browse</span>
           </Link>
           <Link
+            to={ROUTES.SETS}
+            className={`navbar__link ${isActive(ROUTES.SETS) ? 'navbar__link--active' : ''}`}
+          >
+            <Grid3x3 size={18} />
+            <span>Sets</span>
+          </Link>
+          <Link
             to={ROUTES.DECKS}
             className={`navbar__link ${isActive(ROUTES.DECKS) ? 'navbar__link--active' : ''}`}
           >
@@ -87,6 +94,22 @@ export function Navbar() {
             <MapPin size={18} />
             <span>Local Meta</span>
           </Link>
+          <Link
+            to={ROUTES.ROTATION}
+            className={`navbar__link ${isActive(ROUTES.ROTATION) ? 'navbar__link--active' : ''}`}
+          >
+            <CalendarDays size={18} />
+            <span>Rotation</span>
+          </Link>
+          {isAuthenticated && (
+            <Link
+              to={ROUTES.CP}
+              className={`navbar__link ${isActive(ROUTES.CP) ? 'navbar__link--active' : ''}`}
+            >
+              <Trophy size={18} />
+              <span>CP</span>
+            </Link>
+          )}
           <NavLinkGated label="Collection" tooltip="Coming Soon" />
           <NavLinkGated label="Dashboard" tooltip="Coming Soon" />
         </div>

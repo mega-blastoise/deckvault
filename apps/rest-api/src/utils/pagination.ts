@@ -21,7 +21,7 @@ export interface PaginationParams {
 }
 
 export const DEFAULT_PAGE_SIZE = 60;
-export const MAX_PAGE_SIZE = 250;
+export const MAX_PAGE_SIZE = 420;
 
 /**
  * Parse pagination parameters from URL search params

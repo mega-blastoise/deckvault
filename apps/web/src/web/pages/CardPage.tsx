@@ -320,6 +320,17 @@ function CardPage() {
                 Remove One
               </button>
             )}
+            <a
+              href={
+                (card as { tcgplayer?: { url: string } }).tcgplayer?.url ??
+                `https://prices.pokemontcg.io/tcgplayer/${card.id}`
+              }
+              target="_blank"
+              rel="noopener noreferrer"
+              className="button button--secondary"
+            >
+              View on TCGPlayer →
+            </a>
           </div>
         </div>
       </div>

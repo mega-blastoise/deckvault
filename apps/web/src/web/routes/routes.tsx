@@ -18,6 +18,10 @@ import { DeckAnalyticsPage } from '../pages/DeckAnalyticsPage';
 import CardPage from '../pages/CardPage';
 import SignInPage from '../pages/SignInPage';
 import NotFoundPage from '../pages/NotFoundPage';
+import { SetBrowserPage } from '../pages/SetBrowserPage';
+import { SetDetailPage } from '../pages/SetDetailPage';
+import { RotationPage } from '../pages/RotationPage';
+import { CpTrackerPage } from '../pages/CpTrackerPage';
 
 export const REACT_ROUTER_ROUTES: RouteObject[] = [
   // Standalone routes — no Navbar, no AppLayout
@@ -97,6 +101,26 @@ export const REACT_ROUTER_ROUTES: RouteObject[] = [
       {
         path: '/cards/:cardId',
         Component: CardPage
+      },
+      {
+        path: '/sets',
+        element: <SetBrowserPage />
+      },
+      {
+        path: '/sets/:setId',
+        element: <SetDetailPage />
+      },
+      {
+        path: '/rotation',
+        element: <RotationPage />
+      },
+      {
+        path: '/cp',
+        element: (
+          <ProtectedRoute>
+            <CpTrackerPage />
+          </ProtectedRoute>
+        )
       },
       {
         path: '/collection/:cardId',

@@ -82,6 +82,16 @@ export function DeckBuilderList({ cards, legalityMap, onAddOne, onRemoveOne, onR
                   ⚠
                 </span>
               )}
+              <a
+                href={dc.card.tcgplayer?.url ?? `https://prices.pokemontcg.io/tcgplayer/${dc.card.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="deck-builder-list__price-link"
+                title="View price on TCGPlayer"
+                onClick={(e) => e.stopPropagation()}
+              >
+                $
+              </a>
             </div>
             <div className="deck-builder-list__controls">
               <button type="button" className="deck-builder-list__qty-btn" onClick={() => onRemoveOne(dc.card.id)}>−</button>

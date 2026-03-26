@@ -1,0 +1,76 @@
+.set-browser-page__loading,
+.set-browser-page__error {
+  padding: 3rem 1rem;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.set-browser-page__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 1rem;
+}
+
+.set-browser-page__card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 1.25rem 1rem 1rem;
+  background: var(--pico-card-background-color);
+  border: 1px solid var(--pico-muted-border-color);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: border-color 0.15s, transform 0.15s, box-shadow 0.15s;
+  text-align: center;
+}
+
+.set-browser-page__card:hover {
+  border-color: var(--pico-primary);
+  transform: translateY(-3px);
+  box-shadow: var(--card-shadow);
+}
+
+.set-browser-page__card-logo {
+  width: 100%;
+  max-width: 140px;
+  height: 56px;
+  object-fit: contain;
+}
+
+.set-browser-page__card-logo-placeholder {
+  width: 140px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-sunken);
+  border-radius: 8px;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.set-browser-page__card-name {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--pico-color);
+  line-height: 1.3;
+}
+
+.set-browser-page__card-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.125rem;
+}
+
+.set-browser-page__card-series {
+  font-size: 0.6875rem;
+  color: var(--text-secondary);
+}
+
+.set-browser-page__card-count {
+  font-size: 0.6875rem;
+  color: var(--text-secondary);
+}

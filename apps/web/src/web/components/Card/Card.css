@@ -172,6 +172,41 @@
   line-height: 1.5;
 }
 
+/* Legality badge overlay on card image */
+.pokemon-card__legality-badge {
+  position: absolute;
+  bottom: 6px;
+  left: 6px;
+  font-size: 0.5625rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 2px 5px;
+  border-radius: 4px;
+  z-index: 1;
+  cursor: default;
+}
+
+.pokemon-card__legality-badge--standard {
+  background: rgba(34, 197, 94, 0.9);
+  color: #fff;
+}
+
+.pokemon-card__legality-badge--expanded {
+  background: rgba(59, 130, 246, 0.9);
+  color: #fff;
+}
+
+.pokemon-card__legality-badge--unlimited {
+  background: rgba(107, 114, 128, 0.85);
+  color: #fff;
+}
+
+.pokemon-card__legality-badge--rotated {
+  background: rgba(0, 0, 0, 0.55);
+  color: rgba(255, 255, 255, 0.6);
+}
+
 /* Common elements */
 .pokemon-card__header {
   display: flex;

@@ -3,6 +3,7 @@ import type { CardProps } from './types';
 import { Badge } from '../Badge';
 import { useTheme } from '../../themes';
 import { useCardHover } from '../../motion/hooks/useCardHover';
+import { getCardFormatBadge, FORMAT_BADGE_LABELS, FORMAT_BADGE_TITLES } from '../../lib/card-legality-display';
 import './Card.css';
 
 const RARITY_GLOW_COLORS: Record<string, string> = {
@@ -103,6 +104,11 @@ export function Card({
     );
   }
 
+  const cardLegalities = card.legalities as
+    | { standard?: string; expanded?: string; unlimited?: string }
+    | undefined;
+  const legalityBadge = cardLegalities ? getCardFormatBadge({ legalities: cardLegalities }) : null;
+
   return (
     <div
       ref={enableHover ? cardRef : undefined}
@@ -115,6 +121,14 @@ export function Card({
       {enableHover && <div ref={glowRef} className="pokemon-card__glow" />}
       <div className="pokemon-card__image">
         <img src={card.images.small} alt={card.name} loading="lazy" />
+        {legalityBadge && (
+          <span
+            className={`pokemon-card__legality-badge pokemon-card__legality-badge--${legalityBadge}`}
+            title={FORMAT_BADGE_TITLES[legalityBadge]}
+          >
+            {FORMAT_BADGE_LABELS[legalityBadge]}
+          </span>
+        )}
       </div>
       <div className="pokemon-card__content">
         <div className="pokemon-card__header">

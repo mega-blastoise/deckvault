@@ -25,7 +25,7 @@
 /* ── Filters ─────────────────────────────────────────────── */
 .meta-browser__filters {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 1rem;
   flex-wrap: wrap;
@@ -34,7 +34,14 @@
   border-bottom: 1px solid var(--pico-muted-border-color);
 }
 
-.meta-browser__format-pills {
+.meta-browser__filter-left {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.meta-browser__format-pills,
+.meta-browser__tier-pills {
   display: flex;
   gap: 0.375rem;
   flex-wrap: wrap;
@@ -67,6 +74,13 @@
 .meta-browser__pill--active:hover {
   color: #fff;
 }
+
+/* Tier pill colored active states */
+.meta-browser__pill--tier-s.meta-browser__pill--active { background: #f59e0b; border-color: #f59e0b; }
+.meta-browser__pill--tier-a.meta-browser__pill--active { background: #22c55e; border-color: #22c55e; }
+.meta-browser__pill--tier-b.meta-browser__pill--active { background: #3b82f6; border-color: #3b82f6; }
+.meta-browser__pill--tier-c.meta-browser__pill--active { background: #8b5cf6; border-color: #8b5cf6; }
+.meta-browser__pill--tier-d.meta-browser__pill--active { background: #6b7280; border-color: #6b7280; }
 
 .meta-browser__filter-right {
   display: flex;

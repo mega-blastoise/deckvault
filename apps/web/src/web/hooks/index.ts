@@ -19,3 +19,4 @@ export { useLocalStorage } from './useLocalStorage';
 export { useSearchCards, toCardFormat } from './useSearchCards';
 export { useSet } from './useSet';
 export { useSets } from './useSets';
+export { useSetCards } from './useSetCards';

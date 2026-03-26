@@ -6,6 +6,7 @@ export interface MetaDeckSummary {
   name: string;
   archetype: string;
   format: string;
+  tier?: string | null;
   placement: string | null;
   eventName: string | null;
   eventDate: string | null;
@@ -45,6 +46,11 @@ export function MetaDeckCard({ deck, onClone }: MetaDeckCardProps) {
     <div className="meta-deck-card">
       <div className="meta-deck-card__header">
         <div className="meta-deck-card__title-row">
+          {deck.tier && (
+            <span className={`meta-deck-card__tier-badge meta-deck-card__tier-badge--${deck.tier.toLowerCase()}`}>
+              {deck.tier}
+            </span>
+          )}
           <h3 className="meta-deck-card__name">{deck.name}</h3>
           <span className={`meta-deck-card__format-badge meta-deck-card__format-badge--${deck.format}`}>
             {FORMAT_LABELS[deck.format] ?? deck.format}

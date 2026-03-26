@@ -21,5 +21,9 @@ export const ROUTES = {
   CARD: (cardId: string) => `/cards/${cardId}`,
   COLLECTION: '/collection',
   COLLECTION_CARD: (cardId: string) => `/collection/${cardId}`,
-  LOCAL_META: '/local-meta'
+  LOCAL_META: '/local-meta',
+  SETS: '/sets',
+  SET_DETAIL: (setId: string) => `/sets/${setId}`,
+  ROTATION: '/rotation',
+  CP: '/cp'
 } as const;

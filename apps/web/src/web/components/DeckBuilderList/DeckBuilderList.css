@@ -75,6 +75,24 @@
   color: #ef4444;
 }
 
+.deck-builder-list__price-link {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: #22c55e;
+  text-decoration: none;
+  flex-shrink: 0;
+  line-height: 1;
+  padding: 1px 4px;
+  border-radius: 3px;
+  border: 1px solid currentColor;
+  opacity: 0.75;
+  transition: opacity 0.15s;
+}
+
+.deck-builder-list__price-link:hover {
+  opacity: 1;
+}
+
 .deck-builder-list__controls {
   display: flex;
   align-items: center;

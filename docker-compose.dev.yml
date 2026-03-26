@@ -1,3 +1,10 @@
+# Development-only postgres.
+# `name:` is explicit so this compose file NEVER shares a project namespace
+# with the prod stack (project "pokemon", managed from /opt/deckvault/).
+# Without this, Docker would treat dev/prod as the same project and
+# `compose up -f dev` would orphan-remove all prod containers.
+name: pokemon-dev
+
 services:
   postgres:
     image: postgres:17-alpine
@@ -8,9 +15,12 @@ services:
       POSTGRES_DB: pokemon_tcg
       PGDATA: /var/lib/postgresql/data/pgdata
     ports:
-      - "5432:5432"
+      # 5433 on the host → 5432 inside the container.
+      # Dev is intentionally on a different host port from prod (5432 internal only)
+      # so the two can coexist without any port conflict, now or in future.
+      - "5433:5432"
     volumes:
-      - pokemon_dev_data:/var/lib/postgresql/data
+      - pokemon_dev_postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U pokemon -d pokemon_tcg"]
       interval: 5s
@@ -19,4 +29,4 @@ services:
     restart: unless-stopped
 
 volumes:
-  pokemon_dev_data:
+  pokemon_dev_postgres_data:

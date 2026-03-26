@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { useDecks } from '../contexts/Deck';
@@ -10,6 +10,8 @@ import { DeckValidation } from '../components/DeckValidation';
 import { DeckBuilderList } from '../components/DeckBuilderList';
 import { DeckBuilderVisual } from '../components/DeckBuilderVisual';
 import { getCardLegalityIssue } from '../lib/deck-legality';
+import { exportToPtcgl } from '../lib/ptcgl-codec';
+import { PtcglImportModal } from '../components/PtcglImportModal';
 import { DecksService } from '../services/DecksService';
 import { DECKS_QUERY_KEY } from '../hooks/useDecksQuery';
 import { deckQueryKey } from '../hooks/useDeckQuery';
@@ -57,6 +59,9 @@ function DeckBuilderPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterByLegality, setFilterByLegality] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [exportCopied, setExportCopied] = useState(false);
+  const exportCopiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const {
     cards: searchResults,
@@ -167,6 +172,21 @@ function DeckBuilderPage() {
     });
   }, []);
 
+  const handleExport = useCallback(() => {
+    if (deckCards.length === 0) return;
+    const text = exportToPtcgl(deckCards);
+    navigator.clipboard.writeText(text).then(() => {
+      setExportCopied(true);
+      if (exportCopiedTimerRef.current) clearTimeout(exportCopiedTimerRef.current);
+      exportCopiedTimerRef.current = setTimeout(() => setExportCopied(false), 2000);
+    });
+  }, [deckCards]);
+
+  const handleImport = useCallback((cards: DeckCard[]) => {
+    setDeckCards(cards);
+    setIsDirty(true);
+  }, []);
+
   const handleCancel = useCallback(() => {
     if (isDirty && !confirm('You have unsaved changes. Are you sure you want to leave?')) {
       return;
@@ -246,6 +266,23 @@ function DeckBuilderPage() {
           {isDirty && (
             <span className="deck-builder-page__dirty-indicator">Unsaved changes ●</span>
           )}
+          <button
+            type="button"
+            className="button button--secondary"
+            onClick={() => setShowImportModal(true)}
+            title="Import from PTCGL"
+          >
+            ↓ Import
+          </button>
+          <button
+            type="button"
+            className="button button--secondary"
+            onClick={handleExport}
+            disabled={deckCards.length === 0}
+            title="Copy deck as PTCGL text"
+          >
+            {exportCopied ? '✓ Copied!' : '↑ Export'}
+          </button>
           <button type="button" className="button button--secondary" onClick={handleCancel}>
             Cancel
           </button>
@@ -363,6 +400,11 @@ function DeckBuilderPage() {
           )}
         </div>
       </div>
+      <PtcglImportModal
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        onImport={handleImport}
+      />
     </div>
   );
 }

@@ -153,10 +153,10 @@ describe('GET /api/v1/cards', () => {
     expect(body.meta.totalCount).toBe(TEST_CARDS.length);
   });
 
-  it('caps pageSize at 250', async () => {
+  it('caps pageSize at 420', async () => {
     const res = await app.handle(req('/api/v1/cards?page=1&pageSize=999'));
     const body = await res.json();
-    expect(body.meta.pageSize).toBe(250);
+    expect(body.meta.pageSize).toBe(420);
   });
 
   it('each card has the expected top-level shape', async () => {

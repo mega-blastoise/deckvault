@@ -1,0 +1,385 @@
+.cp-tracker {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 2rem 0;
+}
+
+.cp-tracker__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.75rem;
+  flex-wrap: wrap;
+}
+
+.cp-tracker__title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  margin: 0 0 0.375rem;
+  color: var(--pico-color);
+}
+
+.cp-tracker__subtitle {
+  font-size: 0.9375rem;
+  color: var(--pico-muted-color);
+  margin: 0;
+}
+
+.cp-tracker__header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.cp-tracker__season-select {
+  padding: 0.5rem 0.875rem;
+  border-radius: 8px;
+  border: 1px solid var(--pico-muted-border-color);
+  background: var(--pico-card-background-color);
+  color: var(--pico-color);
+  font-family: inherit;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+/* ── Summary card ────────────────────────────────────────── */
+.cp-tracker__summary {
+  background: var(--pico-card-background-color);
+  border: 1px solid var(--pico-muted-border-color);
+  border-radius: 14px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.cp-tracker__total {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--pico-color);
+}
+
+.cp-tracker__milestones {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.cp-tracker__milestone {
+  font-size: 0.8125rem;
+  color: var(--pico-muted-color);
+}
+
+.cp-tracker__bar-track {
+  position: relative;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--pico-muted-border-color);
+  overflow: visible;
+}
+
+.cp-tracker__bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  background: var(--pico-primary);
+  transition: width 0.4s ease;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.cp-tracker__bar-marker {
+  position: absolute;
+  top: -4px;
+  width: 2px;
+  height: 16px;
+  background: var(--pico-muted-color);
+  transform: translateX(-50%);
+  border-radius: 1px;
+}
+
+/* ── Form ────────────────────────────────────────────────── */
+.cp-tracker__form-wrapper {
+  background: var(--pico-card-background-color);
+  border: 1px solid var(--pico-muted-border-color);
+  border-radius: 14px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.cp-tracker__form-title {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0 0 1.25rem;
+  color: var(--pico-color);
+}
+
+.cp-tracker__form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.875rem;
+}
+
+.cp-tracker__label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--pico-muted-color);
+}
+
+.cp-tracker__label--full {
+  grid-column: 1 / -1;
+}
+
+.cp-tracker__input {
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--pico-muted-border-color);
+  background: var(--pico-background-color);
+  color: var(--pico-color);
+  font-family: inherit;
+  font-size: 0.875rem;
+  transition: border-color 0.15s ease;
+}
+
+.cp-tracker__input:focus {
+  outline: none;
+  border-color: var(--pico-primary);
+}
+
+.cp-tracker__select {
+  cursor: pointer;
+}
+
+.cp-tracker__form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+}
+
+/* ── Buttons ─────────────────────────────────────────────── */
+.cp-tracker__btn {
+  padding: 0.5rem 1.25rem;
+  border-radius: 8px;
+  border: none;
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.cp-tracker__btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.cp-tracker__btn--primary {
+  background: var(--pico-primary);
+  color: #fff;
+}
+
+.cp-tracker__btn--primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(32, 129, 226, 0.35);
+}
+
+.cp-tracker__btn--ghost {
+  background: transparent;
+  color: var(--pico-muted-color);
+  border: 1px solid var(--pico-muted-border-color);
+}
+
+.cp-tracker__btn--ghost:hover {
+  border-color: var(--pico-color);
+  color: var(--pico-color);
+}
+
+/* ── Table ───────────────────────────────────────────────── */
+.cp-tracker__table-wrapper {
+  overflow-x: auto;
+  border-radius: 14px;
+  border: 1px solid var(--pico-muted-border-color);
+}
+
+.cp-tracker__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.cp-tracker__table th,
+.cp-tracker__table td {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid var(--pico-muted-border-color);
+}
+
+.cp-tracker__table th {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--pico-muted-color);
+  background: var(--pico-card-background-color);
+}
+
+.cp-tracker__th--cp {
+  text-align: right;
+}
+
+.cp-tracker__row:last-child td {
+  border-bottom: none;
+}
+
+.cp-tracker__row:hover {
+  background: var(--pico-card-sectioning-background-color, rgba(0,0,0,0.02));
+}
+
+.cp-tracker__cell--name {
+  min-width: 180px;
+}
+
+.cp-tracker__event-name {
+  display: block;
+  font-weight: 500;
+  color: var(--pico-color);
+}
+
+.cp-tracker__notes {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--pico-muted-color);
+  margin-top: 0.125rem;
+}
+
+.cp-tracker__cell--date,
+.cp-tracker__cell--placement {
+  color: var(--pico-muted-color);
+  white-space: nowrap;
+}
+
+.cp-tracker__format-badge {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  padding: 0.2rem 0.5rem;
+  border-radius: 9999px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.cp-tracker__format-badge--standard {
+  background: rgba(32, 129, 226, 0.12);
+  color: var(--pico-primary);
+}
+
+.cp-tracker__format-badge--expanded {
+  background: rgba(147, 51, 234, 0.12);
+  color: #9333ea;
+}
+
+.cp-tracker__format-badge--unlimited {
+  background: rgba(234, 179, 8, 0.12);
+  color: #ca8a04;
+}
+
+.cp-tracker__cell--cp,
+.cp-tracker__th--cp {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.cp-tracker__cp-value {
+  font-weight: 600;
+  color: #22c55e;
+}
+
+.cp-tracker__cell--actions {
+  width: 2rem;
+  text-align: center;
+}
+
+.cp-tracker__delete-btn {
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--pico-muted-color);
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.5;
+  transition: opacity 0.15s ease, background 0.15s ease;
+}
+
+.cp-tracker__delete-btn:hover:not(:disabled) {
+  opacity: 1;
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+}
+
+.cp-tracker__total-row td {
+  font-weight: 600;
+  border-top: 2px solid var(--pico-muted-border-color);
+  border-bottom: none;
+  background: var(--pico-card-background-color);
+}
+
+.cp-tracker__cp-total {
+  font-size: 1rem;
+  color: var(--pico-color);
+}
+
+/* ── States ──────────────────────────────────────────────── */
+.cp-tracker__state {
+  text-align: center;
+  padding: 4rem 2rem;
+  color: var(--pico-muted-color);
+  font-size: 0.9375rem;
+}
+
+.cp-tracker__state--error {
+  color: #ef4444;
+}
+
+.cp-tracker__error {
+  color: #ef4444;
+  font-size: 0.875rem;
+  margin: 0.5rem 0;
+}
+
+/* ── Nebula overrides ────────────────────────────────────── */
+[data-theme="nebula"] .cp-tracker__summary,
+[data-theme="nebula"] .cp-tracker__form-wrapper {
+  background: var(--nebula-bg-secondary);
+  border-color: var(--nebula-surface-border);
+}
+
+[data-theme="nebula"] .cp-tracker__table th {
+  background: var(--nebula-bg-secondary);
+}
+
+[data-theme="nebula"] .cp-tracker__total-row td {
+  background: var(--nebula-bg-secondary);
+}
+
+/* ── Responsive ──────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .cp-tracker__header {
+    flex-direction: column;
+  }
+
+  .cp-tracker__form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .cp-tracker__label--full {
+    grid-column: 1;
+  }
+}

@@ -78,7 +78,7 @@ const ENDPOINT_REGISTRY: EndpointInfo[] = [
         name: 'pageSize',
         type: 'query',
         required: false,
-        description: 'Items per page (default: 60, max: 250)'
+        description: 'Items per page (default: 60, max: 420)'
       }
     ]
   },
@@ -136,7 +136,7 @@ const ENDPOINT_REGISTRY: EndpointInfo[] = [
         name: 'pageSize',
         type: 'query',
         required: false,
-        description: 'Items per page (default: 60, max: 250)'
+        description: 'Items per page (default: 60, max: 420)'
       }
     ]
   },
@@ -174,7 +174,7 @@ const ENDPOINT_REGISTRY: EndpointInfo[] = [
         name: 'pageSize',
         type: 'query',
         required: false,
-        description: 'Items per page (default: 60, max: 250)'
+        description: 'Items per page (default: 60, max: 420)'
       }
     ]
   },

@@ -56,6 +56,7 @@ function formatMetaDeckSummary(row: MetaDeckRow) {
     name: row.name,
     archetype: row.archetype,
     format: row.format,
+    tier: row.tier ?? null,
     placement: row.placement,
     eventName: row.event_name,
     eventDate: row.event_date,

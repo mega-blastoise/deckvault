@@ -1,6 +1,7 @@
-import React, { useState, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router';
 import { Layers, Printer } from 'lucide-react';
+import { exportToPtcgl } from '../lib/ptcgl-codec';
 import { useDeckQuery } from '../hooks/useDeckQuery';
 import { useDeckMutations } from '../hooks/useDeckMutations';
 import { useAuth } from '../contexts/Auth';
@@ -128,6 +129,45 @@ function DeckDetailPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showPrintView, setShowPrintView] = useState(false);
   const [activeTab, setActiveTab] = useState<DeckTab>('overview');
+  const [exportCopied, setExportCopied] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
+  const [priceCopied, setPriceCopied] = useState(false);
+  const exportTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const linkTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const priceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => () => {
+    if (exportTimerRef.current) clearTimeout(exportTimerRef.current);
+    if (linkTimerRef.current) clearTimeout(linkTimerRef.current);
+    if (priceTimerRef.current) clearTimeout(priceTimerRef.current);
+  }, []);
+
+  const handleExport = useCallback(() => {
+    if (!deck?.cards.length) return;
+    navigator.clipboard.writeText(exportToPtcgl(deck.cards)).then(() => {
+      setExportCopied(true);
+      if (exportTimerRef.current) clearTimeout(exportTimerRef.current);
+      exportTimerRef.current = setTimeout(() => setExportCopied(false), 2000);
+    });
+  }, [deck?.cards]);
+
+  const handleCopyLink = useCallback(() => {
+    navigator.clipboard.writeText(window.location.href).then(() => {
+      setLinkCopied(true);
+      if (linkTimerRef.current) clearTimeout(linkTimerRef.current);
+      linkTimerRef.current = setTimeout(() => setLinkCopied(false), 2000);
+    });
+  }, []);
+
+  const handlePriceCheck = useCallback(() => {
+    if (!deck?.cards.length) return;
+    navigator.clipboard.writeText(exportToPtcgl(deck.cards)).then(() => {
+      setPriceCopied(true);
+      if (priceTimerRef.current) clearTimeout(priceTimerRef.current);
+      priceTimerRef.current = setTimeout(() => setPriceCopied(false), 3000);
+      window.open('https://www.tcgplayer.com/massentry', '_blank', 'noopener,noreferrer');
+    });
+  }, [deck?.cards]);
 
   const validation = useMemo(
     () => buildValidation(deck?.cards ?? []),
@@ -211,6 +251,34 @@ function DeckDetailPage() {
           )}
         </div>
         <div className="page__header-actions">
+          <button
+            type="button"
+            className="button button--secondary"
+            onClick={handleCopyLink}
+            title="Copy shareable link"
+          >
+            {linkCopied ? '✓ Link Copied!' : '🔗 Share'}
+          </button>
+          {deck.cards.length > 0 && (
+            <button
+              type="button"
+              className="button button--secondary"
+              onClick={handlePriceCheck}
+              title="Copy deck list and open TCGPlayer mass entry"
+            >
+              {priceCopied ? '✓ List copied — paste on TCGPlayer!' : '💰 Price Check'}
+            </button>
+          )}
+          {deck.cards.length > 0 && (
+            <button
+              type="button"
+              className="button button--secondary"
+              onClick={handleExport}
+              title="Copy deck as PTCGL text"
+            >
+              {exportCopied ? '✓ Copied!' : '↑ Export PTCGL'}
+            </button>
+          )}
           {deck.cards.length > 0 && (
             <Link
               to={ROUTES.DECK_ANALYTICS(deckId!)}

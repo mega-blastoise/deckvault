@@ -46,7 +46,9 @@ import {
   removeCollectionCard
 } from './handlers/collection';
 import { listMetaDecks, getMetaDeck } from './handlers/meta-decks';
+import { resolvePtcgl } from './handlers/ptcgl';
 import { createReport, getFrequency } from './handlers/local-meta';
+import { listCpEntries, createCpEntry, deleteCpEntry } from './handlers/cp';
 import {
   listVersions,
   getVersion,
@@ -108,7 +110,8 @@ const sets = createRouter<Services>('/api/v1/sets')
 
 // Decks — browse is public, user-specific list and mutations require auth
 const decksBrowse = createRouter<Services>('/api/v1/decks')
-  .get('/browse', browseDecks);
+  .get('/browse', browseDecks)
+  .post('/ptcgl/resolve', resolvePtcgl);
 
 const decksDetail = createRouter<Services>('/api/v1/decks')
   .use(authOptional)
@@ -143,6 +146,13 @@ const metaDecksList = createRouter<Services>('/api/v1/meta-decks')
 
 const metaDecksDetail = createRouter<Services>('/api/v1/meta-decks')
   .get('/:id', getMetaDeck);
+
+// CP tracker — all auth-required
+const cp = createRouter<Services>('/api/v1/cp')
+  .use(authRequired)
+  .get('/', listCpEntries)
+  .post('/', createCpEntry)
+  .delete('/:id', deleteCpEntry);
 
 // Local meta — POST requires auth, GET is public
 const localMetaReports = createRouter<Services>('/api/v1/local-meta')
@@ -192,6 +202,7 @@ const app = createApp({ container })
   .routes(collection)
   .routes(metaDecksList)
   .routes(metaDecksDetail)
+  .routes(cp)
   .routes(localMetaReports)
   .routes(localMetaFrequency);
 
