@@ -66,6 +66,10 @@ export interface TurnFlags {
   // The starting player cannot attack or play a Supporter on turn 1 (rulebook p.12-13).
   // Computed as: activePlayer === startingPlayer && turnNumber === 1.
   readonly isStartingPlayerFirstTurn: boolean;
+  // Setup-phase tracking (zeroed when setup completes):
+  readonly mulliganCounts: Readonly<Record<PlayerId, number>>;
+  readonly extraDrawsRemaining: Readonly<Record<PlayerId, number>>;
+  readonly setupBenchSelected: Readonly<Record<PlayerId, boolean>>;
 }
 
 export interface GameState {

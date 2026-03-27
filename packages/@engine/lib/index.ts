@@ -55,3 +55,25 @@ export {
   removeSpecialCondition,
   clearSpecialConditions
 } from './core/conditions';
+
+export type { GameErrorCode, GameError, GameResult } from './core/result';
+export { ok, err } from './core/result';
+
+export type { GameConfig } from './core/game';
+export {
+  createGame,
+  checkWinConditions,
+  handleKnockOut,
+  promoteFromBench,
+  otherPlayer
+} from './core/game';
+
+export { validateDeck } from './core/validation';
+export { hasBasicPokemon } from './core/setup';
+export { canPayEnergyCost, canPayRetreatCost } from './core/energy';
+export { canEvolve, evolvePokemon } from './core/evolution';
+export { performCheckup } from './core/checkup';
+export { startTurn, endTurn, getLegalActions, applyAction } from './core/turn';
+
+export type { EffectContext, EffectHandler } from './effects/registry';
+export { registerEffect, resolveEffect } from './effects/registry';
