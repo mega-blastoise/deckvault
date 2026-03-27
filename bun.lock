@@ -333,6 +333,17 @@
         "pg": "^8.13.1",
       },
     },
+    "packages/@engine": {
+      "name": "@pokemon/engine",
+      "version": "0.0.1-alpha.1",
+      "devDependencies": {
+        "@pokemon/build": "workspace:*",
+        "@pokemon/configs": "workspace:*",
+        "@types/bun": "latest",
+        "npm-run-all": "^4.1.5",
+        "typescript": "^5.5",
+      },
+    },
     "packages/@framework": {
       "name": "@pokemon/framework",
       "version": "0.0.1",
@@ -842,6 +853,8 @@
     "@pokemon/docs-deployment": ["@pokemon/docs-deployment@workspace:docsites/deployment"],
 
     "@pokemon/docs-development": ["@pokemon/docs-development@workspace:docsites/development"],
+
+    "@pokemon/engine": ["@pokemon/engine@workspace:packages/@engine"],
 
     "@pokemon/framework": ["@pokemon/framework@workspace:packages/@framework"],
 
@@ -2780,6 +2793,8 @@
     "@pokemon/cron/dotenv": ["dotenv@17.2.3", "", {}, "sha512-JVUnt+DUIzu87TABbhPmNfVdBDt18BLOWjMUFJMSi/Qqg7NTYtabbvSNJGOJ7afbRuv9D/lngizHtP7QyLQ+9w=="],
 
     "@pokemon/database/typescript": ["typescript@5.9.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw=="],
+
+    "@pokemon/engine/typescript": ["typescript@5.9.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw=="],
 
     "@pokemon/graphql-api/dotenv": ["dotenv@17.2.3", "", {}, "sha512-JVUnt+DUIzu87TABbhPmNfVdBDt18BLOWjMUFJMSi/Qqg7NTYtabbvSNJGOJ7afbRuv9D/lngizHtP7QyLQ+9w=="],
 
