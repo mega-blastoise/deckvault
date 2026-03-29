@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "pokemon-tcg": {
+      "command": "cargo",
+      "args": [
+        "run",
+        "--manifest-path",
+        "/home/nicks-dgx/dev/.Project-Johto/Pokemon/apps/mcp-server/Cargo.toml",
+        "--",
+        "--transport",
+        "stdio"
+      ],
+      "env": {
+        "DATABASE_PATH": "/home/nicks-dgx/dev/.Project-Johto/Pokemon/apps/mcp-server/database/pokemon-data.sqlite3.db"
+      }
+    }
+  }
+}

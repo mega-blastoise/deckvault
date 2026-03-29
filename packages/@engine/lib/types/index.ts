@@ -32,4 +32,11 @@ export type { PlayerAction } from './action';
 
 export type { GameEvent, WinReason } from './event';
 
-export type { TemporalEffect } from './effect';
+export type {
+  TemporalEffect,
+  TemporalEffectType,
+  EffectSourceType,
+  EffectExpiry,
+  EffectChoice,
+  ChoiceResolver
+} from './effect';

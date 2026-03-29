@@ -1,4 +1,4 @@
-# SPEC_04: Card Effect System
+ # SPEC_04: Card Effect System
 
 ## Context
 

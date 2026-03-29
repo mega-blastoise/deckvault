@@ -10,8 +10,10 @@ import { canEvolve, evolvePokemon } from './evolution';
 import { canPayEnergyCost, canPayRetreatCost } from './energy';
 import { hasBasicPokemon } from './setup';
 import { performCheckup } from './checkup';
-import { otherPlayer, checkWinConditions, handleKnockOut, promoteFromBench } from './game';
+import { otherPlayer } from './game';
 import { resolveEffect } from '../effects/registry';
+import { resolveAttack } from './combat';
+import { getEffectiveRetreatCost, getEffectiveAttackCost } from './modifiers';
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
@@ -93,7 +95,8 @@ export function startTurn(state: GameState): GameState {
     turnFlags: {
       ...s.turnFlags,
       attackUsed: false,
-      isStartingPlayerFirstTurn
+      isStartingPlayerFirstTurn,
+      turnEndedByEffect: false
     },
     eventLog: [...s.eventLog, { type: 'TURN_STARTED', player: s.activePlayer, turnNumber: s.turnNumber }]
   };
@@ -124,6 +127,17 @@ export function endTurn(state: GameState): GameState {
       player1: resetPlayerFlags(s.players.player1),
       player2: resetPlayerFlags(s.players.player2)
     }
+  };
+
+  const currentPlayer = state.activePlayer;
+  s = {
+    ...s,
+    temporalEffects: s.temporalEffects.filter(e => {
+      if (e.expiresAt === 'end_of_turn') return false;
+      if (e.expiresAt === 'end_of_opponent_turn' && currentPlayer !== e.payload['createdByPlayer']) return false;
+      if (e.expiresOnTurn !== null && s.turnNumber >= e.expiresOnTurn) return false;
+      return true;
+    })
   };
 
   s = performCheckup(s);
@@ -308,7 +322,9 @@ function getMainActions(state: GameState): ReadonlyArray<PlayerAction> {
 
     if (!isAsleep && !isParalyzed) {
       const activeDef = getActivePokemonDef(state, state.activePlayer);
-      const retreatCost = activeDef?.retreatCost ?? 0;
+      const retreatCost = activeDef
+        ? getEffectiveRetreatCost(state, state.activePlayer, active, activeDef)
+        : 0;
       const energyProviders = active.attachedEnergy.map(eid => {
         const def = getCardDef(state, eid);
         return { provides: def?.cardType === 'Energy' ? def.provides : [] };
@@ -354,7 +370,8 @@ function getMainActions(state: GameState): ReadonlyArray<PlayerAction> {
 
         for (let i = 0; i < activeDef.attacks.length; i++) {
           const attack = activeDef.attacks[i]!;
-          if (canPayEnergyCost(attack.cost, energyProviders)) {
+          const effectiveCost = getEffectiveAttackCost(state, active, activeDef, attack, state.activePlayer);
+          if (canPayEnergyCost(effectiveCost, energyProviders)) {
             actions.push({ type: 'ATTACK', attackIndex: i });
           }
         }
@@ -957,7 +974,19 @@ function applyMainAction(state: GameState, action: PlayerAction): GameResult<Gam
       targets: action.targets ?? []
     });
     if (!effectResult.ok) return effectResult;
-    return ok(effectResult.value);
+
+    let resultState = effectResult.value;
+
+    // Some trainer effects end the turn immediately (e.g. Boxed Order, Katy).
+    if (resultState.turnFlags.turnEndedByEffect) {
+      resultState = {
+        ...resultState,
+        turnFlags: { ...resultState.turnFlags, turnEndedByEffect: false }
+      };
+      resultState = endTurn(resultState);
+    }
+
+    return ok(resultState);
   }
 
   if (action.type === 'RETREAT') {
@@ -975,7 +1004,9 @@ function applyMainAction(state: GameState, action: PlayerAction): GameResult<Gam
     if (isParalyzed) return err('ILLEGAL_ACTION', 'Cannot retreat while Paralyzed');
 
     const activeDef = getActivePokemonDef(state, state.activePlayer);
-    const retreatCost = activeDef?.retreatCost ?? 0;
+    const retreatCost = activeDef
+      ? getEffectiveRetreatCost(state, state.activePlayer, active, activeDef)
+      : 0;
     const energyProviders = active.attachedEnergy.map(eid => {
       const def = getCardDef(state, eid);
       return { provides: def?.cardType === 'Energy' ? def.provides : [] };
@@ -1020,7 +1051,7 @@ function applyMainAction(state: GameState, action: PlayerAction): GameResult<Gam
         }
       },
       temporalEffects: state.temporalEffects.filter(
-        e => e.targetInstanceId !== active.instanceId
+        e => !(e.targetInstanceId === active.instanceId && e.sourceType === 'attack')
       ),
       eventLog: [
         ...state.eventLog,
@@ -1097,6 +1128,9 @@ function applyMainAction(state: GameState, action: PlayerAction): GameResult<Gam
       ] as GameEvent[]
     };
 
+    s = resolveAttack(s, action.attackIndex);
+    if (s.phase === 'finished') return ok(s);
+
     s = endTurn(s);
     return ok(s);
   }
@@ -1107,6 +1141,3 @@ function applyMainAction(state: GameState, action: PlayerAction): GameResult<Gam
 
   return err('ILLEGAL_ACTION', `Action type ${action.type} not valid during main phase`);
 }
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function _unusedImports(_: typeof handleKnockOut | typeof promoteFromBench | typeof checkWinConditions): void {}

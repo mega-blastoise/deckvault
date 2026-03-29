@@ -3,6 +3,7 @@ import type { GameEvent } from '../types/event';
 import { coinFlip } from '../rng';
 import { removeSpecialCondition } from './conditions';
 import { handleKnockOut, checkWinConditions } from './game';
+import { getEffectiveHpById, getPoisonModifiers, checkConditionImmunity } from './modifiers';
 
 function placeDamageCounters(
   state: GameState,
@@ -29,14 +30,6 @@ function placeDamageCounters(
   };
 }
 
-function getPokemonHp(state: GameState, pokemon: InPlayPokemon): number {
-  const topInstanceId = pokemon.evolutionStack[pokemon.evolutionStack.length - 1] ?? pokemon.instanceId;
-  const instance = state.cardRegistry.get(topInstanceId);
-  if (!instance) return 0;
-  const def = state.definitionRegistry.get(instance.definitionId);
-  return def?.cardType === 'Pokemon' ? def.hp : 0;
-}
-
 export function performCheckup(state: GameState): GameState {
   let s = state;
   const activePlayerId = state.activePlayer;
@@ -45,9 +38,28 @@ export function performCheckup(state: GameState): GameState {
     const player = s.players[playerId];
     if (!player.active) continue;
 
-    // 1. Poisoned → 1 damage counter
+    // Check condition immunity (Festival Grounds, Ancient Booster Energy Capsule)
+    const topId = player.active.evolutionStack[player.active.evolutionStack.length - 1] ?? player.active.instanceId;
+    const topInst = s.cardRegistry.get(topId);
+    const topDef = topInst ? s.definitionRegistry.get(topInst.definitionId) : undefined;
+    const pokeDef = topDef?.cardType === 'Pokemon' ? topDef : null;
+
+    if (pokeDef && checkConditionImmunity(s, player.active, pokeDef)) {
+      // Remove all special conditions from immune Pokemon
+      if (player.active.specialConditions.length > 0) {
+        const cleansed = { ...player.active, specialConditions: [] as ReadonlyArray<import('../types/game').SpecialCondition> };
+        s = {
+          ...s,
+          players: { ...s.players, [playerId]: { ...s.players[playerId], active: cleansed } }
+        };
+      }
+      continue;
+    }
+
+    // 1. Poisoned → 1 damage counter + stadium modifiers (Perilous Jungle)
     if (player.active.specialConditions.includes('Poisoned')) {
-      s = placeDamageCounters(s, playerId, 1, 'poison');
+      const extraCounters = pokeDef ? getPoisonModifiers(s, player.active, pokeDef) : 0;
+      s = placeDamageCounters(s, playerId, 1 + extraCounters, 'poison');
     }
 
     // 2. Burned → 2 damage counters, then coin flip for removal
@@ -102,7 +114,7 @@ export function performCheckup(state: GameState): GameState {
   for (const playerId of ['player1', 'player2'] as PlayerId[]) {
     const player = s.players[playerId];
     if (!player.active) continue;
-    const hp = getPokemonHp(s, player.active);
+    const hp = getEffectiveHpById(s, player.active);
     if (player.active.damageCounters * 10 >= hp) {
       kos.push(playerId);
     }

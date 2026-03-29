@@ -125,7 +125,10 @@ export function evolvePokemon(
   newState = {
     ...newState,
     temporalEffects: newState.temporalEffects.filter(
-      e => e.targetInstanceId !== targetInstanceId && e.targetInstanceId !== evolutionInstanceId
+      e => !(
+        (e.targetInstanceId === targetInstanceId || e.targetInstanceId === evolutionInstanceId) &&
+        e.sourceType === 'attack'
+      )
     )
   };
 

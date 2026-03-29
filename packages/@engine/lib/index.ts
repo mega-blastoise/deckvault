@@ -27,7 +27,12 @@ export type {
   PlayerAction,
   GameEvent,
   WinReason,
-  TemporalEffect
+  TemporalEffect,
+  TemporalEffectType,
+  EffectSourceType,
+  EffectExpiry,
+  EffectChoice,
+  ChoiceResolver
 } from './types/index';
 
 export { ENERGY_TYPES } from './types/index';
@@ -75,5 +80,95 @@ export { canEvolve, evolvePokemon } from './core/evolution';
 export { performCheckup } from './core/checkup';
 export { startTurn, endTurn, getLegalActions, applyAction } from './core/turn';
 
-export type { EffectContext, EffectHandler } from './effects/registry';
-export { registerEffect, resolveEffect } from './effects/registry';
+export type {
+  DamageOutputModifierResult,
+  DamageInputModifierResult,
+  RetreatCostModifierResult,
+  HpModifierResult,
+  AttackCostModifierResult,
+  PrizeModifierResult,
+  SurvivalResult
+} from './core/modifiers';
+export {
+  getDamageOutputModifiers,
+  getDamageInputModifiers,
+  getRetreatCostModifiers,
+  getEffectiveRetreatCost,
+  getAttackCostModifiers,
+  getEffectiveAttackCost,
+  getHpModifiers,
+  getEffectiveHp,
+  getEffectiveHpById,
+  modifyPrizeCount,
+  checkSurvivalEffects,
+  resolveOnDamageTriggers,
+  resolveOnKOTriggers,
+  getPoisonModifiers,
+  checkConditionImmunity,
+  isJammingTowerActive,
+  isNeutralizationZoneActive
+} from './core/modifiers';
+
+export type { DamageCalculation } from './core/combat';
+export {
+  resolveAttack,
+  calculateDamage,
+  resolveWeakness,
+  resolveResistance,
+  resolveConfusion,
+  dealBenchDamage,
+  dealSelfDamage,
+  discardEnergyFromPokemon,
+  checkKnockOuts,
+  placeDamageCountersOn
+} from './core/combat';
+
+export type {
+  EffectContext,
+  EffectHandler,
+  AttackContext,
+  AbilityContext,
+  TrainerContext,
+  AttackEffectHandler,
+  AbilityEffectHandler,
+  TrainerEffectHandler
+} from './effects/registry';
+export {
+  registerEffect,
+  resolveEffect,
+  registerAttackEffect,
+  registerAbilityEffect,
+  registerTrainerEffect,
+  resolveAttackEffect,
+  resolveAbilityEffect,
+  resolveTrainerEffect
+} from './effects/registry';
+
+import './effects/tools';
+import './effects/stadiums';
+import './effects/trainers';
+import './effects/items';
+import './effects/supporters';
+
+export type { CardFilter, SearchResult, Zone } from './effects/primitives';
+export {
+  drawCards as effectDrawCards,
+  discardFromHand,
+  searchDeck,
+  shuffleDeck,
+  moveToHand,
+  moveToDeck,
+  moveToDeckBottom,
+  discardEnergy as effectDiscardEnergy,
+  discardAllEnergy,
+  moveEnergy,
+  attachEnergyFromDeck,
+  switchActive,
+  putOnBench,
+  flipCoin as effectFlipCoin,
+  flipCoins,
+  healDamage,
+  healAllDamage,
+  applyCondition,
+  removeCondition
+} from './effects/primitives';

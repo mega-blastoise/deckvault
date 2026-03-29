@@ -1,10 +1,14 @@
-import type { CardDefinition } from '../types/card';
+import type { CardDefinition, PokemonCardDefinition } from '../types/card';
 import type {
   GameState, PlayerState, PlayerId, CardInstance, TurnFlags
 } from '../types/game';
 import type { GameEvent } from '../types/event';
 import { createRngState, coinFlip } from '../rng';
 import { validateDeck } from './validation';
+import {
+  modifyPrizeCount,
+  resolveOnKOTriggers
+} from './modifiers';
 export type { GameErrorCode, GameError, GameResult } from './result';
 export { ok, err } from './result';
 
@@ -41,6 +45,7 @@ function makeInitialTurnFlags(): TurnFlags {
   return {
     attackUsed: false,
     isStartingPlayerFirstTurn: false,
+    turnEndedByEffect: false,
     mulliganCounts: { player1: 0, player2: 0 },
     extraDrawsRemaining: { player1: 0, player2: 0 },
     setupBenchSelected: { player1: false, player2: false }
@@ -171,69 +176,125 @@ export function promoteFromBench(
 
 export function handleKnockOut(state: GameState, knockedOutPokemonId: string): GameState {
   let koPlayer: PlayerId | null = null;
+  let koZone: 'active' | 'bench' = 'active';
+  let koBenchIdx = -1;
+
   for (const [pid, ps] of Object.entries(state.players) as Array<[PlayerId, PlayerState]>) {
     if (ps.active?.instanceId === knockedOutPokemonId) {
       koPlayer = pid;
+      koZone = 'active';
+      break;
+    }
+    const bi = ps.bench.findIndex(b => b.instanceId === knockedOutPokemonId);
+    if (bi !== -1) {
+      koPlayer = pid;
+      koZone = 'bench';
+      koBenchIdx = bi;
       break;
     }
   }
   if (!koPlayer) return state;
 
   const koPlayerState = state.players[koPlayer];
-  const koedPokemon = koPlayerState.active!;
-  const prize = otherPlayer(koPlayer);
-  const prizePlayer = state.players[prize];
+  const koedPokemon = koZone === 'active'
+    ? koPlayerState.active!
+    : koPlayerState.bench[koBenchIdx]!;
 
   const topInstanceId = koedPokemon.evolutionStack[koedPokemon.evolutionStack.length - 1] ?? koedPokemon.instanceId;
   const topInstance = state.cardRegistry.get(topInstanceId);
   const topDef = topInstance ? state.definitionRegistry.get(topInstance.definitionId) : undefined;
-  const prizeValue = (topDef?.cardType === 'Pokemon' ? topDef.prizeValue : 1) as 1 | 2 | 3;
+  const pokemonDef = topDef?.cardType === 'Pokemon' ? topDef : null;
+
+  const basePrizeValue = (pokemonDef ? pokemonDef.prizeValue : 1) as 1 | 2 | 3;
+  const prizeValue = pokemonDef
+    ? modifyPrizeCount(state, koedPokemon, pokemonDef, basePrizeValue, koPlayer)
+    : basePrizeValue;
+
+  const prize = otherPlayer(koPlayer);
+  const prizePlayer = state.players[prize];
 
   const events: GameEvent[] = [];
 
+  // On-KO triggers (Exp. Share, Heavy Baton, etc.) — run BEFORE discard
+  let s = state;
+  if (pokemonDef) {
+    s = resolveOnKOTriggers(s, koedPokemon, pokemonDef, koPlayer, null);
+  }
+
+  // Re-read state after triggers may have moved energy
+  const updatedKoPlayerState = s.players[koPlayer];
+  const updatedKoedPokemon = koZone === 'active'
+    ? updatedKoPlayerState.active!
+    : updatedKoPlayerState.bench[koBenchIdx]!;
+
   const toDiscard: string[] = [
-    koedPokemon.instanceId,
-    ...koedPokemon.evolutionStack,
-    ...koedPokemon.attachedEnergy,
-    ...koedPokemon.attachedTools
+    updatedKoedPokemon.instanceId,
+    ...updatedKoedPokemon.evolutionStack,
+    ...updatedKoedPokemon.attachedEnergy,
+    ...updatedKoedPokemon.attachedTools
   ];
   const discardSet = new Set(toDiscard);
   events.push({ type: 'POKEMON_KNOCKED_OUT', player: koPlayer, pokemonInstanceId: knockedOutPokemonId, prizesAwarded: prizeValue });
 
-  const newKoPlayerDiscard = [...koPlayerState.discard, ...discardSet];
+  const newKoPlayerDiscard = [...updatedKoPlayerState.discard, ...discardSet];
+  const updatedPrizePlayer = s.players[prize];
 
-  const prizesToTake = Math.min(prizeValue, prizePlayer.prizes.length);
-  const takenPrizes = prizePlayer.prizes.slice(0, prizesToTake);
-  const remainingPrizes = prizePlayer.prizes.slice(prizesToTake);
+  const prizesToTake = Math.min(prizeValue, updatedPrizePlayer.prizes.length);
+  const takenPrizes = updatedPrizePlayer.prizes.slice(0, prizesToTake);
+  const remainingPrizes = updatedPrizePlayer.prizes.slice(prizesToTake);
 
   for (const prizeCard of takenPrizes) {
     events.push({ type: 'PRIZE_TAKEN', player: prize, cardInstanceId: prizeCard });
   }
 
+  if (koZone === 'bench') {
+    const newBench = updatedKoPlayerState.bench.filter((_, i) => i !== koBenchIdx);
+    let newState: GameState = {
+      ...s,
+      players: {
+        ...s.players,
+        [koPlayer]: {
+          ...updatedKoPlayerState,
+          bench: newBench,
+          discard: newKoPlayerDiscard
+        },
+        [prize]: {
+          ...updatedPrizePlayer,
+          prizes: remainingPrizes,
+          hand: [...updatedPrizePlayer.hand, ...takenPrizes]
+        }
+      },
+      eventLog: [...s.eventLog, ...events]
+    };
+    newState = checkWinConditions(newState);
+    return newState;
+  }
+
+  // Active KO
   let newState: GameState = {
-    ...state,
+    ...s,
     players: {
-      ...state.players,
+      ...s.players,
       [koPlayer]: {
-        ...koPlayerState,
+        ...updatedKoPlayerState,
         active: null,
         discard: newKoPlayerDiscard
       },
       [prize]: {
-        ...prizePlayer,
+        ...updatedPrizePlayer,
         prizes: remainingPrizes,
-        hand: [...prizePlayer.hand, ...takenPrizes]
+        hand: [...updatedPrizePlayer.hand, ...takenPrizes]
       }
     },
-    eventLog: [...state.eventLog, ...events]
+    eventLog: [...s.eventLog, ...events]
   };
 
   newState = checkWinConditions(newState);
   if (newState.phase === 'finished') return newState;
 
-  const updatedKoPlayer = newState.players[koPlayer];
-  if (updatedKoPlayer.bench.length > 0) {
-    newState = promoteFromBench(newState, koPlayer, updatedKoPlayer.bench[0]!.instanceId);
+  const finalKoPlayer = newState.players[koPlayer];
+  if (finalKoPlayer.bench.length > 0) {
+    newState = promoteFromBench(newState, koPlayer, finalKoPlayer.bench[0]!.instanceId);
   }
 
   return newState;

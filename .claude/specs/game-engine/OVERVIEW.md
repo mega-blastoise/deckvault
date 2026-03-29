@@ -131,13 +131,19 @@ SPEC_01 (Core Types)
     │        ├──▶ SPEC_03 (Combat)
     │        │        │
     │        │        └──▶ SPEC_04 (Card Effects)
-    │        │
-    │        └──▶ SPEC_05 (AI Player)  ← needs SPEC_03 + SPEC_04
+    │        │                 │
+    │        │                 └──▶ SPEC_04B (Pipeline Hooks)
+    │        │                          │
+    │        │                          ├──▶ SPEC_05 (AI Player)
+    │        │                          │      needs SPEC_03 + SPEC_04 + SPEC_04B
+    │        │                          │
+    │        │                          └──▶ SPEC_06 (Event Hooks & Abilities)
+    │        │                                 parallel track to SPEC_05
     │
-    └──▶ SPEC_06 (Simulation)  ← needs SPEC_05
+    └──▶ SPEC_07 (Simulation)  ← needs SPEC_05
 ```
 
-SPEC_01 is the foundation. SPEC_02 and SPEC_03 build sequentially. SPEC_04 (effects) requires combat to plug into. SPEC_05 (AI) requires all game mechanics. SPEC_06 (simulation) wraps everything.
+SPEC_01 is the foundation. SPEC_02 and SPEC_03 build sequentially. SPEC_04 (effects) requires combat to plug into. SPEC_04B (pipeline hooks) wires passive Stadium/Tool/Ability modifiers into the damage, retreat, HP, and KO pipelines. SPEC_05 (AI) and SPEC_06 (event hooks) are parallel tracks that both depend on SPEC_04B — neither blocks the other. SPEC_07 (simulation) wraps everything and requires SPEC_05.
 
 ---
 
