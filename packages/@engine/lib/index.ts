@@ -172,3 +172,28 @@ export {
   applyCondition,
   removeCondition
 } from './effects/primitives';
+
+// Event Hooks
+export type {
+  EventHookType,
+  EventHookPayload,
+  EventHookResult,
+  EventHook,
+  EnergyAttachedPayload,
+  PokemonBenchedPayload,
+  TurnEndingPayload,
+  DeckDiscardAttemptedPayload
+} from './core/events';
+export { registerEventHook, fireEventHooks } from './core/events';
+
+// Abilities
+export { canUseAbility } from './core/abilities';
+
+// New primitive
+export { attachEnergyFromDiscard } from './effects/primitives';
+
+// AI
+export type { AiStrategy, AiConfig, ScoredAction } from './ai/types';
+export { RandomStrategy, GreedyStrategy } from './ai/strategy';
+export { playTurn, runSetupPhase, simulateGame } from './ai/player';
+export { evaluateBoard } from './ai/evaluate';

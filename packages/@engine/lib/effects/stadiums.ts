@@ -1,4 +1,5 @@
 import type { GameState } from '../types/game';
+import type { TrainerCardDefinition } from '../types/card';
 import type { TrainerContext } from './registry';
 import { registerTrainerEffect } from './registry';
 import {
@@ -11,9 +12,21 @@ import {
   putOnBench,
   switchActive,
   healDamage,
-  flipCoin
+  flipCoin,
+  getTopDef
 } from './primitives';
 import { canEvolve, evolvePokemon } from '../core/evolution';
+import { registerEventHook } from '../core/events';
+import type { EventHookPayload, EventHookResult } from '../core/events';
+import { placeDamageCountersOn } from '../core/combat';
+
+function getStadiumDef(state: GameState): TrainerCardDefinition | null {
+  if (!state.stadium) return null;
+  const inst = state.cardRegistry.get(state.stadium.cardInstanceId);
+  if (!inst) return null;
+  const def = state.definitionRegistry.get(inst.definitionId);
+  return def?.cardType === 'Trainer' ? def : null;
+}
 
 // ─── Academy at Night ───────────────────────────────────────────────────
 // Once per turn: put a card from hand on top of deck.
@@ -602,3 +615,51 @@ export function registerAllStadiums(): void {
 }
 
 registerAllStadiums();
+
+// ─── Event Hooks ─────────────────────────────────────────────────────────
+
+registerEventHook({
+  id: 'calamitous_snowy_mountain',
+  hookType: 'energy_attached',
+  handler(state: GameState, payload: EventHookPayload): EventHookResult {
+    if (payload.type !== 'energy_attached') return { handled: false };
+    const stadiumDef = getStadiumDef(state);
+    if (stadiumDef?.name !== 'Calamitous Snowy Mountain') return { handled: false };
+
+    const { targetInstanceId, player } = payload.data;
+    const playerState = state.players[player];
+    const target = playerState.active?.instanceId === targetInstanceId
+      ? playerState.active
+      : playerState.bench.find(b => b.instanceId === targetInstanceId);
+    if (!target) return { handled: false };
+
+    const targetDef = getTopDef(state, target);
+    if (!targetDef) return { handled: false };
+    if (targetDef.stage !== 'Basic' || targetDef.types.includes('Water')) return { handled: false };
+
+    const newState = placeDamageCountersOn(state, targetInstanceId, 2, 'Calamitous Snowy Mountain');
+    return { handled: true, newState };
+  }
+});
+
+registerEventHook({
+  id: 'risky_ruins',
+  hookType: 'pokemon_benched',
+  handler(state: GameState, payload: EventHookPayload): EventHookResult {
+    if (payload.type !== 'pokemon_benched') return { handled: false };
+    const stadiumDef = getStadiumDef(state);
+    if (stadiumDef?.name !== 'Risky Ruins') return { handled: false };
+
+    const { pokemonInstanceId, player } = payload.data;
+    const playerState = state.players[player];
+    const benched = playerState.bench.find(b => b.instanceId === pokemonInstanceId);
+    if (!benched) return { handled: false };
+
+    const benchedDef = getTopDef(state, benched);
+    if (!benchedDef) return { handled: false };
+    if (benchedDef.stage !== 'Basic' || benchedDef.types.includes('Darkness')) return { handled: false };
+
+    const newState = placeDamageCountersOn(state, pokemonInstanceId, 2, 'Risky Ruins');
+    return { handled: true, newState };
+  }
+});

@@ -416,6 +416,33 @@ export function attachEnergyFromDeck(
   ]);
 }
 
+export function attachEnergyFromDiscard(
+  state: GameState,
+  player: PlayerId,
+  energyInstanceId: string,
+  targetPokemonInstanceId: string
+): GameState {
+  const playerState = state.players[player];
+  if (!playerState.discard.includes(energyInstanceId)) return state;
+
+  const loc = findPokemonLocation(state, player, targetPokemonInstanceId);
+  if (!loc) return state;
+
+  let s = updatePlayer(state, player, ps => ({
+    ...ps,
+    discard: ps.discard.filter(id => id !== energyInstanceId)
+  }));
+
+  s = updatePokemonInPlay(s, player, targetPokemonInstanceId, p => ({
+    ...p,
+    attachedEnergy: [...p.attachedEnergy, energyInstanceId]
+  }));
+
+  return addEvents(s, [
+    { type: 'ENERGY_ATTACHED', player, energyInstanceId, targetInstanceId: targetPokemonInstanceId }
+  ]);
+}
+
 // ─── Pokemon Movement ────────────────────────────────────────────────────
 
 export function switchActive(

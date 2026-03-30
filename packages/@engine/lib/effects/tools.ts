@@ -1,6 +1,10 @@
 import type { GameState } from '../types/game';
 import type { TrainerContext } from './registry';
 import { registerTrainerEffect } from './registry';
+import { registerEventHook } from '../core/events';
+import type { EventHookPayload, EventHookResult } from '../core/events';
+import { isJammingTowerActive } from '../core/modifiers';
+import { attachEnergyFromDiscard } from './primitives';
 
 // Pokemon Tool handlers are no-ops: their "effect" is being attached to a Pokemon.
 // All passive modifier logic lives in core/modifiers.ts and is queried by the
@@ -88,3 +92,65 @@ export function registerAllTools(): void {
 }
 
 registerAllTools();
+
+// ─── Event Hooks ─────────────────────────────────────────────────────────
+
+registerEventHook({
+  id: 'powerglass',
+  hookType: 'turn_ending',
+  handler(state: GameState, payload: EventHookPayload): EventHookResult {
+    if (payload.type !== 'turn_ending') return { handled: false };
+    if (isJammingTowerActive(state)) return { handled: false };
+
+    const { player } = payload.data;
+    const playerState = state.players[player];
+    const active = playerState.active;
+    if (!active) return { handled: false };
+
+    const hasPowerglass = active.attachedTools.some(toolId => {
+      const inst = state.cardRegistry.get(toolId);
+      if (!inst) return false;
+      const def = state.definitionRegistry.get(inst.definitionId);
+      return def?.cardType === 'Trainer' && def.name === 'Powerglass';
+    });
+    if (!hasPowerglass) return { handled: false };
+
+    const basicEnergyInDiscard = playerState.discard.filter(id => {
+      const inst = state.cardRegistry.get(id);
+      if (!inst) return false;
+      const def = state.definitionRegistry.get(inst.definitionId);
+      return def?.cardType === 'Energy' && def.subtype === 'Basic';
+    });
+    if (basicEnergyInDiscard.length === 0) return { handled: false };
+
+    const energyId = basicEnergyInDiscard[0]!;
+    const newState = attachEnergyFromDiscard(state, player, energyId, active.instanceId);
+    return { handled: true, newState };
+  }
+});
+
+registerEventHook({
+  id: 'patrol_cap',
+  hookType: 'deck_discard_attempted',
+  handler(state: GameState, payload: EventHookPayload): EventHookResult {
+    if (payload.type !== 'deck_discard_attempted') return { handled: false };
+    if (isJammingTowerActive(state)) return { handled: false };
+
+    const { requestingPlayer, targetPlayer } = payload.data;
+    if (requestingPlayer === targetPlayer) return { handled: false };
+
+    const ownerState = state.players[targetPlayer];
+    const active = ownerState.active;
+    if (!active) return { handled: false };
+
+    const hasPatrolCap = active.attachedTools.some(toolId => {
+      const inst = state.cardRegistry.get(toolId);
+      if (!inst) return false;
+      const def = state.definitionRegistry.get(inst.definitionId);
+      return def?.cardType === 'Trainer' && def.name === 'Patrol Cap';
+    });
+    if (!hasPatrolCap) return { handled: false };
+
+    return { handled: true, newState: state, prevented: true };
+  }
+});

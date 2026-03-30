@@ -14,6 +14,9 @@ import { otherPlayer } from './game';
 import { resolveEffect } from '../effects/registry';
 import { resolveAttack } from './combat';
 import { getEffectiveRetreatCost, getEffectiveAttackCost } from './modifiers';
+import { fireEventHooks } from './events';
+import type { EventHookPayload } from './events';
+import { canUseAbility } from './abilities';
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
@@ -107,10 +110,16 @@ export function startTurn(state: GameState): GameState {
 // ─── endTurn ───────────────────────────────────────────────────────────────
 
 export function endTurn(state: GameState): GameState {
+  const endingPayload: EventHookPayload = {
+    type: 'turn_ending',
+    data: { player: state.activePlayer }
+  };
+  const turnEndingResult = fireEventHooks(state, endingPayload);
+
   let s: GameState = {
-    ...state,
+    ...turnEndingResult.newState,
     phase: 'checkup',
-    eventLog: [...state.eventLog, { type: 'TURN_ENDED', player: state.activePlayer }]
+    eventLog: [...turnEndingResult.newState.eventLog, { type: 'TURN_ENDED', player: state.activePlayer }]
   };
 
   const resetPlayerFlags = (ps: PlayerState): PlayerState => ({
@@ -350,7 +359,9 @@ function getMainActions(state: GameState): ReadonlyArray<PlayerAction> {
     const def = state.definitionRegistry.get(instance.definitionId);
     if (!def || def.cardType !== 'Pokemon') continue;
     for (let i = 0; i < def.abilities.length; i++) {
-      actions.push({ type: 'USE_ABILITY', pokemonInstanceId: pokemon.instanceId, abilityIndex: i });
+      if (canUseAbility(state, state.activePlayer, pokemon, i)) {
+        actions.push({ type: 'USE_ABILITY', pokemonInstanceId: pokemon.instanceId, abilityIndex: i });
+      }
     }
   }
 
@@ -775,7 +786,12 @@ function applyMainAction(state: GameState, action: PlayerAction): GameResult<Gam
         { type: 'BASIC_PLAYED', player: state.activePlayer, cardInstanceId: action.cardInstanceId, zone: 'bench' }
       ] as GameEvent[]
     };
-    return ok(s);
+    const benchPayload: EventHookPayload = {
+      type: 'pokemon_benched',
+      data: { player: state.activePlayer, pokemonInstanceId: action.cardInstanceId }
+    };
+    const benchHookResult = fireEventHooks(s, benchPayload);
+    return ok(benchHookResult.newState);
   }
 
   if (action.type === 'EVOLVE_POKEMON') {
@@ -841,7 +857,16 @@ function applyMainAction(state: GameState, action: PlayerAction): GameResult<Gam
         { type: 'ENERGY_ATTACHED', player: state.activePlayer, energyInstanceId: action.cardInstanceId, targetInstanceId: action.targetInstanceId }
       ] as GameEvent[]
     };
-    return ok(s);
+    const energyPayload: EventHookPayload = {
+      type: 'energy_attached',
+      data: {
+        player: state.activePlayer,
+        energyInstanceId: action.cardInstanceId,
+        targetInstanceId: action.targetInstanceId
+      }
+    };
+    const energyHookResult = fireEventHooks(s, energyPayload);
+    return ok(energyHookResult.newState);
   }
 
   if (action.type === 'PLAY_TRAINER') {
@@ -1079,6 +1104,11 @@ function applyMainAction(state: GameState, action: PlayerAction): GameResult<Gam
     }
 
     const ability = def.abilities[action.abilityIndex]!;
+
+    if (!canUseAbility(state, state.activePlayer, pokemon, action.abilityIndex)) {
+      return err('ILLEGAL_ACTION', 'Ability is suppressed or unavailable');
+    }
+
     const s: GameState = {
       ...state,
       eventLog: [
