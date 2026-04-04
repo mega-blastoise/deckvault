@@ -7,7 +7,7 @@ Copy everything below this line as your opening message.
 You are implementing SPEC_07 (Simulation Runner & Metrics) of a headless Pokemon TCG game engine
 for the Project Johto monorepo at `/home/nicks-dgx/dev/.Project-Johto/Pokemon`.
 
-Before writing any code, read the following files in full:
+read the following files in full:
 
 1. `/home/nicks-dgx/dev/.Project-Johto/Pokemon/.claude/specs/game-engine/SPEC_07_IMPL_CONTEXT.md`
    — Complete implementation context, type signatures, per-component design, pitfall guide,

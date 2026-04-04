@@ -197,3 +197,23 @@ export type { AiStrategy, AiConfig, ScoredAction } from './ai/types';
 export { RandomStrategy, GreedyStrategy } from './ai/strategy';
 export { playTurn, runSetupPhase, simulateGame } from './ai/player';
 export { evaluateBoard } from './ai/evaluate';
+
+// Simulation
+export type {
+  DeckInput,
+  SimulationConfig,
+  SimulationResult,
+  GameResult as SimGameResult,
+  DeckStats,
+  MatchupMatrixConfig,
+  MatchupMatrixResult,
+  SimulationSummary
+} from './simulation/runner';
+export {
+  runSimulation,
+  runMatchupMatrix,
+  serializeResult,
+  serializeResultSummary
+} from './simulation/runner';
+export type { OpeningHandStats } from './simulation/opening';
+export { analyzeOpeningHands } from './simulation/opening';
