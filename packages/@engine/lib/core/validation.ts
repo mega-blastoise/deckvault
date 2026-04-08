@@ -1,7 +1,7 @@
 import type { CardDefinition, PokemonCardDefinition } from '../types/card';
 import type { GameResult } from './result';
 import { ok, err } from './result';
-import { getLegalRegulationMarks } from '../adapter';
+import { getLegalRegulationMarks } from '../adapter-format';
 
 export function validateDeck(
   cardIds: ReadonlyArray<string>,

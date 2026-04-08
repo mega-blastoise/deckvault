@@ -15,6 +15,7 @@ import type {
   CardInstance,
   StadiumState
 } from '../../lib/types/game';
+import type { TemporalEffect } from '../../lib/types/effect';
 import { createRngState } from '../../lib/rng';
 import {
   getDamageOutputModifiers,
@@ -192,6 +193,7 @@ function makeBaseState(overrides: Partial<GameState> = {}): GameState {
       attackUsed: false,
       isStartingPlayerFirstTurn: false,
       turnEndedByEffect: false,
+      abilitiesUsedThisTurn: [],
       mulliganCounts: { player1: 0, player2: 0 },
       extraDrawsRemaining: { player1: 0, player2: 0 },
       setupBenchSelected: { player1: false, player2: false }
@@ -1347,7 +1349,7 @@ describe('Sacred Charm', () => {
     let state = makeBaseState();
     const abilityDef = makePokemonDef({
       id: 'p1-ability', name: 'Ability Mon', types: ['Lightning'],
-      abilities: [{ name: 'Test Ability', type: 'Ability', text: '', effectId: null }]
+      abilities: [{ name: 'Test Ability', type: 'Ability', category: 'activated' as const, text: '', effectId: 'test-ability-effect' }]
     });
     const newDefReg = new Map(state.definitionRegistry);
     newDefReg.set('p1-ability', abilityDef);
@@ -1361,5 +1363,261 @@ describe('Sacred Charm', () => {
       state.players.player1.active!, abilityDef, 'player2'
     );
     expect(result.flatReduction).toBe(30);
+  });
+});
+
+// ─── Passive Ability Modifiers ────────────────────────────────────────────
+
+function makeSkylinerDef(): PokemonCardDefinition {
+  return makePokemonDef({
+    id: 'latias-ex-test',
+    name: 'Latias ex',
+    stage: 'Basic',
+    subtypes: ['ex'],
+    types: ['Psychic'],
+    abilities: [{
+      name: 'Skyliner',
+      text: 'Your Basic Pokémon in play have no retreat cost.',
+      type: 'Ability',
+      category: 'passive',
+      effectId: 'latias-ex-test:ability:Skyliner'
+    }]
+  });
+}
+
+function makeSeasonedSkillDef(): PokemonCardDefinition {
+  return makePokemonDef({
+    id: 'ursaluna-ex-test',
+    name: 'Bloodmoon Ursaluna ex',
+    stage: 'Basic',
+    subtypes: ['ex'],
+    types: ['Colorless'],
+    retreatCost: 2,
+    attacks: [{
+      name: 'Calamity Dig',
+      cost: ['Colorless', 'Colorless', 'Colorless'],
+      damage: 180,
+      damageModifier: null,
+      text: '',
+      effectId: null
+    }],
+    abilities: [{
+      name: 'Seasoned Skill',
+      text: "This Pokémon's attacks cost [C] less for each Prize card your opponent has taken.",
+      type: 'Ability',
+      category: 'passive',
+      effectId: 'ursaluna-ex-test:ability:Seasoned Skill'
+    }]
+  });
+}
+
+function addBenchPokemon(
+  state: GameState,
+  player: PlayerId,
+  instanceId: string,
+  definitionId: string
+): GameState {
+  const newCardReg = new Map(state.cardRegistry);
+  newCardReg.set(instanceId, makeCardInstance(instanceId, definitionId, player));
+  const ps = state.players[player];
+  const benchPokemon = makeInPlayPokemon(instanceId);
+  return {
+    ...state,
+    cardRegistry: newCardReg,
+    players: {
+      ...state.players,
+      [player]: { ...ps, bench: [...ps.bench, benchPokemon] }
+    }
+  };
+}
+
+describe('Skyliner passive ability', () => {
+  it('sets retreat cost to zero for Basic Pokemon when Latias ex is in play', () => {
+    let state = makeBaseState();
+    const skylinerDef = makeSkylinerDef();
+    const newDefReg = new Map(state.definitionRegistry);
+    newDefReg.set(skylinerDef.id, skylinerDef);
+    state = { ...state, definitionRegistry: newDefReg };
+    state = addBenchPokemon(state, 'player1', 'p1-latias', skylinerDef.id);
+
+    const basicDef = makePokemonDef({ id: 'p1-basic', stage: 'Basic', retreatCost: 2 });
+    const newDefReg2 = new Map(state.definitionRegistry);
+    newDefReg2.set(basicDef.id, basicDef);
+    const newCardReg = new Map(state.cardRegistry);
+    newCardReg.set('p1-basic-inst', makeCardInstance('p1-basic-inst', basicDef.id, 'player1'));
+    state = { ...state, definitionRegistry: newDefReg2, cardRegistry: newCardReg };
+
+    const basicPokemon = makeInPlayPokemon('p1-basic-inst');
+    const result = getRetreatCostModifiers(state, basicPokemon, basicDef, 'player1');
+    expect(result.setToZero).toBe(true);
+  });
+
+  it('does not affect non-Basic Pokemon retreat cost', () => {
+    let state = makeBaseState();
+    const skylinerDef = makeSkylinerDef();
+    const newDefReg = new Map(state.definitionRegistry);
+    newDefReg.set(skylinerDef.id, skylinerDef);
+    state = { ...state, definitionRegistry: newDefReg };
+    state = addBenchPokemon(state, 'player1', 'p1-latias', skylinerDef.id);
+
+    const stage1Def = makePokemonDef({ id: 'p1-stage1', stage: 'Stage1', retreatCost: 2 });
+    const newDefReg2 = new Map(state.definitionRegistry);
+    newDefReg2.set(stage1Def.id, stage1Def);
+    const newCardReg = new Map(state.cardRegistry);
+    newCardReg.set('p1-stage1-inst', makeCardInstance('p1-stage1-inst', stage1Def.id, 'player1'));
+    state = { ...state, definitionRegistry: newDefReg2, cardRegistry: newCardReg };
+
+    const stage1Pokemon = makeInPlayPokemon('p1-stage1-inst');
+    const result = getRetreatCostModifiers(state, stage1Pokemon, stage1Def, 'player1');
+    expect(result.setToZero).toBe(false);
+  });
+
+  it('does not apply when Skyliner ability is locked', () => {
+    let state = makeBaseState();
+    const skylinerDef = makeSkylinerDef();
+    const newDefReg = new Map(state.definitionRegistry);
+    newDefReg.set(skylinerDef.id, skylinerDef);
+    state = { ...state, definitionRegistry: newDefReg };
+    state = addBenchPokemon(state, 'player1', 'p1-latias', skylinerDef.id);
+
+    const lockEffect: TemporalEffect = {
+      id: 'lock-1',
+      type: 'ability_lock',
+      sourceInstanceId: 'some-source',
+      sourceType: 'attack',
+      targetInstanceId: 'p1-latias',
+      expiresOnTurn: null,
+      expiresAt: 'end_of_turn',
+      payload: {}
+    };
+    state = { ...state, temporalEffects: [lockEffect] };
+
+    const basicDef = makePokemonDef({ id: 'p1-basic', stage: 'Basic', retreatCost: 2 });
+    const newDefReg2 = new Map(state.definitionRegistry);
+    newDefReg2.set(basicDef.id, basicDef);
+    const newCardReg = new Map(state.cardRegistry);
+    newCardReg.set('p1-basic-inst', makeCardInstance('p1-basic-inst', basicDef.id, 'player1'));
+    state = { ...state, definitionRegistry: newDefReg2, cardRegistry: newCardReg };
+
+    const basicPokemon = makeInPlayPokemon('p1-basic-inst');
+    const result = getRetreatCostModifiers(state, basicPokemon, basicDef, 'player1');
+    expect(result.setToZero).toBe(false);
+  });
+
+  it('does not apply to the opponent side', () => {
+    let state = makeBaseState();
+    const skylinerDef = makeSkylinerDef();
+    const newDefReg = new Map(state.definitionRegistry);
+    newDefReg.set(skylinerDef.id, skylinerDef);
+    state = { ...state, definitionRegistry: newDefReg };
+    // Latias ex is on player1's bench
+    state = addBenchPokemon(state, 'player1', 'p1-latias', skylinerDef.id);
+
+    // Player2's Basic Pokemon should not benefit
+    const basicDef = makePokemonDef({ id: 'p2-basic', stage: 'Basic', retreatCost: 2 });
+    const newDefReg2 = new Map(state.definitionRegistry);
+    newDefReg2.set(basicDef.id, basicDef);
+    const newCardReg = new Map(state.cardRegistry);
+    newCardReg.set('p2-basic-inst', makeCardInstance('p2-basic-inst', basicDef.id, 'player2'));
+    state = { ...state, definitionRegistry: newDefReg2, cardRegistry: newCardReg };
+
+    const basicPokemon = makeInPlayPokemon('p2-basic-inst');
+    const result = getRetreatCostModifiers(state, basicPokemon, basicDef, 'player2');
+    expect(result.setToZero).toBe(false);
+  });
+});
+
+describe('Seasoned Skill passive ability', () => {
+  it('reduces attack cost by 1 per opponent prize taken (2 prizes taken)', () => {
+    let state = makeBaseState();
+    const ursalunaDef = makeSeasonedSkillDef();
+    const newDefReg = new Map(state.definitionRegistry);
+    newDefReg.set(ursalunaDef.id, ursalunaDef);
+    const newCardReg = new Map(state.cardRegistry);
+    newCardReg.set('p1-ursaluna-inst', makeCardInstance('p1-ursaluna-inst', ursalunaDef.id, 'player1'));
+    // Opponent has taken 2 prizes (4 remaining)
+    state = {
+      ...state,
+      definitionRegistry: newDefReg,
+      cardRegistry: newCardReg,
+      players: {
+        ...state.players,
+        player2: { ...state.players.player2, prizes: ['p2-prize-0', 'p2-prize-1', 'p2-prize-2', 'p2-prize-3'] }
+      }
+    };
+
+    const ursalunaPokemon = makeInPlayPokemon('p1-ursaluna-inst');
+    const result = getAttackCostModifiers(state, ursalunaPokemon, ursalunaDef, 'player1');
+    expect(result.colorlessReduction).toBe(2);
+  });
+
+  it('gives no reduction when opponent has taken no prizes', () => {
+    let state = makeBaseState();
+    const ursalunaDef = makeSeasonedSkillDef();
+    const newDefReg = new Map(state.definitionRegistry);
+    newDefReg.set(ursalunaDef.id, ursalunaDef);
+    const newCardReg = new Map(state.cardRegistry);
+    newCardReg.set('p1-ursaluna-inst', makeCardInstance('p1-ursaluna-inst', ursalunaDef.id, 'player1'));
+    // Opponent has all 6 prizes (0 taken)
+    state = { ...state, definitionRegistry: newDefReg, cardRegistry: newCardReg };
+
+    const ursalunaPokemon = makeInPlayPokemon('p1-ursaluna-inst');
+    const result = getAttackCostModifiers(state, ursalunaPokemon, ursalunaDef, 'player1');
+    expect(result.colorlessReduction).toBe(0);
+  });
+
+  it('gives full reduction when opponent has taken all 6 prizes', () => {
+    let state = makeBaseState();
+    const ursalunaDef = makeSeasonedSkillDef();
+    const newDefReg = new Map(state.definitionRegistry);
+    newDefReg.set(ursalunaDef.id, ursalunaDef);
+    const newCardReg = new Map(state.cardRegistry);
+    newCardReg.set('p1-ursaluna-inst', makeCardInstance('p1-ursaluna-inst', ursalunaDef.id, 'player1'));
+    state = {
+      ...state,
+      definitionRegistry: newDefReg,
+      cardRegistry: newCardReg,
+      players: {
+        ...state.players,
+        player2: { ...state.players.player2, prizes: [] }
+      }
+    };
+
+    const ursalunaPokemon = makeInPlayPokemon('p1-ursaluna-inst');
+    const result = getAttackCostModifiers(state, ursalunaPokemon, ursalunaDef, 'player1');
+    expect(result.colorlessReduction).toBe(6);
+  });
+
+  it('does not apply when ability is locked', () => {
+    let state = makeBaseState();
+    const ursalunaDef = makeSeasonedSkillDef();
+    const newDefReg = new Map(state.definitionRegistry);
+    newDefReg.set(ursalunaDef.id, ursalunaDef);
+    const newCardReg = new Map(state.cardRegistry);
+    newCardReg.set('p1-ursaluna-inst', makeCardInstance('p1-ursaluna-inst', ursalunaDef.id, 'player1'));
+    const lockEffect: TemporalEffect = {
+      id: 'lock-1',
+      type: 'ability_lock',
+      sourceInstanceId: 'some-source',
+      sourceType: 'attack',
+      targetInstanceId: 'p1-ursaluna-inst',
+      expiresOnTurn: null,
+      expiresAt: 'end_of_turn',
+      payload: {}
+    };
+    state = {
+      ...state,
+      definitionRegistry: newDefReg,
+      cardRegistry: newCardReg,
+      temporalEffects: [lockEffect],
+      players: {
+        ...state.players,
+        player2: { ...state.players.player2, prizes: ['p2-prize-0', 'p2-prize-1', 'p2-prize-2'] }
+      }
+    };
+
+    const ursalunaPokemon = makeInPlayPokemon('p1-ursaluna-inst');
+    const result = getAttackCostModifiers(state, ursalunaPokemon, ursalunaDef, 'player1');
+    expect(result.colorlessReduction).toBe(0);
   });
 });

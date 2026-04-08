@@ -1,5 +1,5 @@
 import { handleRequest } from './lib/handleRequest';
-import { middleware } from './lib/middleware/middleware';
+import { middleware, checkRateLimit } from './lib/middleware/middleware';
 import {
   isBffRoute,
   routeBffRequest,
@@ -11,6 +11,9 @@ export const serve = async () => {
   return Bun.serve({
     port: 3000,
     async fetch(req) {
+      const rateLimitResponse = await checkRateLimit(req);
+      if (rateLimitResponse) return rateLimitResponse;
+
       const url = new URL(req.url);
 
       // Handle BFF routes (aggregated data for frontend)

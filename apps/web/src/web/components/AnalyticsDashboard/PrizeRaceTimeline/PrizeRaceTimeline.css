@@ -1,0 +1,44 @@
+.prize-race {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  height: 100%;
+}
+
+.prize-race__canvas {
+  display: block;
+  width: 100%;
+  flex: 1;
+  min-height: 200px;
+}
+
+.prize-race__legend {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.prize-race__legend-line {
+  display: inline-block;
+  width: 24px;
+  height: 2px;
+  background: #3b82f6;
+  border-radius: 1px;
+}
+
+.prize-race__legend-band {
+  display: inline-block;
+  width: 16px;
+  height: 10px;
+  background: rgba(59, 130, 246, 0.2);
+  border: 1px solid rgba(59, 130, 246, 0.4);
+  border-radius: 2px;
+}
+
+.prize-race--empty .prize-race__empty {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  text-align: center;
+}

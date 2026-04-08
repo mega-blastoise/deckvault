@@ -400,6 +400,30 @@ export function getRetreatCostModifiers(
     }
   }
 
+  // Passive ability modifiers
+  // Skyliner (Latias ex): Basic Pokemon on the same side have no retreat cost.
+  if (pokemonDef.stage === 'Basic') {
+    const playerState = state.players[player];
+    const allPlayerPokemon: InPlayPokemon[] = [];
+    if (playerState.active) allPlayerPokemon.push(playerState.active);
+    allPlayerPokemon.push(...playerState.bench);
+
+    for (const candidate of allPlayerPokemon) {
+      const candidateDef = getTopDef(state, candidate);
+      if (!candidateDef) continue;
+      const skylineAbility = candidateDef.abilities.find(a => a.name === 'Skyliner' && a.category === 'passive');
+      if (!skylineAbility) continue;
+      const isLocked = state.temporalEffects.some(
+        e => e.type === 'ability_lock' &&
+          (e.targetInstanceId === null || e.targetInstanceId === candidate.instanceId)
+      );
+      if (!isLocked) {
+        setToZero = true;
+        break;
+      }
+    }
+  }
+
   return { flatReduction, flatIncrease, setToZero };
 }
 
@@ -455,6 +479,22 @@ export function getAttackCostModifiers(
     }
     if (stadiumDef.name === 'Nighttime Mine' && hasSubtype(pokemonDef, 'Tera')) {
       colorlessIncrease += 1;
+    }
+  }
+
+  // Passive ability modifiers
+  // Seasoned Skill (Bloodmoon Ursaluna ex): this Pokemon's attacks cost [C] less
+  // for each Prize card the opponent has taken (6 - opponent.prizes.length).
+  const seasonedSkill = pokemonDef.abilities.find(a => a.name === 'Seasoned Skill' && a.category === 'passive');
+  if (seasonedSkill) {
+    const isLocked = state.temporalEffects.some(
+      e => e.type === 'ability_lock' &&
+        (e.targetInstanceId === null || e.targetInstanceId === pokemon.instanceId)
+    );
+    if (!isLocked) {
+      const opponentPrizesRemaining = state.players[otherPlayer(player)].prizes.length;
+      const opponentPrizesTaken = 6 - opponentPrizesRemaining;
+      colorlessReduction += opponentPrizesTaken;
     }
   }
 

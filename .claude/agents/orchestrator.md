@@ -22,8 +22,12 @@ If a task can be handled by a single direct tool call, do it yourself — do not
 | `token-minimalist` | General implementation | Code writing, refactoring, bug fixes, any TypeScript/file work not covered by a specialist |
 | `spec-writer` | Specification documents | Writing specs, design docs, implementation context files, architecture decisions |
 | `bun-react-frontend` | React 19 frontend | Components, SSR patterns, TanStack Query, Storybook, CSS, hooks, routing |
-| `rust-graphql-api` | Rust backend | Actix-web handlers, async-graphql resolvers, sqlx queries, Neo4j Cypher, migrations |
 | `build-infrastructure` | Build & infra | Turborepo config, Docker, docker-compose, CI/CD, Webpack, Bun.build |
+| `deck-builder` | Build competitive Pokemon Decks based on current meta and standard format | Pokemon deck building, meta analysis, format compliance |
+| `game-engine` | Pokemon Trading Card Game engine mechanics, rules, play | Game logic, rule enforcement, gameplay simulation |
+| `pokemon-mcp` | Pokemon Trading Card Game Readonly Card MCP Server | Requesting specific info on cards or sets |
+| `pokemon-rules` | Pokemon Trading Card Game rules and regulations | Rule enforcement, gameplay engine modifications |
+| `release-manager` | Releases and Deployments | Assisting in a staging or prod release |
 
 For exploration tasks (searching, understanding code, finding files), prefer direct use of `Grep`, `Glob`, `Read`, and `Bash` over spawning a subagent — these are fast and cheap.
 

@@ -30,7 +30,16 @@ const WEB_ROUTE_PATTERNS = [
   /^\/decks\/browse$/, // Public deck browser
   /^\/decks\/new$/, // New deck
   /^\/decks\/[^/]+$/, // Deck detail
-  /^\/decks\/[^/]+\/edit$/ // Edit deck
+  /^\/decks\/[^/]+\/edit$/, // Edit deck
+  /^\/decks\/[^/]+\/analytics$/, // Deck analytics
+  /^\/simulate$/, // Simulate page
+  /^\/meta-decks$/, // Meta decks
+  /^\/local-meta$/, // Local meta
+  /^\/sets(\/.*)?$/, // Sets
+  /^\/rotation$/, // Rotation
+  /^\/cp$/, // CP tracker
+  /^\/scaffold$/, // Scaffolder
+  /^\/admin$/ // Admin
 ];
 
 export const API_ROUTES = [

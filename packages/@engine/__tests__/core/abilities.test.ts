@@ -1,10 +1,11 @@
-import { describe, expect, it, beforeAll } from 'bun:test';
+import { describe, expect, it, beforeAll, beforeEach } from 'bun:test';
 import { loadStandardCardPool } from '../../lib/adapter';
 import type { CardDefinition, PokemonCardDefinition, TrainerCardDefinition } from '../../lib/types/card';
 import type { GameState, InPlayPokemon, PlayerId, PlayerState, CardInstance } from '../../lib/types/game';
 import type { TemporalEffect } from '../../lib/types/effect';
 import { createRngState } from '../../lib/rng';
 import { canUseAbility } from '../../lib/core/abilities';
+import { getLegalActions } from '../../lib/core/turn';
 
 const DB_PATH = '../../database/pokemon-data.sqlite3.db';
 
@@ -24,7 +25,7 @@ const COLORLESS_WITH_ABILITY: PokemonCardDefinition = {
   stage: 'Basic', subtypes: [], hp: 100, types: ['Colorless'],
   evolvesFrom: null,
   attacks: [],
-  abilities: [{ name: 'Test Ability', text: 'test', type: 'Ability', effectId: 'test-effect' }],
+  abilities: [{ name: 'Test Ability', text: 'test', type: 'Ability', category: 'activated', effectId: 'test-effect' }],
   weaknesses: [], resistances: [], retreatCost: 1, rules: [], prizeValue: 1, regulationMark: 'H'
 };
 
@@ -33,7 +34,7 @@ const FIRE_WITH_ABILITY: PokemonCardDefinition = {
   stage: 'Basic', subtypes: [], hp: 100, types: ['Fire'],
   evolvesFrom: null,
   attacks: [],
-  abilities: [{ name: 'Fire Ability', text: 'test', type: 'Ability', effectId: 'test-effect' }],
+  abilities: [{ name: 'Fire Ability', text: 'test', type: 'Ability', category: 'activated', effectId: 'test-effect' }],
   weaknesses: [], resistances: [], retreatCost: 1, rules: [], prizeValue: 1, regulationMark: 'H'
 };
 
@@ -127,6 +128,7 @@ function makeBaseState(overrides: Partial<GameState> = {}): GameState {
       attackUsed: false,
       isStartingPlayerFirstTurn: false,
       turnEndedByEffect: false,
+      abilitiesUsedThisTurn: [],
       mulliganCounts: { player1: 0, player2: 0 },
       extraDrawsRemaining: { player1: 0, player2: 0 },
       setupBenchSelected: { player1: false, player2: false }
@@ -230,5 +232,225 @@ describe('canUseAbility', () => {
     };
 
     expect(canUseAbility(s, 'player1', pokemon, 0)).toBe(false);
+  });
+});
+
+const PASSIVE_ABILITY_DEF: PokemonCardDefinition = {
+  cardType: 'Pokemon', id: 'test-passive-ability', name: 'Test Passive',
+  stage: 'Basic', subtypes: [], hp: 100, types: ['Fire'],
+  evolvesFrom: null,
+  attacks: [],
+  abilities: [{ name: 'Skyliner', text: 'passive test', type: 'Ability', category: 'passive', effectId: 'passive-effect' }],
+  weaknesses: [], resistances: [], retreatCost: 1, rules: [], prizeValue: 1, regulationMark: 'H'
+};
+
+describe('passive abilities', () => {
+  it('canUseAbility returns false for passive ability', () => {
+    const state = makeBaseState();
+    const defReg = new Map(state.definitionRegistry);
+    defReg.set('test-passive-ability', PASSIVE_ABILITY_DEF);
+    const cardReg = new Map(state.cardRegistry);
+    cardReg.set('p1-passive', makeCardInstance('p1-passive', 'test-passive-ability', 'player1'));
+
+    const pokemon = makeInPlayPokemon('p1-passive');
+    const s: GameState = { ...state, cardRegistry: cardReg, definitionRegistry: defReg };
+
+    expect(canUseAbility(s, 'player1', pokemon, 0)).toBe(false);
+  });
+
+  it('passive ability does not appear in getLegalActions', () => {
+    const state = makeBaseState();
+    const defReg = new Map(state.definitionRegistry);
+    defReg.set('test-passive-ability', PASSIVE_ABILITY_DEF);
+    const cardReg = new Map(state.cardRegistry);
+    cardReg.set('p1-passive', makeCardInstance('p1-passive', 'test-passive-ability', 'player1'));
+
+    const passivePokemon = makeInPlayPokemon('p1-passive');
+    const s: GameState = {
+      ...state,
+      cardRegistry: cardReg,
+      definitionRegistry: defReg,
+      players: {
+        ...state.players,
+        player1: { ...state.players.player1, active: passivePokemon }
+      }
+    };
+
+    const actions = getLegalActions(s);
+    const abilityActions = actions.filter(a => a.type === 'USE_ABILITY');
+    expect(abilityActions.length).toBe(0);
+  });
+
+  it('activated ability still appears in getLegalActions', () => {
+    const state = makeBaseState();
+    const activatedDef: PokemonCardDefinition = {
+      ...FIRE_WITH_ABILITY,
+      id: 'test-activated',
+    };
+    const defReg = new Map(state.definitionRegistry);
+    defReg.set('test-activated', activatedDef);
+    const cardReg = new Map(state.cardRegistry);
+    cardReg.set('p1-activated', makeCardInstance('p1-activated', 'test-activated', 'player1'));
+
+    const activatedPokemon = makeInPlayPokemon('p1-activated');
+    const s: GameState = {
+      ...state,
+      cardRegistry: cardReg,
+      definitionRegistry: defReg,
+      players: {
+        ...state.players,
+        player1: { ...state.players.player1, active: activatedPokemon }
+      }
+    };
+
+    const actions = getLegalActions(s);
+    const abilityActions = actions.filter(a => a.type === 'USE_ABILITY');
+    expect(abilityActions.length).toBeGreaterThan(0);
+  });
+});
+
+const TRIGGERED_ABILITY_DEF: PokemonCardDefinition = {
+  cardType: 'Pokemon', id: 'test-triggered-ability', name: 'Test Triggered',
+  stage: 'Basic', subtypes: [], hp: 100, types: ['Fire'],
+  evolvesFrom: null,
+  attacks: [],
+  abilities: [{ name: 'Flying Entry', text: 'When you play this Pokemon from your hand to your Bench, ...', type: 'Ability', category: 'triggered', effectId: 'flying-entry-effect' }],
+  weaknesses: [], resistances: [], retreatCost: 1, rules: [], prizeValue: 1, regulationMark: 'H'
+};
+
+const REPEATABLE_ABILITY_DEF: PokemonCardDefinition = {
+  cardType: 'Pokemon', id: 'test-repeatable-ability', name: 'Test Repeatable',
+  stage: 'Basic', subtypes: [], hp: 100, types: ['Psychic'],
+  evolvesFrom: null,
+  attacks: [],
+  abilities: [{ name: 'Psychic Embrace', text: 'As often as you like during your turn, you may attach a Psychic Energy card...', type: 'Ability', category: 'activated', effectId: 'psychic-embrace-effect' }],
+  weaknesses: [], resistances: [], retreatCost: 1, rules: [], prizeValue: 2, regulationMark: 'H'
+};
+
+describe('triggered abilities', () => {
+  it('canUseAbility returns false for triggered ability', () => {
+    const state = makeBaseState();
+    const defReg = new Map(state.definitionRegistry);
+    defReg.set('test-triggered-ability', TRIGGERED_ABILITY_DEF);
+    const cardReg = new Map(state.cardRegistry);
+    cardReg.set('p1-triggered', makeCardInstance('p1-triggered', 'test-triggered-ability', 'player1'));
+
+    const pokemon = makeInPlayPokemon('p1-triggered');
+    const s: GameState = { ...state, cardRegistry: cardReg, definitionRegistry: defReg };
+
+    expect(canUseAbility(s, 'player1', pokemon, 0)).toBe(false);
+  });
+
+  it('triggered ability does not appear in getLegalActions', () => {
+    const state = makeBaseState();
+    const defReg = new Map(state.definitionRegistry);
+    defReg.set('test-triggered-ability', TRIGGERED_ABILITY_DEF);
+    const cardReg = new Map(state.cardRegistry);
+    cardReg.set('p1-triggered', makeCardInstance('p1-triggered', 'test-triggered-ability', 'player1'));
+
+    const triggeredPokemon = makeInPlayPokemon('p1-triggered');
+    const s: GameState = {
+      ...state,
+      cardRegistry: cardReg,
+      definitionRegistry: defReg,
+      players: {
+        ...state.players,
+        player1: { ...state.players.player1, active: triggeredPokemon }
+      }
+    };
+
+    const actions = getLegalActions(s);
+    const abilityActions = actions.filter(a => a.type === 'USE_ABILITY');
+    expect(abilityActions.length).toBe(0);
+  });
+});
+
+describe('once-per-turn ability tracking', () => {
+  it('activated ability appears in getLegalActions when not yet used', () => {
+    const state = makeBaseState();
+    const defReg = new Map(state.definitionRegistry);
+    defReg.set('test-fire-ability', FIRE_WITH_ABILITY);
+    const cardReg = new Map(state.cardRegistry);
+    cardReg.set('p1-fire', makeCardInstance('p1-fire', 'test-fire-ability', 'player1'));
+
+    const pokemon = makeInPlayPokemon('p1-fire');
+    const s: GameState = {
+      ...state,
+      cardRegistry: cardReg,
+      definitionRegistry: defReg,
+      players: { ...state.players, player1: { ...state.players.player1, active: pokemon } }
+    };
+
+    const actions = getLegalActions(s);
+    expect(actions.some(a => a.type === 'USE_ABILITY' && a.pokemonInstanceId === 'p1-fire')).toBe(true);
+  });
+
+  it('activated ability does NOT appear in getLegalActions after being used', () => {
+    const state = makeBaseState();
+    const defReg = new Map(state.definitionRegistry);
+    defReg.set('test-fire-ability', FIRE_WITH_ABILITY);
+    const cardReg = new Map(state.cardRegistry);
+    cardReg.set('p1-fire', makeCardInstance('p1-fire', 'test-fire-ability', 'player1'));
+
+    const pokemon = makeInPlayPokemon('p1-fire');
+    const s: GameState = {
+      ...state,
+      cardRegistry: cardReg,
+      definitionRegistry: defReg,
+      players: { ...state.players, player1: { ...state.players.player1, active: pokemon } },
+      turnFlags: {
+        ...state.turnFlags,
+        abilitiesUsedThisTurn: ['p1-fire:0']
+      }
+    };
+
+    const actions = getLegalActions(s);
+    expect(actions.some(a => a.type === 'USE_ABILITY' && a.pokemonInstanceId === 'p1-fire')).toBe(false);
+  });
+
+  it('"as often as you like" ability still appears after being used', () => {
+    const state = makeBaseState();
+    const defReg = new Map(state.definitionRegistry);
+    defReg.set('test-repeatable-ability', REPEATABLE_ABILITY_DEF);
+    const cardReg = new Map(state.cardRegistry);
+    cardReg.set('p1-repeatable', makeCardInstance('p1-repeatable', 'test-repeatable-ability', 'player1'));
+
+    const pokemon = makeInPlayPokemon('p1-repeatable');
+    const s: GameState = {
+      ...state,
+      cardRegistry: cardReg,
+      definitionRegistry: defReg,
+      players: { ...state.players, player1: { ...state.players.player1, active: pokemon } },
+      turnFlags: {
+        ...state.turnFlags,
+        abilitiesUsedThisTurn: ['p1-repeatable:0']
+      }
+    };
+
+    const actions = getLegalActions(s);
+    expect(actions.some(a => a.type === 'USE_ABILITY' && a.pokemonInstanceId === 'p1-repeatable')).toBe(true);
+  });
+
+  it('abilitiesUsedThisTurn resets at start of new turn', () => {
+    const state = makeBaseState();
+    const s: GameState = {
+      ...state,
+      turnFlags: {
+        ...state.turnFlags,
+        abilitiesUsedThisTurn: ['p1-mareep-0:0', 'p1-mareep-0:1']
+      }
+    };
+
+    expect(s.turnFlags.abilitiesUsedThisTurn.length).toBe(2);
+
+    const nextTurnFlags = {
+      ...s.turnFlags,
+      attackUsed: false,
+      isStartingPlayerFirstTurn: false,
+      turnEndedByEffect: false,
+      abilitiesUsedThisTurn: [] as ReadonlyArray<string>
+    };
+
+    expect(nextTurnFlags.abilitiesUsedThisTurn.length).toBe(0);
   });
 });

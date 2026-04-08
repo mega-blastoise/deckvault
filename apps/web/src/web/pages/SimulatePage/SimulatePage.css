@@ -1,0 +1,232 @@
+/* ============================================================
+   SimulatePage — Monte Carlo simulation tool
+   Tokens: --pico-* system (matches app patterns)
+   ============================================================ */
+
+/* ── Page header ─────────────────────────────────────────── */
+.sim-page__title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  margin: 0 0 0.375rem;
+  color: var(--pico-color);
+}
+
+.sim-page__subtitle {
+  font-size: 0.9375rem;
+  color: var(--pico-muted-color);
+  margin: 0 0 2rem;
+}
+
+/* ── Input phase layout: left decks + right sticky sidebar ── */
+.sim-page__content {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+@media (max-width: 860px) {
+  .sim-page__content {
+    grid-template-columns: 1fr;
+  }
+  .sim-page__sidebar {
+    position: static !important;
+  }
+}
+
+.sim-page__main {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.sim-page__sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  position: sticky;
+  top: 1rem;
+}
+
+/* ── Run button + hint ───────────────────────────────────── */
+.sim-page__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.sim-page__run-btn {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--pico-primary);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.625rem 1.25rem;
+  font-family: inherit;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.sim-page__run-btn:hover:not(:disabled) {
+  background: var(--pico-primary-hover);
+}
+
+.sim-page__run-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+[data-theme="nebula"] .sim-page__run-btn {
+  box-shadow: 0 2px 8px rgba(32, 129, 226, 0.3);
+}
+
+[data-theme="nebula"] .sim-page__run-btn:hover:not(:disabled) {
+  box-shadow: 0 4px 16px rgba(32, 129, 226, 0.4);
+  transform: translateY(-1px);
+}
+
+[data-theme="nebula"] .sim-page__run-btn:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 1px 4px rgba(32, 129, 226, 0.3);
+}
+
+.sim-page__hint {
+  font-size: 0.75rem;
+  color: var(--pico-muted-color);
+  margin: 0;
+  text-align: center;
+  line-height: 1.4;
+}
+
+/* ── Error banner ────────────────────────────────────────── */
+.sim-page__error-banner {
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625rem;
+}
+
+.sim-page__error-icon {
+  font-size: 0.875rem;
+  flex-shrink: 0;
+  color: var(--color-error);
+  margin-top: 1px;
+}
+
+.sim-page__error-text {
+  font-size: 0.8125rem;
+  color: var(--color-error);
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* ── Running phase ───────────────────────────────────────── */
+.sim-page__running {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
+  text-align: center;
+}
+
+/* ── Results phase ───────────────────────────────────────── */
+.sim-page__results-actions {
+  display: flex;
+  gap: 0.75rem;
+  padding: 1rem 0;
+}
+
+/* ── Replay + Matrix nav ─────────────────────────────────── */
+.sim-page__replay-nav,
+.sim-page__matrix-nav {
+  padding: 0.75rem 0;
+}
+
+.sim-page__back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: transparent;
+  border: 1px solid var(--pico-muted-border-color);
+  border-radius: 6px;
+  padding: 0.375rem 0.75rem;
+  font-family: inherit;
+  font-size: 0.875rem;
+  color: var(--pico-muted-color);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.sim-page__back-btn:hover {
+  border-color: var(--pico-primary);
+  color: var(--pico-primary);
+}
+
+.sim-page__breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 0;
+}
+
+.sim-page__breadcrumb-label {
+  font-size: 0.875rem;
+  color: var(--pico-muted-color);
+}
+
+.sim-page__drilldown-placeholder {
+  color: var(--pico-muted-color);
+  font-size: 0.875rem;
+  padding: 3rem 2rem;
+  text-align: center;
+}
+
+/* ── Results secondary action buttons ───────────────────── */
+.sim-page__results-actions .button--secondary {
+  display: inline-flex;
+  align-items: center;
+  background: var(--surface-hover);
+  border: 1px solid var(--pico-muted-border-color);
+  border-radius: 8px;
+  padding: 0.5rem 1rem;
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--pico-color);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.sim-page__results-actions .button--secondary:hover {
+  border-color: var(--pico-primary);
+}
+
+.sim-page__results-actions .button--primary {
+  display: inline-flex;
+  align-items: center;
+  background: var(--pico-primary);
+  border: none;
+  border-radius: 8px;
+  padding: 0.5rem 1rem;
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.sim-page__results-actions .button--primary:hover {
+  background: var(--pico-primary-hover);
+}

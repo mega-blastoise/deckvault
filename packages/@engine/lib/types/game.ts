@@ -69,6 +69,10 @@ export interface TurnFlags {
   // Set by Trainer effects that end the turn immediately (e.g. Boxed Order, Katy).
   // Checked after resolveEffect — if true, skip remaining main phase and go to endTurn.
   readonly turnEndedByEffect: boolean;
+  // Once-per-turn tracking: each entry is "instanceId:abilityIndex".
+  // Reset to [] at the start of each turn. Repeatable abilities (e.g. Psychic Embrace)
+  // are still recorded here but are not gated by this list.
+  readonly abilitiesUsedThisTurn: ReadonlyArray<string>;
   // Setup-phase tracking (zeroed when setup completes):
   readonly mulliganCounts: Readonly<Record<PlayerId, number>>;
   readonly extraDrawsRemaining: Readonly<Record<PlayerId, number>>;

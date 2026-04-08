@@ -29,6 +29,8 @@ export function canUseAbility(
   const ability = def.abilities[abilityIndex];
   if (!ability) return false;
 
+  if (ability.category === 'passive' || ability.category === 'triggered') return false;
+
   const hasAbilityLock = state.temporalEffects.some(
     e => e.type === 'ability_lock' &&
       (e.targetInstanceId === null || e.targetInstanceId === pokemon.instanceId)

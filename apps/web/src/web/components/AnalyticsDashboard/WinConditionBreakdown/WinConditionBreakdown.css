@@ -1,0 +1,46 @@
+.win-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.win-breakdown__bar {
+  display: block;
+  width: 100%;
+  height: 56px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.win-breakdown__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm) var(--space-md);
+}
+
+.win-breakdown__legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.win-breakdown__legend-swatch {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.win-breakdown__legend-pct {
+  font-weight: 600;
+  color: var(--text-primary, #f9fafb);
+}
+
+.win-breakdown--empty .win-breakdown__empty {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  text-align: center;
+}

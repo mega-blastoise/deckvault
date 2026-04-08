@@ -13,6 +13,14 @@ import type {
   WeaknessDefinition
 } from './types/card';
 import { ENERGY_TYPES } from './types/card';
+import {
+  ROTATION_DATE,
+  PRE_ROTATION_MARKS,
+  POST_ROTATION_MARKS,
+  getLegalRegulationMarks
+} from './adapter-format';
+
+export { ROTATION_DATE, PRE_ROTATION_MARKS, POST_ROTATION_MARKS, getLegalRegulationMarks };
 
 // Raw row shape from the pokemon_cards SQLite table.
 // JSON columns are stored as stringified arrays/objects.
@@ -35,16 +43,6 @@ export interface SqliteCardRow {
   readonly set_id: string;
   readonly regulation_mark: string | null;
   readonly legalities: string | null;
-}
-
-// --- Format configuration ---
-
-export const ROTATION_DATE = new Date('2026-04-10');
-export const PRE_ROTATION_MARKS = ['G', 'H', 'I'] as const;
-export const POST_ROTATION_MARKS = ['H', 'I', 'J'] as const;
-
-export function getLegalRegulationMarks(formatDate: Date): ReadonlyArray<string> {
-  return formatDate >= ROTATION_DATE ? POST_ROTATION_MARKS : PRE_ROTATION_MARKS;
 }
 
 export function isStandardLegal(row: SqliteCardRow, formatDate: Date): boolean {
@@ -180,6 +178,25 @@ function derivePrizeValue(subtypes: ReadonlyArray<string>): 1 | 2 | 3 {
   return 1;
 }
 
+// Passive (continuous modifier) ability names — never offered as player actions.
+const PASSIVE_ABILITY_NAMES: ReadonlySet<string> = new Set([
+  'Seasoned Skill',   // Bloodmoon Ursaluna ex: attacks cost [C] less per opponent prize taken
+  'Skyliner',         // Latias ex: Basic Pokemon have no retreat cost
+  'Diamond Coat',     // Duraludon ex: takes 30 less damage
+  'Oceanic Curse',    // Wo-Chien ex: while Active, opponent can't play Items/Tools
+  'Damp',             // Politoed: Pokemon lose self-KO abilities
+  'Festival Lead',    // Alcremie ex: if Festival Grounds in play, attack twice
+  'Fairy Zone'        // Sylveon ex: opponent's Dragon weakness becomes Psychic
+]);
+
+// Triggered ability names — fire automatically on game events, never a main-phase action.
+const TRIGGERED_ABILITY_NAMES: ReadonlySet<string> = new Set([
+  'Flying Entry',     // Pidgeot ex: when played from hand to Bench
+  'Punk Up',          // Toxtricity: when evolved
+  'Battle-Hardened',  // Garchomp ex: when played from hand to Bench
+  'Freezing Shroud'   // Frosmoth: during Pokemon Checkup
+]);
+
 // --- Per-supertype adapters ---
 
 interface RawAttack {
@@ -235,6 +252,9 @@ export function adaptPokemonRow(row: SqliteCardRow): PokemonCardDefinition {
       name: a.name ?? '',
       text: a.text ?? '',
       type: 'Ability' as const,
+      category: PASSIVE_ABILITY_NAMES.has(a.name ?? '') ? 'passive' as const
+               : TRIGGERED_ABILITY_NAMES.has(a.name ?? '') ? 'triggered' as const
+               : 'activated' as const,
       effectId: `${row.id}:ability:${a.name ?? ''}`
     }));
 

@@ -6,6 +6,11 @@ try {
     browser({
       entrypoints: ['src/web/browser/browser.tsx'],
       naming: { entry: 'www/[name].[hash].[ext]' }
+    }),
+    browser({
+      entrypoints: ['src/workers/simulation.worker.ts'],
+      outdir: './out',
+      naming: { entry: 'www/workers/[name].[ext]' }
     })
   );
   report_outputs(outputs);

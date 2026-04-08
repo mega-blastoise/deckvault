@@ -1,0 +1,406 @@
+/* ============================================================
+   DeckInputPanel — deck selection for the Simulate page
+   Tokens: --pico-* system + direct rem values (matches app patterns)
+   ============================================================ */
+
+.deck-input-panel {
+  background: var(--pico-card-background-color);
+  border: 1px solid var(--pico-muted-border-color);
+  border-radius: 14px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+[data-theme="nebula"] .deck-input-panel {
+  background: rgba(18, 18, 26, 0.65);
+  backdrop-filter: blur(10px) saturate(1.3);
+  -webkit-backdrop-filter: blur(10px) saturate(1.3);
+  border-color: rgba(255, 255, 255, 0.07);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+/* ── Header ─────────────────────────────────────────────── */
+.deck-input-panel__header {
+  padding: 1rem 1.25rem 0.75rem;
+}
+
+.deck-input-panel__label {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--pico-muted-color);
+  margin: 0;
+}
+
+/* ── Resolved state (deck selected) ─────────────────────── */
+.deck-input-panel__resolved-state {
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.deck-input-panel__resolved-check {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-success);
+}
+
+.deck-input-panel__resolved-deck-name {
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--pico-color);
+  margin: 0.25rem 0 0;
+  line-height: 1.3;
+}
+
+.deck-input-panel__resolved-deck-meta {
+  font-size: 0.8125rem;
+  color: var(--pico-muted-color);
+  margin: 0;
+}
+
+.deck-input-panel__change-btn {
+  align-self: flex-start;
+  margin-top: 0.75rem;
+  background: transparent;
+  border: 1px solid var(--pico-muted-border-color);
+  border-radius: 6px;
+  padding: 0.375rem 0.875rem;
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--pico-muted-color);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.deck-input-panel__change-btn:hover {
+  border-color: var(--pico-primary);
+  color: var(--pico-primary);
+}
+
+/* ── Tab bar ─────────────────────────────────────────────── */
+.deck-input-panel__tabs {
+  display: flex;
+  padding: 0 0.75rem;
+  border-bottom: 1px solid var(--pico-muted-border-color);
+  gap: 0;
+}
+
+.deck-input-panel__tab {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  padding: 0.625rem 0.75rem;
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--pico-muted-color);
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+  white-space: nowrap;
+}
+
+.deck-input-panel__tab:hover {
+  color: var(--pico-color);
+}
+
+.deck-input-panel__tab--active {
+  color: var(--pico-primary);
+  border-bottom-color: var(--pico-primary);
+  font-weight: 600;
+}
+
+/* ── Content area ────────────────────────────────────────── */
+.deck-input-panel__content {
+  min-height: 180px;
+  padding: 0.5rem 0;
+}
+
+.deck-input-panel__loading,
+.deck-input-panel__error,
+.deck-input-panel__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 2rem 1.25rem;
+  color: var(--pico-muted-color);
+  font-size: 0.875rem;
+  text-align: center;
+  min-height: 180px;
+}
+
+.deck-input-panel__error {
+  color: var(--color-error);
+}
+
+.deck-input-panel__auth-prompt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.875rem;
+  padding: 2rem 1.25rem;
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--pico-muted-color);
+}
+
+/* ── Saved deck list ─────────────────────────────────────── */
+.deck-input-panel__deck-list {
+  list-style: none;
+  margin: 0;
+  padding: 0.375rem 0;
+  display: flex;
+  flex-direction: column;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.deck-input-panel__deck-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 1.25rem;
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.deck-input-panel__deck-row:hover {
+  background: var(--surface-hover);
+}
+
+.deck-input-panel__deck-thumb {
+  width: 32px;
+  height: 44px;
+  object-fit: contain;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.deck-input-panel__deck-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.deck-input-panel__deck-name {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--pico-color);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.deck-input-panel__deck-count {
+  font-size: 0.75rem;
+  color: var(--pico-muted-color);
+}
+
+/* ── Paste input ─────────────────────────────────────────── */
+.deck-input-panel__paste {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+}
+
+.deck-input-panel__textarea {
+  width: 100%;
+  font-family: 'JetBrains Mono', 'Space Mono', monospace;
+  font-size: 0.75rem;
+  padding: 0.625rem;
+  border: 1px solid var(--pico-muted-border-color);
+  border-radius: 8px;
+  background: var(--bg-sunken);
+  color: var(--pico-color);
+  resize: vertical;
+  box-sizing: border-box;
+  min-height: 120px;
+  line-height: 1.5;
+}
+
+.deck-input-panel__textarea:focus {
+  outline: none;
+  border-color: var(--pico-primary);
+}
+
+.deck-input-panel__parse-status {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.deck-input-panel__count {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.deck-input-panel__count--valid {
+  color: var(--color-success);
+}
+
+.deck-input-panel__count--invalid {
+  color: var(--color-error);
+}
+
+.deck-input-panel__parse-errors {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.deck-input-panel__parse-error {
+  font-size: 0.75rem;
+  color: var(--color-error);
+}
+
+.deck-input-panel__card-preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.deck-input-panel__card-pill {
+  font-size: 0.75rem;
+  padding: 2px 6px;
+  border-radius: 9999px;
+  border: 1px solid transparent;
+}
+
+.deck-input-panel__card-pill--ok {
+  background: rgba(34, 197, 94, 0.12);
+  border-color: rgba(34, 197, 94, 0.3);
+  color: var(--color-success);
+}
+
+.deck-input-panel__card-pill--err {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: var(--color-error);
+}
+
+/* ── Meta deck full grid (player deck picker) ────────────── */
+.deck-input-panel__meta-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.75rem;
+  padding: 0.75rem 1.25rem;
+  max-height: 380px;
+  overflow-y: auto;
+}
+
+.deck-input-panel__meta-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  padding: 0.875rem;
+  border: 1px solid var(--pico-muted-border-color);
+  border-radius: 10px;
+  background: var(--pico-background-color);
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  transition: background 0.12s ease, border-color 0.12s ease, transform 0.15s ease;
+}
+
+.deck-input-panel__meta-card:hover {
+  background: var(--surface-hover);
+  border-color: var(--pico-primary);
+  transform: translateY(-1px);
+}
+
+.deck-input-panel__meta-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.deck-input-panel__meta-name {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--pico-color);
+  line-height: 1.3;
+}
+
+.deck-input-panel__meta-event,
+.deck-input-panel__meta-event-date {
+  font-size: 0.75rem;
+  color: var(--pico-muted-color);
+  line-height: 1.3;
+}
+
+/* ── Meta deck compact list (opponent picker) ────────────── */
+.deck-input-panel__meta-list {
+  list-style: none;
+  margin: 0;
+  padding: 0.375rem 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.deck-input-panel__meta-item {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.5rem 1.25rem;
+  background: none;
+  border: none;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--pico-color);
+  transition: background 0.12s ease;
+}
+
+.deck-input-panel__meta-item:hover {
+  background: var(--surface-hover);
+}
+
+.deck-input-panel__meta-item-name {
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Tier badge (shared) ─────────────────────────────────── */
+.deck-input-panel__tier-badge {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.5rem;
+  height: 1.25rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  padding: 0 0.3125rem;
+  border-radius: 4px;
+  border: 1px solid;
+  line-height: 1;
+  letter-spacing: 0.02em;
+}
+
+.deck-input-panel__tier-badge--s { background: rgba(245,158,11,0.2); color: #f59e0b; border-color: rgba(245,158,11,0.4); }
+.deck-input-panel__tier-badge--a { background: rgba(34,197,94,0.2);  color: #22c55e; border-color: rgba(34,197,94,0.4); }
+.deck-input-panel__tier-badge--b { background: rgba(59,130,246,0.2); color: #3b82f6; border-color: rgba(59,130,246,0.4); }
+.deck-input-panel__tier-badge--c { background: rgba(139,92,246,0.2); color: #8b5cf6; border-color: rgba(139,92,246,0.4); }

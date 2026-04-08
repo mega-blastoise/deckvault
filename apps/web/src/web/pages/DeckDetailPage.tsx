@@ -287,6 +287,14 @@ function DeckDetailPage() {
               View Analytics
             </Link>
           )}
+          {deck.cards.length > 0 && (
+            <Link
+              to={`${ROUTES.SIMULATE}?deckId=${deckId}&source=saved`}
+              className="button button--primary"
+            >
+              Test This Deck
+            </Link>
+          )}
           {validation.isValid && isOwner && (
             <button
               type="button"

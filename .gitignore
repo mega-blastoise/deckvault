@@ -52,8 +52,11 @@ chat.sh
 SESSION_CONTEXT.md
 
 # Debug screenshots and documents (root-level)
+
 /*.png
 /*.pdf
+
+!dv-simulation.png
 
 apps/bot-cli
 apps/bot-cli-auth-server

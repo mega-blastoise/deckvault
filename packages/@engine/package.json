@@ -9,6 +9,11 @@
       "types": "./out/lib/index.d.ts",
       "default": "./out/lib/index.js"
     },
+    "./browser": {
+      "import": "./out/lib/browser.js",
+      "types": "./out/lib/browser.d.ts",
+      "default": "./out/lib/browser.js"
+    },
     "./types": {
       "import": "./out/lib/types/index.js",
       "types": "./out/lib/types/index.d.ts",

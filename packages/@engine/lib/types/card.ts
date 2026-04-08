@@ -29,6 +29,7 @@ export interface AbilityDefinition {
   readonly name: string;
   readonly text: string;
   readonly type: 'Ability';
+  readonly category: 'activated' | 'passive' | 'triggered';
   readonly effectId: string;
 }
 

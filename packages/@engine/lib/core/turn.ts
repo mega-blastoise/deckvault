@@ -99,7 +99,8 @@ export function startTurn(state: GameState): GameState {
       ...s.turnFlags,
       attackUsed: false,
       isStartingPlayerFirstTurn,
-      turnEndedByEffect: false
+      turnEndedByEffect: false,
+      abilitiesUsedThisTurn: []
     },
     eventLog: [...s.eventLog, { type: 'TURN_STARTED', player: s.activePlayer, turnNumber: s.turnNumber }]
   };
@@ -359,6 +360,12 @@ function getMainActions(state: GameState): ReadonlyArray<PlayerAction> {
     const def = state.definitionRegistry.get(instance.definitionId);
     if (!def || def.cardType !== 'Pokemon') continue;
     for (let i = 0; i < def.abilities.length; i++) {
+      const ability = def.abilities[i]!;
+      if (ability.category === 'passive' || ability.category === 'triggered') continue;
+      const usedKey = `${pokemon.instanceId}:${i}`;
+      const alreadyUsed = flags.abilitiesUsedThisTurn.includes(usedKey);
+      const isRepeatable = ability.text.toLowerCase().includes('as often as you like');
+      if (alreadyUsed && !isRepeatable) continue;
       if (canUseAbility(state, state.activePlayer, pokemon, i)) {
         actions.push({ type: 'USE_ABILITY', pokemonInstanceId: pokemon.instanceId, abilityIndex: i });
       }
@@ -1123,7 +1130,16 @@ function applyMainAction(state: GameState, action: PlayerAction): GameResult<Gam
       targets: [action.pokemonInstanceId]
     });
     if (!effectResult.ok) return effectResult;
-    return ok(effectResult.value);
+
+    const abilityKey = `${action.pokemonInstanceId}:${action.abilityIndex}`;
+    const finalState: GameState = {
+      ...effectResult.value,
+      turnFlags: {
+        ...effectResult.value.turnFlags,
+        abilitiesUsedThisTurn: [...effectResult.value.turnFlags.abilitiesUsedThisTurn, abilityKey]
+      }
+    };
+    return ok(finalState);
   }
 
   if (action.type === 'ATTACK') {

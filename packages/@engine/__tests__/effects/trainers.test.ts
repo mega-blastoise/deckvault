@@ -158,6 +158,8 @@ function makeBaseState(overrides: Partial<GameState> = {}): GameState {
     turnFlags: {
       attackUsed: false,
       isStartingPlayerFirstTurn: false,
+      turnEndedByEffect: false,
+      abilitiesUsedThisTurn: [],
       mulliganCounts: { player1: 0, player2: 0 },
       extraDrawsRemaining: { player1: 0, player2: 0 },
       setupBenchSelected: { player1: false, player2: false }

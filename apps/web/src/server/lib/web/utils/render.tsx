@@ -2,6 +2,8 @@ import React from 'react';
 import { renderToReadableStream, renderToString } from 'react-dom/server.bun';
 import { createStaticHandler, createStaticRouter } from 'react-router';
 
+import { generateCsrfToken, setCsrfCookie } from '../../csrf';
+
 import { getBrowserCssSheet, getBrowserJavascriptBundle } from './fs';
 
 import { App, type AppProps, withDocument } from '@/web/App';
@@ -40,6 +42,7 @@ export async function renderReactApplication(request: Request) {
     />,
     {
       bootstrapScriptContent: `
+        window.FEATURE_SIMULATE = ${process.env.FEATURE_SIMULATE === 'true' ? 'true' : 'false'};
         window.__INITIAL_STATE__ = ${JSON.stringify({})};
         const css = document.createElement('link');
         css.rel = 'stylesheet';
@@ -50,7 +53,14 @@ export async function renderReactApplication(request: Request) {
     }
   );
 
-  return new Response(stream, {
+  const baseResponse = new Response(stream, {
     headers: { 'Content-Type': 'text/html; charset=utf-8' }
   });
+
+  const cookieHeader = request.headers.get('cookie') ?? '';
+  const hasCsrfCookie = cookieHeader.split(';').some(c => c.trim().startsWith('csrf_token='));
+
+  if (hasCsrfCookie) return baseResponse;
+
+  return setCsrfCookie(baseResponse, generateCsrfToken());
 }
