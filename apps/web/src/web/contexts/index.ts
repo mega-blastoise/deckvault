@@ -9,3 +9,6 @@ export type { DeckContextValue } from './Deck';
 
 export { ThemeProvider, useTheme, useThemeOptional, FLAVORS, FLAVOR_META } from './Theme';
 export type { ThemeContextValue, CatppuccinFlavor } from './Theme';
+
+export { ToastProvider, useToast } from './Toast';
+export type { ToastKind } from './Toast';

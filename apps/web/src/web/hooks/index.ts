@@ -22,3 +22,7 @@ export { useSets } from './useSets';
 export { useSetCards } from './useSetCards';
 export { useUseCaseCards } from './useUseCaseCards';
 export { useScaffold } from './useScaffold';
+export { useSimulation } from './useSimulation';
+export type { UseSimulationOptions, UseSimulationReturn, SimulationStatus } from './useSimulation';
+export { useMatchupMatrix } from './useMatchupMatrix';
+export type { UseMatchupMatrixReturn, MatchupMatrixStatus } from './useMatchupMatrix';

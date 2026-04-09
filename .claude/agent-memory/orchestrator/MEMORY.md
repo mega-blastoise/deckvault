@@ -1,0 +1,2 @@
+- [Ability Catalog](ability_catalog.md) — Complete passive/activated/triggered classification for all abilities in 10 meta decks
+- [Engine Simulation Findings](engine_simulation_findings.md) — Critical flaws: AI never attacks, no bench dev, deck-out loops, broken post-KO flow

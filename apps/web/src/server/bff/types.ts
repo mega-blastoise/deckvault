@@ -23,6 +23,7 @@ export interface BffRoute {
   pattern: RegExp;
   paramNames: string[];
   handler: BffHandler;
+  method?: 'GET' | 'POST';
 }
 
 /**

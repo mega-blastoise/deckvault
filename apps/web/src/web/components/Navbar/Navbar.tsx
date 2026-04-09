@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useLocation } from 'react-router';
-import { Layers, Search, LogIn, TrendingUp, MapPin, Plus, Grid3x3, CalendarDays, Trophy, Shield } from 'lucide-react';
+import { Layers, Search, LogIn, TrendingUp, Plus, Shield, Grid3x3 } from 'lucide-react';
 import { ROUTES } from '@/web/routes';
 import { useCollectionQuery } from '@/web/hooks/useCollectionQuery';
 import { useDecks } from '@/web/contexts/Deck';
@@ -9,23 +9,25 @@ import { ThemeToggle } from '@/web/components/ThemeToggle';
 import { ReportMatchModal } from '@/web/components/ReportMatchModal';
 import './Navbar.css';
 
-function PokeballIcon({ size = 20 }: { size?: number }) {
+function DeckVaultIcon({ size = 20 }: { size?: number }) {
   return (
     <svg
       className="navbar__logo-icon"
       width={size}
       height={size}
-      viewBox="0 0 100 100"
+      viewBox="0 0 24 24"
       aria-hidden="true"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
-      <circle cx="50" cy="50" r="47" fill="#f5f5f5"/>
-      <path d="M3,50 A47,47 0 0,1 97,50 Z" fill="#cc2222"/>
-      <circle cx="50" cy="50" r="47" fill="none" stroke="currentColor" strokeWidth="6"/>
-      <rect x="3" y="44" width="94" height="12" fill="currentColor"/>
-      <circle cx="50" cy="50" r="13" fill="currentColor"/>
-      <circle cx="50" cy="50" r="9" fill="#f5f5f5"/>
+      {/* Bottom card */}
+      <rect x="3" y="8" width="16" height="12" rx="2" fill="currentColor" opacity="0.3" />
+      {/* Middle card */}
+      <rect x="2" y="5" width="16" height="12" rx="2" fill="currentColor" opacity="0.6" />
+      {/* Top card */}
+      <rect x="1" y="2" width="16" height="12" rx="2" fill="currentColor" />
+      {/* Highlight stripe */}
+      <rect x="4" y="5" width="7" height="1.5" rx="0.75" fill="white" opacity="0.4" />
     </svg>
   );
 }
@@ -56,7 +58,7 @@ export function Navbar() {
     <nav className="navbar">
       <div className="navbar__container">
         <Link to="/" className="navbar__logo">
-          <PokeballIcon size={22} />
+          <DeckVaultIcon size={22} />
           <span className="navbar__logo-text">DeckVault</span>
         </Link>
 
@@ -92,29 +94,6 @@ export function Navbar() {
             <TrendingUp size={18} />
             <span>Meta</span>
           </Link>
-          <Link
-            to={ROUTES.LOCAL_META}
-            className={`navbar__link ${isActive(ROUTES.LOCAL_META) ? 'navbar__link--active' : ''}`}
-          >
-            <MapPin size={18} />
-            <span>Local Meta</span>
-          </Link>
-          <Link
-            to={ROUTES.ROTATION}
-            className={`navbar__link ${isActive(ROUTES.ROTATION) ? 'navbar__link--active' : ''}`}
-          >
-            <CalendarDays size={18} />
-            <span>Rotation</span>
-          </Link>
-          {isAuthenticated && (
-            <Link
-              to={ROUTES.CP}
-              className={`navbar__link ${isActive(ROUTES.CP) ? 'navbar__link--active' : ''}`}
-            >
-              <Trophy size={18} />
-              <span>CP</span>
-            </Link>
-          )}
         </div>
 
         <div className="navbar__actions">

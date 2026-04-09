@@ -27,5 +27,6 @@ export const ROUTES = {
   ROTATION: '/rotation',
   CP: '/cp',
   SCAFFOLD: '/scaffold',
-  ADMIN: '/admin'
+  ADMIN: '/admin',
+  SIMULATE: '/simulate'
 } as const;

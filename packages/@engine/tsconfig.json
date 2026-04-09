@@ -1,0 +1,17 @@
+{
+  "extends": "@pokemon/configs/typescript/base.tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ESNext"],
+    "rootDir": "./",
+    "outDir": "./out",
+    "noEmit": false,
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "types": ["bun", "node"],
+    "typeRoots": ["node_modules/@types", "../../node_modules/@types"],
+    "noImplicitReturns": true,
+    "preserveSymlinks": true
+  },
+  "include": ["lib", "smoke.ts"],
+  "exclude": ["node_modules", "out"]
+}

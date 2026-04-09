@@ -25,6 +25,8 @@ import { CpTrackerPage } from '../pages/CpTrackerPage';
 import { ScaffolderPage } from '../pages/ScaffolderPage';
 import { AdminPage } from '../pages/AdminPage';
 import { AdminRoute } from '../components/AdminRoute';
+import { FeatureRoute } from '../components/FeatureRoute';
+import { SimulatePage } from '../pages/SimulatePage';
 
 export const REACT_ROUTER_ROUTES: RouteObject[] = [
   // Standalone routes — no Navbar, no AppLayout
@@ -128,6 +130,14 @@ export const REACT_ROUTER_ROUTES: RouteObject[] = [
       {
         path: '/scaffold',
         element: <ScaffolderPage />
+      },
+      {
+        path: '/simulate',
+        element: (
+          <FeatureRoute feature="SIMULATE">
+            <SimulatePage />
+          </FeatureRoute>
+        )
       },
       {
         path: '/admin',
