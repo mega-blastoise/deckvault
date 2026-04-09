@@ -284,7 +284,7 @@ function DeckDetailPageViewComponent({
               View Analytics
             </Link>
           )}
-          {deck.cards.length > 0 && (
+          {false && deck?.cards?.length && deck?.cards?.length! > 0 && (
             <Link
               to={`${ROUTES.SIMULATE}?deckId=${deckId}&source=saved`}
               className="button button--primary"
