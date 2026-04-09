@@ -1,36 +1,35 @@
 import fs from 'fs/promises';
 import path from 'path';
 
-export async function getBrowserJavascriptBundle() {
+type AssetMap = { js: string | null; css: string | null };
+
+let cachedAssets: AssetMap | null = null;
+
+async function resolveAssets(): Promise<AssetMap> {
+  if (cachedAssets) return cachedAssets;
   const assetsDir = path.resolve(process.cwd(), 'out', 'www');
   const files = await fs.readdir(assetsDir, {
     encoding: 'utf-8',
     recursive: true,
     withFileTypes: true
   });
-  const file = files.find(
+  const jsFile = files.find(
     (f) => f.isFile() && f.name.startsWith('browser') && f.name.endsWith('.js')
   );
-  if (file) {
-    return path.join('/www', file.name);
-  }
-
-  return null;
-}
-
-export async function getBrowserCssSheet() {
-  const assetsDir = path.resolve(process.cwd(), 'out', 'www');
-  const files = await fs.readdir(assetsDir, {
-    encoding: 'utf-8',
-    recursive: true,
-    withFileTypes: true
-  });
-  const file = files.find(
+  const cssFile = files.find(
     (f) => f.isFile() && f.name.startsWith('browser') && f.name.endsWith('.css')
   );
-  if (file) {
-    return path.join('/www', file.name);
-  }
+  cachedAssets = {
+    js: jsFile ? path.join('/www', jsFile.name) : null,
+    css: cssFile ? path.join('/www', cssFile.name) : null
+  };
+  return cachedAssets;
+}
 
-  return null;
+export async function getBrowserJavascriptBundle(): Promise<string | null> {
+  return (await resolveAssets()).js;
+}
+
+export async function getBrowserCssSheet(): Promise<string | null> {
+  return (await resolveAssets()).css;
 }

@@ -1,81 +1,25 @@
-import React, { useState, useCallback } from 'react';
+import React from 'react';
 import { Link } from 'react-router';
 import { Layers, ChevronLeft, ChevronRight } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
-import { ROUTES } from '../routes';
-import { useFadeIn } from '../motion/hooks/useFadeIn';
-import type { DeckFormat } from '../../types/deck';
+import { ROUTES } from '@/web/routes';
+import { pipeline } from '../../utils/pipeline';
+import type { DeckFormat } from '../../../types/deck';
+import type { DeckBrowsePageViewProps } from './types';
 
-interface BrowseDeck {
-  id: string;
-  name: string;
-  description?: string;
-  format: string;
-  coverCardId?: string;
-  cardCount: number;
-  updatedAt: string;
-  owner: {
-    name: string;
-    avatarUrl: string | null;
-  };
-}
+const FORMAT_FILTERS = ['all', 'standard', 'expanded', 'unlimited'] as const;
 
-interface BrowseResponse {
-  data: BrowseDeck[];
-  pagination: { page: number; limit: number; total: number };
-}
-
-async function fetchBrowseDecks(params: {
-  page: number;
-  limit: number;
-  format?: string;
-  q?: string;
-}): Promise<BrowseResponse> {
-  const searchParams = new URLSearchParams();
-  searchParams.set('page', String(params.page));
-  searchParams.set('limit', String(params.limit));
-  if (params.format) searchParams.set('format', params.format);
-  if (params.q) searchParams.set('q', params.q);
-
-  const res = await fetch(`/api/v1/decks/browse?${searchParams}`, {
-    credentials: 'include'
-  });
-  if (!res.ok) throw new Error('Failed to fetch decks');
-  return res.json();
-}
-
-function DeckBrowsePage() {
-  const [page, setPage] = useState(1);
-  const [formatFilter, setFormatFilter] = useState<DeckFormat | 'all'>('all');
-  const [searchQuery, setSearchQuery] = useState('');
-
-  const { ref: headerRef } = useFadeIn({ y: 20, duration: 0.4 });
-
-  const { data, isLoading } = useQuery({
-    queryKey: ['decks', 'browse', page, formatFilter, searchQuery],
-    queryFn: () =>
-      fetchBrowseDecks({
-        page,
-        limit: 20,
-        format: formatFilter === 'all' ? undefined : formatFilter,
-        q: searchQuery || undefined
-      })
-  });
-
-  const decks = data?.data ?? [];
-  const pagination = data?.pagination;
-  const totalPages = pagination
-    ? Math.ceil(pagination.total / pagination.limit)
-    : 0;
-
-  const handleSearch = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      setSearchQuery(e.target.value);
-      setPage(1);
-    },
-    []
-  );
-
+function DeckBrowsePageViewComponent({
+  headerRef,
+  page,
+  formatFilter,
+  searchQuery,
+  decks,
+  isLoading,
+  totalPages,
+  onSearch,
+  onFormatFilterChange,
+  onPageChange
+}: DeckBrowsePageViewProps) {
   return (
     <div className="page decks-browse-page">
       <div ref={headerRef} className="page__header">
@@ -89,19 +33,16 @@ function DeckBrowsePage() {
             type="text"
             placeholder="Search decks by name..."
             value={searchQuery}
-            onChange={handleSearch}
+            onChange={onSearch}
           />
         </div>
         <div className="decks-page__format-filter">
-          {(['all', 'standard', 'expanded', 'unlimited'] as const).map((f) => (
+          {FORMAT_FILTERS.map((f) => (
             <button
               key={f}
               type="button"
               className={`decks-page__filter-btn ${formatFilter === f ? 'decks-page__filter-btn--active' : ''}`}
-              onClick={() => {
-                setFormatFilter(f);
-                setPage(1);
-              }}
+              onClick={() => onFormatFilterChange(f as DeckFormat | 'all')}
             >
               {f === 'all' ? 'All' : f.charAt(0).toUpperCase() + f.slice(1)}
             </button>
@@ -171,7 +112,7 @@ function DeckBrowsePage() {
                 type="button"
                 className="button button--secondary"
                 disabled={page <= 1}
-                onClick={() => setPage((p) => p - 1)}
+                onClick={() => onPageChange((p) => p - 1)}
               >
                 <ChevronLeft size={16} />
               </button>
@@ -182,7 +123,7 @@ function DeckBrowsePage() {
                 type="button"
                 className="button button--secondary"
                 disabled={page >= totalPages}
-                onClick={() => setPage((p) => p + 1)}
+                onClick={() => onPageChange((p) => p + 1)}
               >
                 <ChevronRight size={16} />
               </button>
@@ -194,4 +135,4 @@ function DeckBrowsePage() {
   );
 }
 
-export default DeckBrowsePage;
+export const DeckBrowsePageView = pipeline(React.memo)(DeckBrowsePageViewComponent);

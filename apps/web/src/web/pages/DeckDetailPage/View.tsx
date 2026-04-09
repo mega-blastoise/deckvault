@@ -1,20 +1,61 @@
-import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router';
+import React, { use, useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { Link } from 'react-router';
 import { Layers, Printer } from 'lucide-react';
-import { exportToPtcgl } from '../lib/ptcgl-codec';
-import { useDeckQuery } from '../hooks/useDeckQuery';
-import { useDeckMutations } from '../hooks/useDeckMutations';
-import { useAuth } from '../contexts/Auth';
-import { Modal } from '../components/Modal';
-import { Badge } from '../components/Badge';
-import { DeckValidation } from '../components/DeckValidation';
-import { DeckPrintView } from '../components/DeckPrintView';
-import { DeckVersionHistory } from '../components/DeckVersionHistory';
-import { ROUTES } from '../routes';
-import { FORMAT_NAMES } from '../../types/deck';
-import type { DeckCard, DeckValidation as DeckValidationType } from '../../types/deck';
+import { exportToPtcgl } from '../../lib/ptcgl-codec';
+import { Modal } from '../../components/Modal';
+import { Badge } from '../../components/Badge';
+import { DeckValidation } from '../../components/DeckValidation';
+import { DeckPrintView } from '../../components/DeckPrintView';
+import { DeckVersionHistory } from '../../components/DeckVersionHistory';
+import { ROUTES } from '../../routes';
+import { FORMAT_NAMES } from '../../../types/deck';
+import { pipeline } from '../../utils/pipeline';
+import type { Deck, DeckCard, DeckValidation as DeckValidationType } from '../../../types/deck';
+import type { DeckDetailPageViewProps } from './types';
 
 type DeckTab = 'overview' | 'history';
+
+function buildValidation(cards: DeckCard[]): DeckValidationType {
+  const breakdown = { pokemon: 0, trainer: 0, energy: 0, basicPokemon: 0 };
+  let totalCards = 0;
+
+  for (const dc of cards) {
+    totalCards += dc.quantity;
+    const st = dc.card.supertype;
+    if (st === 'Pok\u00E9mon') {
+      breakdown.pokemon += dc.quantity;
+      if (dc.card.subtypes?.includes('Basic')) {
+        breakdown.basicPokemon += dc.quantity;
+      }
+    } else if (st === 'Trainer') {
+      breakdown.trainer += dc.quantity;
+    } else if (st === 'Energy') {
+      breakdown.energy += dc.quantity;
+    }
+  }
+
+  const errors = [];
+  if (totalCards !== 60) {
+    errors.push({
+      code: 'INVALID_DECK_SIZE',
+      message: `Deck must contain exactly 60 cards (currently ${totalCards})`
+    });
+  }
+  if (breakdown.basicPokemon === 0 && breakdown.pokemon > 0) {
+    errors.push({
+      code: 'NO_BASIC_POKEMON',
+      message: 'Deck must contain at least 1 Basic Pok\u00E9mon'
+    });
+  }
+
+  return {
+    isValid: errors.length === 0,
+    totalCards,
+    errors,
+    warnings: [],
+    breakdown
+  };
+}
 
 function TiltCard({ card, quantity, onClick }: { card: DeckCard['card']; quantity: number; onClick?: () => void }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -78,54 +119,13 @@ function TiltCard({ card, quantity, onClick }: { card: DeckCard['card']; quantit
   );
 }
 
-function buildValidation(cards: DeckCard[]): DeckValidationType {
-  const breakdown = { pokemon: 0, trainer: 0, energy: 0, basicPokemon: 0 };
-  let totalCards = 0;
-
-  for (const dc of cards) {
-    totalCards += dc.quantity;
-    const st = dc.card.supertype;
-    if (st === 'Pok\u00E9mon') {
-      breakdown.pokemon += dc.quantity;
-      if (dc.card.subtypes?.includes('Basic')) {
-        breakdown.basicPokemon += dc.quantity;
-      }
-    } else if (st === 'Trainer') {
-      breakdown.trainer += dc.quantity;
-    } else if (st === 'Energy') {
-      breakdown.energy += dc.quantity;
-    }
-  }
-
-  const errors = [];
-  if (totalCards !== 60) {
-    errors.push({
-      code: 'INVALID_DECK_SIZE',
-      message: `Deck must contain exactly 60 cards (currently ${totalCards})`
-    });
-  }
-  if (breakdown.basicPokemon === 0 && breakdown.pokemon > 0) {
-    errors.push({
-      code: 'NO_BASIC_POKEMON',
-      message: 'Deck must contain at least 1 Basic Pok\u00E9mon'
-    });
-  }
-
-  return {
-    isValid: errors.length === 0,
-    totalCards,
-    errors,
-    warnings: [],
-    breakdown
-  };
-}
-
-function DeckDetailPage() {
-  const { deckId } = useParams<{ deckId: string }>();
-  const navigate = useNavigate();
-  const { user } = useAuth();
-  const { data: deck, isLoading } = useDeckQuery(deckId);
-  const { deleteMutation } = useDeckMutations();
+function DeckDetailPageViewComponent({
+  deckQuery,
+  deckId,
+  currentUserId,
+  onDelete,
+  onNavigateToCard
+}: DeckDetailPageViewProps) {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showPrintView, setShowPrintView] = useState(false);
   const [activeTab, setActiveTab] = useState<DeckTab>('overview');
@@ -141,6 +141,26 @@ function DeckDetailPage() {
     if (linkTimerRef.current) clearTimeout(linkTimerRef.current);
     if (priceTimerRef.current) clearTimeout(priceTimerRef.current);
   }, []);
+
+  const deck = use(deckQuery.promise) as Deck | null | undefined;
+
+  const deckCards = deck?.cards ?? [];
+
+  const validation = useMemo(() => buildValidation(deckCards), [deckCards]);
+
+  const groupedCards = useMemo(() => {
+    const groups: Record<string, DeckCard[]> = {
+      'Pok\u00E9mon': [],
+      Trainer: [],
+      Energy: []
+    };
+    for (const dc of deckCards) {
+      const st = dc.card.supertype;
+      if (!groups[st]) groups[st] = [];
+      groups[st].push(dc);
+    }
+    return groups;
+  }, [deckCards]);
 
   const handleExport = useCallback(() => {
     if (!deck?.cards.length) return;
@@ -169,38 +189,12 @@ function DeckDetailPage() {
     });
   }, [deck?.cards]);
 
-  const validation = useMemo(
-    () => buildValidation(deck?.cards ?? []),
-    [deck?.cards]
-  );
+  const handleDeleteConfirm = useCallback(async () => {
+    await onDelete();
+    setShowDeleteModal(false);
+  }, [onDelete]);
 
-  const { totalCards, isValid } = validation;
-
-  // Check ownership for edit/delete gating
-  const isOwner = user && deck && (deck as { userId?: string }).userId === user.id;
-
-  const groupedCards = useMemo(() => {
-    const groups: Record<string, DeckCard[]> = {
-      'Pok\u00E9mon': [],
-      Trainer: [],
-      Energy: []
-    };
-    for (const dc of deck?.cards ?? []) {
-      const st = dc.card.supertype;
-      if (!groups[st]) groups[st] = [];
-      groups[st].push(dc);
-    }
-    return groups;
-  }, [deck?.cards]);
-
-  const handleDelete = useCallback(async () => {
-    if (deckId) {
-      await deleteMutation.mutateAsync(deckId);
-      navigate(ROUTES.DECKS);
-    }
-  }, [deckId, deleteMutation, navigate]);
-
-  if (isLoading) {
+  if (deck === undefined) {
     return (
       <div className="page deck-detail-page">
         <div className="page__content">
@@ -210,7 +204,7 @@ function DeckDetailPage() {
     );
   }
 
-  if (!deck) {
+  if (deck === null) {
     return (
       <div className="page deck-detail-page">
         <div className="page__header">
@@ -231,6 +225,9 @@ function DeckDetailPage() {
       </div>
     );
   }
+
+  const isOwner = Boolean(currentUserId && (deck as { userId?: string }).userId === currentUserId);
+  const { totalCards, isValid } = validation;
 
   return (
     <div className="page deck-detail-page">
@@ -281,7 +278,7 @@ function DeckDetailPage() {
           )}
           {deck.cards.length > 0 && (
             <Link
-              to={ROUTES.DECK_ANALYTICS(deckId!)}
+              to={ROUTES.DECK_ANALYTICS(deckId)}
               className="button button--secondary"
             >
               View Analytics
@@ -308,7 +305,7 @@ function DeckDetailPage() {
           {isOwner && (
             <>
               <Link
-                to={ROUTES.DECK_EDIT(deckId!)}
+                to={ROUTES.DECK_EDIT(deckId)}
                 className="button button--secondary"
               >
                 Edit Deck
@@ -346,7 +343,7 @@ function DeckDetailPage() {
       {/* History tab */}
       {activeTab === 'history' && (
         <div className="page__content">
-          <DeckVersionHistory deckId={deckId!} />
+          <DeckVersionHistory deckId={deckId} />
         </div>
       )}
 
@@ -410,7 +407,7 @@ function DeckDetailPage() {
                     key={dc.card.id}
                     card={dc.card}
                     quantity={dc.quantity}
-                    onClick={() => navigate(ROUTES.CARD(dc.card.id))}
+                    onClick={() => onNavigateToCard(dc.card.id)}
                   />
                 ))}
               </div>
@@ -427,7 +424,7 @@ function DeckDetailPage() {
             <p>This deck has no cards yet.</p>
             {isOwner && (
               <Link
-                to={ROUTES.DECK_EDIT(deckId!)}
+                to={ROUTES.DECK_EDIT(deckId)}
                 className="button button--primary"
               >
                 Add Cards
@@ -466,7 +463,7 @@ function DeckDetailPage() {
             <button
               type="button"
               className="button button--danger"
-              onClick={handleDelete}
+              onClick={handleDeleteConfirm}
             >
               Delete
             </button>
@@ -482,4 +479,4 @@ function DeckDetailPage() {
   );
 }
 
-export default DeckDetailPage;
+export const DeckDetailPageView = pipeline(React.memo)(DeckDetailPageViewComponent);
