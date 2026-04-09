@@ -26,3 +26,15 @@ export { useSimulation } from './useSimulation';
 export type { UseSimulationOptions, UseSimulationReturn, SimulationStatus } from './useSimulation';
 export { useMatchupMatrix } from './useMatchupMatrix';
 export type { UseMatchupMatrixReturn, MatchupMatrixStatus } from './useMatchupMatrix';
+export { useMetaDecksQuery, META_DECKS_QUERY_KEY_DEFAULT } from './useMetaDecksQuery';
+export type { MetaDecksResponse } from './useMetaDecksQuery';
+export {
+  useDeckBrowseQuery,
+  DECK_BROWSE_QUERY_KEY_DEFAULT
+} from './useDeckBrowseQuery';
+export type { BrowseResponse, BrowseDeck } from './useDeckBrowseQuery';
+export {
+  useLocalMetaQuery,
+  LOCAL_META_QUERY_KEY_DEFAULT
+} from './useLocalMetaQuery';
+export type { FrequencyResponse, ArchetypeFrequency } from './useLocalMetaQuery';

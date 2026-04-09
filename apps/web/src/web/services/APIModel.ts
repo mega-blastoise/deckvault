@@ -277,6 +277,10 @@ export function getBaseAPIURL() {
     return process.env.API_URL;
   }
 
+  if (typeof window === 'undefined') {
+    return process.env.INTERNAL_API_URL ?? `http://localhost:3000${v1APIEndpointPrefix}`;
+  }
+
   if (typeof window !== 'undefined') {
     const origin = window.location.origin;
     return (

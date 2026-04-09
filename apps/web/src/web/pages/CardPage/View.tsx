@@ -1,11 +1,10 @@
-import React, { useRef, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router';
+import React, { use, useRef, useCallback } from 'react';
 import { ArrowLeft } from 'lucide-react';
-import { useCard } from '../hooks/useCard';
-import { useCollection } from '../contexts/Collection';
-import { Badge } from '../components/Badge';
-import { useFadeIn } from '../motion/hooks/useFadeIn';
+import { Badge } from '../../components/Badge';
+import { useFadeIn } from '../../motion/hooks/useFadeIn';
+import { pipeline } from '../../utils/pipeline';
 import type { Pokemon } from '@pokemon/clients';
+import type { CardPageViewProps } from './types';
 
 function CardPageTilt({ src, alt }: { src: string; alt: string }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -73,45 +72,27 @@ function AttackRow({ attack }: { attack: Pokemon.Attack }) {
   );
 }
 
-function CardPage() {
-  const { cardId } = useParams<{ cardId: string }>();
-  const navigate = useNavigate();
+function CardPageViewComponent({
+  cardQuery,
+  getQuantity,
+  onAddCard,
+  onRemoveCard,
+  onNavigateBack
+}: CardPageViewProps) {
   const { ref: headerRef } = useFadeIn({ y: 16, duration: 0.35 });
 
-  const { data: result, isLoading, isError } = useCard(cardId ?? '');
-
-  // useCard returns APIResponse<Pokemon.Card> where APIResponse.data is the raw JSON body { data: card }
+  const result = use(cardQuery.promise);
   const apiData = result?.data as { data?: Pokemon.Card } | Pokemon.Card | undefined;
   const card = apiData && 'data' in apiData ? apiData.data : (apiData as Pokemon.Card | undefined);
 
-  const { getQuantity, addCard, removeCard } = useCollection();
-  const qty = card ? getQuantity(card.id) : 0;
-
-  if (isLoading) {
+  if (!card) {
     return (
       <div className="page card-page">
-        <div className="page__content">
-          <div className="card-page__loading">Loading card...</div>
-        </div>
-      </div>
-    );
-  }
-
-  if (isError || !card) {
-    return (
-      <div className="page card-page">
-        <div className="page__header">
-          <h1>Card Not Found</h1>
-        </div>
         <div className="page__content">
           <div className="page__empty-state">
             <h2>Card not found</h2>
             <p>The card you&apos;re looking for doesn&apos;t exist.</p>
-            <button
-              type="button"
-              className="button button--primary"
-              onClick={() => navigate(-1)}
-            >
+            <button type="button" className="button button--primary" onClick={onNavigateBack}>
               Go Back
             </button>
           </div>
@@ -120,6 +101,8 @@ function CardPage() {
     );
   }
 
+  const qty = getQuantity(card.id);
+
   return (
     <div className="page card-page">
       {/* Back nav */}
@@ -127,7 +110,7 @@ function CardPage() {
         <button
           type="button"
           className="card-page__back-btn"
-          onClick={() => navigate(-1)}
+          onClick={onNavigateBack}
         >
           <ArrowLeft size={18} aria-hidden="true" />
           Back
@@ -158,7 +141,7 @@ function CardPage() {
 
           {/* Badges */}
           <div className="card-page__badges">
-            {(card as Record<string, unknown>).regulationMark && (
+            {Boolean((card as Record<string, unknown>).regulationMark) && (
               <Badge variant="regulation">
                 {String((card as Record<string, unknown>).regulationMark)}
               </Badge>
@@ -307,7 +290,7 @@ function CardPage() {
             <button
               type="button"
               className="button button--primary"
-              onClick={() => addCard(card.id)}
+              onClick={() => onAddCard(card.id)}
             >
               {qty > 0 ? 'Add Another to Collection' : 'Add to Collection'}
             </button>
@@ -315,7 +298,7 @@ function CardPage() {
               <button
                 type="button"
                 className="button button--danger"
-                onClick={() => removeCard(card.id)}
+                onClick={() => onRemoveCard(card.id)}
               >
                 Remove One
               </button>
@@ -338,4 +321,4 @@ function CardPage() {
   );
 }
 
-export default CardPage;
+export const CardPageView = pipeline(React.memo)(CardPageViewComponent);

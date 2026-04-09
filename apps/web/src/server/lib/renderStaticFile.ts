@@ -6,6 +6,7 @@ const staticFileDirectories = ['public', 'out'] as const;
 
 export async function isRequestForStaticFile(request: Request) {
   const url = new URL(request.url);
+  if (!path.extname(url.pathname)) return false;
   for (const directory of staticFileDirectories) {
     const stdpath = path.join(process.cwd(), directory, url.pathname);
     try {

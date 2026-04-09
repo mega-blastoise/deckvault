@@ -29,6 +29,7 @@ function Document(props: DocumentProps) {
           rel="stylesheet"
           href="/css/themes/catppuccin-mocha.css"
         />
+        {props.cssPath && <link rel="stylesheet" href={props.cssPath} />}
       </head>
       <body>
         <main>{props.children}</main>

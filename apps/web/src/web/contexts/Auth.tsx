@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { getJavascriptEnvironment } from '@/web/layers/data';
 
 export interface AuthUser {
   id: string;
@@ -43,7 +44,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
     queryKey: AUTH_QUERY_KEY,
     queryFn: fetchMe,
     staleTime: 5 * 60 * 1000,
-    retry: false
+    retry: false,
+    enabled: getJavascriptEnvironment() === 'browser'
   });
 
   const signOut = useCallback(async () => {

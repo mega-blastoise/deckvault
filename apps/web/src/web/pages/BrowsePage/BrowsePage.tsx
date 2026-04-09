@@ -1,22 +1,21 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { useSearchParams, useNavigate } from 'react-router';
-import { useSearchCards, toCardFormat } from '../hooks/useSearchCards';
-import { useSets } from '../hooks/useSets';
-import { useSetCards } from '../hooks/useSetCards';
-import { useUseCaseCards } from '../hooks/useUseCaseCards';
-import { CardGrid } from '../components/CardGrid';
-import { SearchBar } from '../components/SearchBar';
-import { ROUTES } from '../routes';
-import { TAG_CATEGORIES, TAG_LABELS } from '../../types/card-tags';
+import { useSearchCards, toCardFormat } from '../../hooks/useSearchCards';
+import { useSets } from '../../hooks/useSets';
+import { useSetCards } from '../../hooks/useSetCards';
+import { useUseCaseCards } from '../../hooks/useUseCaseCards';
+import { ROUTES } from '../../routes';
+import { pipeline } from '../../utils/pipeline';
+import { BrowsePageView } from './View';
 import type { Pokemon } from '@pokemon/clients';
-import type { SearchFilters } from '../components/SearchBar/types';
-import type { CardFunctionalTag } from '../../types/card-tags';
+import type { SearchFilters } from '../../components/SearchBar/types';
+import type { CardFunctionalTag } from '../../../types/card-tags';
+import type { BrowseMode } from './types';
 
-type BrowseMode = 'name' | 'use-case';
 type SetsData = { data: Pokemon.Set[] };
 type SetCardsData = { data: Pokemon.Card[] };
 
-function BrowsePage() {
+function BrowsePageComponent() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
 
@@ -130,6 +129,11 @@ function BrowsePage() {
     [navigate]
   );
 
+  const handleClearTags = useCallback(() => {
+    setSelectedTags([]);
+    setSearchParams({ mode: 'use-case' });
+  }, [setSearchParams]);
+
   const emptyMessage = useMemo(() => {
     if (mode === 'use-case') {
       return selectedTags.length === 0
@@ -143,119 +147,26 @@ function BrowsePage() {
   }, [mode, selectedTags, selectedSetId, searchQuery]);
 
   return (
-    <div className="page browse-page">
-      <div className="page__header">
-        <h1>Browse Cards</h1>
-        <p>Search across all Pokemon TCG cards.</p>
-      </div>
-
-      <div className="browse-page__mode-toggle">
-        <button
-          type="button"
-          className={`browse-page__mode-btn${mode === 'name' ? ' browse-page__mode-btn--active' : ''}`}
-          onClick={() => handleModeChange('name')}
-        >
-          Name / Set
-        </button>
-        <button
-          type="button"
-          className={`browse-page__mode-btn${mode === 'use-case' ? ' browse-page__mode-btn--active' : ''}`}
-          onClick={() => handleModeChange('use-case')}
-        >
-          Use Case
-        </button>
-      </div>
-
-      {mode === 'name' && (
-        <div className="browse-page__toolbar">
-          <SearchBar
-            onSearch={handleSearch}
-            placeholder="Search by card name…"
-            showFilters={false}
-            loading={isLoading}
-          />
-          <select
-            className="browse-page__set-filter"
-            value={selectedSetId}
-            onChange={(e) => handleSetChange(e.target.value)}
-            aria-label="Filter by set"
-          >
-            <option value="">All Sets</option>
-            {sets.map((set) => (
-              <option key={set.id} value={set.id}>
-                {set.name}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
-
-      {mode === 'use-case' && (
-        <div className="browse-page__use-case-panel">
-          <input
-            type="search"
-            className="browse-page__tag-search"
-            placeholder="Filter use cases…"
-            value={tagFilter}
-            onChange={(e) => setTagFilter(e.target.value)}
-            aria-label="Filter use case tags"
-          />
-          {TAG_CATEGORIES.map((category) => {
-            const q = tagFilter.toLowerCase();
-            const visibleTags = q
-              ? category.tags.filter((t) => TAG_LABELS[t].toLowerCase().includes(q))
-              : category.tags;
-            if (visibleTags.length === 0) return null;
-            return (
-              <div key={category.label} className="browse-page__tag-group">
-                <span className="browse-page__tag-group-label">{category.label}</span>
-                <div className="browse-page__tag-pills">
-                  {visibleTags.map((tag) => (
-                    <button
-                      key={tag}
-                      type="button"
-                      className={`browse-page__tag-pill${selectedTags.includes(tag) ? ' browse-page__tag-pill--active' : ''}`}
-                      onClick={() => handleTagToggle(tag)}
-                    >
-                      {TAG_LABELS[tag]}
-                      {selectedTags.includes(tag) && <span className="browse-page__tag-pill-x"> ×</span>}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
-          {selectedTags.length > 0 && (
-            <button
-              type="button"
-              className="browse-page__tag-clear"
-              onClick={() => {
-                setSelectedTags([]);
-                setSearchParams({ mode: 'use-case' });
-              }}
-            >
-              Clear all
-            </button>
-          )}
-        </div>
-      )}
-
-      {isError && (
-        <div className="browse-page__error">
-          <p>Failed to load cards. Please try again.</p>
-        </div>
-      )}
-
-      <div className="page__content">
-        <CardGrid
-          cards={cards}
-          onCardSelect={handleCardSelect}
-          loading={isLoading}
-          emptyMessage={emptyMessage}
-        />
-      </div>
-    </div>
+    <BrowsePageView
+      mode={mode}
+      searchQuery={searchQuery}
+      selectedSetId={selectedSetId}
+      selectedTags={selectedTags}
+      tagFilter={tagFilter}
+      sets={sets}
+      cards={cards}
+      isLoading={isLoading}
+      isError={isError}
+      emptyMessage={emptyMessage}
+      onModeChange={handleModeChange}
+      onSearch={handleSearch}
+      onSetChange={handleSetChange}
+      onTagToggle={handleTagToggle}
+      onTagFilterChange={setTagFilter}
+      onClearTags={handleClearTags}
+      onCardSelect={handleCardSelect}
+    />
   );
 }
 
-export default BrowsePage;
+export const BrowsePage = pipeline(React.memo)(BrowsePageComponent);
