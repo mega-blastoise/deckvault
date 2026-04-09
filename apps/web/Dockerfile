@@ -1,3 +1,7 @@
+ARG VERSION
+ARG GIT_SHA
+ARG BUILD_DATE
+
 FROM oven/bun:1.3.8-alpine AS base
 
 FROM base AS workspace
@@ -27,6 +31,16 @@ FROM install AS build
 RUN bun run build
 
 FROM base AS runtime
+
+ARG VERSION
+ARG GIT_SHA
+ARG BUILD_DATE
+
+LABEL org.opencontainers.image.title="DeckVault Web"
+LABEL org.opencontainers.image.version="${VERSION}"
+LABEL org.opencontainers.image.created="${BUILD_DATE}"
+LABEL org.opencontainers.image.revision="${GIT_SHA}"
+LABEL org.opencontainers.image.source="https://github.com/mega-blastoise/deckvault"
 
 RUN mkdir -p /home/bun/runtime-workspace
 WORKDIR /home/bun/runtime-workspace

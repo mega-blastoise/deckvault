@@ -31,7 +31,7 @@ services:
       - pika
 
   web:
-    image: ghcr.io/mega-blastoise/deckvault-web:latest
+    image: ghcr.io/mega-blastoise/deckvault-web:${IMAGE_TAG:-latest}
     container_name: pokemon-web
     environment:
       - PORT=3000
@@ -50,7 +50,7 @@ services:
       - pika
 
   rest-api:
-    image: ghcr.io/mega-blastoise/deckvault-rest-api:latest
+    image: ghcr.io/mega-blastoise/deckvault-rest-api:${IMAGE_TAG:-latest}
     container_name: pokemon-rest-api
     env_file:
       - .env.prod
@@ -79,7 +79,7 @@ services:
       - pika
 
   graphql-api:
-    image: ghcr.io/mega-blastoise/deckvault-graphql-api:latest
+    image: ghcr.io/mega-blastoise/deckvault-graphql-api:${IMAGE_TAG:-latest}
     container_name: pokemon-graphql-api
     env_file:
       - .env.prod

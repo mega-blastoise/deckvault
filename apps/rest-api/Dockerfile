@@ -1,3 +1,7 @@
+ARG VERSION
+ARG GIT_SHA
+ARG BUILD_DATE
+
 FROM oven/bun:1.3.8-alpine AS base
 WORKDIR /app/pokemon-rest-api
 
@@ -24,6 +28,16 @@ RUN bun run build
 # Production — only the bundled output, nothing else needed
 FROM base AS production
 WORKDIR /app/pokemon-rest-api
+
+ARG VERSION
+ARG GIT_SHA
+ARG BUILD_DATE
+
+LABEL org.opencontainers.image.title="DeckVault REST API"
+LABEL org.opencontainers.image.version="${VERSION}"
+LABEL org.opencontainers.image.created="${BUILD_DATE}"
+LABEL org.opencontainers.image.revision="${GIT_SHA}"
+LABEL org.opencontainers.image.source="https://github.com/mega-blastoise/deckvault"
 
 COPY --from=build /app/pokemon-rest-api/apps/rest-api/dist ./dist
 COPY --from=build /app/pokemon-rest-api/apps/rest-api/migrations ./migrations
