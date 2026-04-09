@@ -291,6 +291,34 @@
   color: var(--pico-color);
 }
 
+/* Browse page — Nebula theme overrides */
+[data-theme="nebula"] .browse-page__use-case-panel {
+  background: var(--nebula-bg-secondary);
+  border-color: var(--nebula-surface-border);
+}
+
+[data-theme="nebula"] .browse-page__tag-pill {
+  background: var(--nebula-bg-elevated);
+  border-color: var(--nebula-surface-border-hover);
+  color: var(--pico-color);
+}
+
+[data-theme="nebula"] .browse-page__tag-pill:hover {
+  background: var(--nebula-surface-glass-hover);
+  border-color: var(--nebula-accent-primary);
+}
+
+[data-theme="nebula"] .browse-page__tag-pill--active {
+  background: color-mix(in srgb, var(--nebula-accent-primary) 20%, transparent);
+  border-color: var(--nebula-accent-primary);
+  color: var(--pico-color);
+}
+
+[data-theme="nebula"] .browse-page__mode-btn--active {
+  background: var(--nebula-bg-elevated);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+
 /* Collection page */
 .collection-page__card-detail {
   margin-bottom: 1.25rem;

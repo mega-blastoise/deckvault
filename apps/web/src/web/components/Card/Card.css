@@ -39,7 +39,7 @@
 .pokemon-card--grid {
   display: flex;
   flex-direction: column;
-  max-width: 280px;
+  max-width: 240px;
 }
 
 .pokemon-card--grid .pokemon-card__image {
