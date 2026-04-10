@@ -1,0 +1,104 @@
+#!/bin/bash
+set -euo pipefail
+
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+SERVICES=("web" "rest-api" "graphql-api")
+
+# --- Args & usage -----------------------------------------------------------
+
+usage() {
+  echo "Usage: $(basename "$0") <version> [service...]"
+  echo ""
+  echo "  version   Semver string, e.g. 1.2.3"
+  echo "  service   One or more of: web, rest-api, graphql-api (default: all)"
+  echo ""
+  echo "Examples:"
+  echo "  $(basename "$0") 0.1.1"
+  echo "  $(basename "$0") 0.1.1 web"
+  exit 1
+}
+
+if [[ $# -lt 1 ]]; then usage; fi
+
+VERSION="$1"
+shift
+
+# Validate semver
+if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+  echo "Error: version must be semver (e.g. 1.2.3), got: $VERSION"
+  exit 1
+fi
+
+MAJOR="${VERSION%%.*}"
+MINOR="${VERSION%.*}"
+
+# Services to build — default all, or whatever was passed
+if [[ $# -gt 0 ]]; then
+  TARGETS=("$@")
+else
+  TARGETS=("${SERVICES[@]}")
+fi
+
+# Validate service names
+for svc in "${TARGETS[@]}"; do
+  if [[ ! " ${SERVICES[*]} " =~ " ${svc} " ]]; then
+    echo "Error: unknown service '${svc}'. Must be one of: ${SERVICES[*]}"
+    exit 1
+  fi
+done
+
+# --- Release variables -------------------------------------------------------
+
+SHA=$(git -C "$REPO_ROOT" rev-parse --short HEAD)
+BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+echo "==> Release v${VERSION} (${SHA}) — $(date -u)"
+echo "    Services: ${TARGETS[*]}"
+echo ""
+
+# --- Build -------------------------------------------------------------------
+
+for svc in "${TARGETS[@]}"; do
+  IMAGE="ghcr.io/mega-blastoise/deckvault-${svc}"
+  echo "==> Building ${IMAGE}:${VERSION}"
+
+  docker build \
+    -t "${IMAGE}:${VERSION}" \
+    -t "${IMAGE}:${MINOR}" \
+    -t "${IMAGE}:${MAJOR}" \
+    -t "${IMAGE}:${SHA}" \
+    -t "${IMAGE}:latest" \
+    --build-arg VERSION="${VERSION}" \
+    --build-arg GIT_SHA="${SHA}" \
+    --build-arg BUILD_DATE="${BUILD_DATE}" \
+    -f "${REPO_ROOT}/apps/${svc}/Dockerfile" \
+    "$REPO_ROOT"
+
+  echo ""
+done
+
+# --- Push --------------------------------------------------------------------
+
+echo "==> All builds succeeded. Push tags to GHCR? [y/N]"
+read -r confirm
+if [[ "$confirm" != "y" && "$confirm" != "Y" ]]; then
+  echo "Skipping push."
+  exit 0
+fi
+
+for svc in "${TARGETS[@]}"; do
+  IMAGE="ghcr.io/mega-blastoise/deckvault-${svc}"
+  echo "==> Pushing ${svc} tags"
+  docker push "${IMAGE}:${VERSION}"
+  docker push "${IMAGE}:${MINOR}"
+  docker push "${IMAGE}:${MAJOR}"
+  docker push "${IMAGE}:${SHA}"
+  docker push "${IMAGE}:latest"
+  echo ""
+done
+
+echo "==> Release v${VERSION} published."
+echo ""
+echo "    Next: update IMAGE_TAG on prod host and restart the service:"
+echo "      echo 'IMAGE_TAG=${VERSION}' | sudo tee /opt/deckvault/.env"
+echo "      sudo systemctl restart deckvault"

@@ -88,11 +88,11 @@ export function Navbar() {
             )}
           </Link>
           <Link
-            to={ROUTES.META_DECKS}
-            className={`navbar__link ${isActive(ROUTES.META_DECKS) ? 'navbar__link--active' : ''}`}
+            to={ROUTES.ROTATION}
+            className={`navbar__link ${isActive(ROUTES.ROTATION) ? 'navbar__link--active' : ''}`}
           >
             <TrendingUp size={18} />
-            <span>Meta</span>
+            <span>Rotation</span>
           </Link>
         </div>
 

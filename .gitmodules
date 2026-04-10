@@ -1,5 +1,5 @@
 [submodule "forks/pokemon-tcg-data"]
 	path = forks/pokemon-tcg-data
-	url = git@github.com:nicholasgalante1997/pokemon-tcg-data.git
-	branch = main
+	url = https://github.com/mega-blastoise/pokemon-tcg-data
+	branch = master
 	shallow = true
