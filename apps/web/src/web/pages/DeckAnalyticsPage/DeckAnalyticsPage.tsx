@@ -14,6 +14,8 @@ import { ConsistencyPanel } from '../../components/DeckAnalyticsPanel/Consistenc
 import { DeckCompositionChart } from '../../components/DeckAnalyticsPanel/DeckCompositionChart';
 import { ProbabilityScatterChart } from '../../components/DeckAnalyticsPanel/ProbabilityScatterChart';
 import { HandSimulator } from '../../components/DeckAnalyticsPanel/HandSimulator';
+import { RecommendationsPanel } from '../../components/DeckAnalyticsPanel/RecommendationsPanel';
+import { analyzeWeaknesses } from '../../lib/deck-suggestions';
 import { ROUTES } from '../../routes';
 import '../../components/DeckAnalyticsPanel/DeckAnalyticsPanel.css';
 import './DeckAnalyticsPage.css';
@@ -58,6 +60,8 @@ export function DeckAnalyticsPage() {
 
   const energyData = energyCurveAnalysis(energySummaries);
 
+  const weaknesses = analyzeWeaknesses(deck.cards, energyData, prizeData);
+
   const scatterData = openingHandProbabilities(deckCards).map((p, i) => ({
     ...p,
     supertype: deck.cards[i]?.card.supertype ?? 'Trainer',
@@ -77,6 +81,11 @@ export function DeckAnalyticsPage() {
 
       <div className="page__content">
         <div className="deck-analytics-page__grid">
+
+          {/* Recommendations (full width, first) */}
+          <div className="deck-analytics-page__panel deck-analytics-page__panel--full">
+            <RecommendationsPanel weaknesses={weaknesses} />
+          </div>
 
           {/* Row 1: Hand simulator (full width, prominent) */}
           <div className="deck-analytics-page__panel deck-analytics-page__panel--full">

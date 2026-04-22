@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useLocation } from 'react-router';
-import { Layers, Search, LogIn, TrendingUp, Plus, Shield, Grid3x3 } from 'lucide-react';
+import { Layers, Search, LogIn, TrendingUp, Plus, Shield, Grid3x3, Trophy, Award } from 'lucide-react';
 import { ROUTES } from '@/web/routes';
 import { useCollectionQuery } from '@/web/hooks/useCollectionQuery';
 import { useDecks } from '@/web/contexts/Deck';
@@ -88,6 +88,13 @@ export function Navbar() {
             )}
           </Link>
           <Link
+            to={ROUTES.META_DECKS}
+            className={`navbar__link ${isActive(ROUTES.META_DECKS) ? 'navbar__link--active' : ''}`}
+          >
+            <Trophy size={18} />
+            <span>Meta</span>
+          </Link>
+          <Link
             to={ROUTES.ROTATION}
             className={`navbar__link ${isActive(ROUTES.ROTATION) ? 'navbar__link--active' : ''}`}
           >
@@ -129,6 +136,10 @@ export function Navbar() {
                 <div className="navbar__user-dropdown">
                   <Link to={ROUTES.DECKS} className="navbar__dropdown-item">
                     My Decks
+                  </Link>
+                  <Link to={ROUTES.CP} className="navbar__dropdown-item">
+                    <Award size={14} />
+                    CP Tracker
                   </Link>
                   {isAdmin && (
                     <Link to={ROUTES.ADMIN} className="navbar__dropdown-item navbar__dropdown-item--admin">

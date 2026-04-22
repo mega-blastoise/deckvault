@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { DeckFormat } from '../../../types/deck';
@@ -27,12 +27,22 @@ async function fetchArchetypes(): Promise<MetaDeckOption[]> {
   return json.data ?? [];
 }
 
+const LOSS_REASONS = [
+  { value: 'draw_issues', label: "Couldn't draw what I needed" },
+  { value: 'energy_slow', label: 'Energy / setup was too slow' },
+  { value: 'bench_slow', label: "Couldn't get Pokémon in play" },
+  { value: 'key_card_prized', label: 'Key card was prized' },
+  { value: 'hand_disruption', label: 'Opponent disrupted my hand' },
+  { value: 'speed', label: 'Opponent was just faster' }
+] as const;
+
 async function submitReport(body: {
   archetype: string;
   archetypeName: string;
   format: string;
   result?: string;
   lgsName?: string;
+  lossReason?: string;
 }): Promise<void> {
   const res = await fetch(`${getBaseUrl()}/api/v1/local-meta/reports`, {
     method: 'POST',
@@ -51,6 +61,7 @@ export function ReportMatchModal({ isOpen, onClose }: ReportMatchModalProps) {
   const [archetypeName, setArchetypeName] = useState('');
   const [format, setFormat] = useState<DeckFormat>('standard');
   const [result, setResult] = useState<'win' | 'loss' | 'tie' | ''>('');
+  const [lossReason, setLossReason] = useState<string>('');
   const [lgsName, setLgsName] = useState('');
   const [toast, setToast] = useState<{ message: string; kind: 'success' | 'error' } | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -62,6 +73,17 @@ export function ReportMatchModal({ isOpen, onClose }: ReportMatchModalProps) {
     enabled: isOpen
   });
 
+  const handleResultChange = useCallback(
+    (r: 'win' | 'loss' | 'tie') => {
+      setResult((prev) => {
+        const next = prev === r ? '' : r;
+        if (next !== 'loss') setLossReason('');
+        return next;
+      });
+    },
+    []
+  );
+
   const mutation = useMutation({
     mutationFn: submitReport,
     onSuccess: () => {
@@ -72,6 +94,7 @@ export function ReportMatchModal({ isOpen, onClose }: ReportMatchModalProps) {
         onClose();
         setArchetypeName('');
         setResult('');
+        setLossReason('');
         setLgsName('');
       }, 1200);
     },
@@ -105,7 +128,8 @@ export function ReportMatchModal({ isOpen, onClose }: ReportMatchModalProps) {
       archetypeName: archetypeName.trim(),
       format,
       result: result || undefined,
-      lgsName: lgsName.trim() || undefined
+      lgsName: lgsName.trim() || undefined,
+      lossReason: lossReason || undefined
     });
   }
 
@@ -161,13 +185,33 @@ export function ReportMatchModal({ isOpen, onClose }: ReportMatchModalProps) {
                   key={r}
                   type="button"
                   className={`report-match-form__result-btn${result === r ? ' report-match-form__result-btn--active' : ''} report-match-form__result-btn--${r}`}
-                  onClick={() => setResult((prev) => (prev === r ? '' : r))}
+                  onClick={() => handleResultChange(r)}
                 >
                   {r.charAt(0).toUpperCase() + r.slice(1)}
                 </button>
               ))}
             </div>
           </div>
+
+          {result === 'loss' && (
+            <div className="report-match-form__label">
+              <span>Why did you lose? (optional)</span>
+              <div className="report-match-form__loss-reasons">
+                {LOSS_REASONS.map((reason) => (
+                  <button
+                    key={reason.value}
+                    type="button"
+                    className={`report-match-form__loss-reason-btn${lossReason === reason.value ? ' report-match-form__loss-reason-btn--active' : ''}`}
+                    onClick={() =>
+                      setLossReason((prev) => (prev === reason.value ? '' : reason.value))
+                    }
+                  >
+                    {reason.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           <label className="report-match-form__label">
             <span>LGS Name (optional)</span>

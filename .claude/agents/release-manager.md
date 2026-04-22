@@ -142,6 +142,8 @@ done
 
 The prod stack runs as a systemctl service named `deckvault` at `/opt/deckvault/`.
 
+> Note: **IMPORTANT** If we bump the version on the images we need to update the prod compose file to reference the new tags or ensure it uses the `${IMAGE_TAG:-latest}` pattern. Always verify the prod compose file references the correct tags before deployment.
+
 ```bash
 # Check service status
 systemctl status deckvault
@@ -199,3 +201,19 @@ Set `IMAGE_TAG` in `/opt/deckvault/.env` on the production host.
 - Never attempt to push or retag external images (`nginx`, `postgres`, `cloudflared`)
 - Never skip the post-deploy health check on `rest-api` and `graphql-api`
 - Never hardcode `:latest` in the prod compose file — use `${IMAGE_TAG:-latest}`
+
+## Notes
+
+Docker Compose automatically reads .env from the working directory for ${VAR} substitution in the compose file itself (this is separate from the env_file: entries that go into containers):
+
+```bash
+  echo "IMAGE_TAG=x.x.x" | sudo tee /opt/deckvault/.env
+```
+
+Then restart to pick it up:
+
+```bash
+  sudo systemctl restart deckvault
+```
+
+For every future release, updating this one line in /opt/deckvault/.env is all that's needed before restarting. No unit file edits required.

@@ -9,6 +9,7 @@ interface ReportBody {
   lgsName?: unknown;
   region?: unknown;
   result?: unknown;
+  lossReason?: unknown;
 }
 
 export const createReport: Handler<Services> = async (ctx) => {
@@ -46,6 +47,10 @@ export const createReport: Handler<Services> = async (ctx) => {
     return ctx.error('Rate limit exceeded: max 10 reports per day', 429);
   }
 
+  const lossReason = typeof body.lossReason === 'string' && body.lossReason.trim()
+    ? body.lossReason.trim()
+    : undefined;
+
   const report = await pg.createLgsReport({
     userId: user.id,
     archetype: body.archetype,
@@ -53,7 +58,8 @@ export const createReport: Handler<Services> = async (ctx) => {
     format: body.format,
     lgsName: typeof body.lgsName === 'string' ? body.lgsName : undefined,
     region: typeof body.region === 'string' ? body.region : undefined,
-    result: typeof body.result === 'string' ? body.result : undefined
+    result: typeof body.result === 'string' ? body.result : undefined,
+    lossReason
   });
 
   return ctx.json({ data: { id: report.id, archetype: report.archetype, reportedAt: report.reported_at } }, 201);

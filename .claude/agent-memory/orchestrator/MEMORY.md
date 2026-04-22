@@ -1,2 +1,3 @@
 - [Ability Catalog](ability_catalog.md) — Complete passive/activated/triggered classification for all abilities in 10 meta decks
 - [Engine Simulation Findings](engine_simulation_findings.md) — Critical flaws: AI never attacks, no bench dev, deck-out loops, broken post-KO flow
+- [Surface subagent questions to user](feedback_surface_subagent_questions.md) — Never answer a subagent's confirmation question on the user's behalf, especially for destructive/prod ops

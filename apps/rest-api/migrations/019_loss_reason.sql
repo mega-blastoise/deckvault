@@ -1,0 +1,2 @@
+ALTER TABLE lgs_reports
+  ADD COLUMN IF NOT EXISTS loss_reason VARCHAR(40);

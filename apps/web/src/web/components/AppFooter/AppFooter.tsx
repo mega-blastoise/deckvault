@@ -25,7 +25,6 @@ export function AppFooter() {
           <div className="app-footer__col">
             <h3 className="app-footer__col-title">Explore</h3>
             <Link to={ROUTES.SETS} className="app-footer__link">Sets</Link>
-            <Link to={ROUTES.LOCAL_META} className="app-footer__link">Local Meta</Link>
             <Link to={ROUTES.ROTATION} className="app-footer__link">Rotation</Link>
             <Link to={ROUTES.CP} className="app-footer__link">CP Tracker</Link>
           </div>
@@ -33,12 +32,6 @@ export function AppFooter() {
             <h3 className="app-footer__col-title">Account</h3>
             <Link to={ROUTES.SIGN_IN} className="app-footer__link">Sign In</Link>
             <Link to={ROUTES.DECKS} className="app-footer__link">My Decks</Link>
-          </div>
-          <div className="app-footer__col">
-            <h3 className="app-footer__col-title">Tools</h3>
-            <Link to={ROUTES.SIMULATE} className="app-footer__link">
-              Simulator <span className="app-footer__alpha-badge">Alpha</span>
-            </Link>
           </div>
         </nav>
       </div>

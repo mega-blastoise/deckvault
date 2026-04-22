@@ -10,6 +10,35 @@ export interface RotationEntry {
 
 export const ROTATION_HISTORY: RotationEntry[] = [
   {
+    seasonYear: '2026',
+    rotationDate: '2026-04-10',
+    legalMarks: ['H', 'I', 'J'],
+    rotatedMarks: ['G'],
+    legalSets: [
+      { name: 'Temporal Forces', code: 'TEF', mark: 'H' },
+      { name: 'Twilight Masquerade', code: 'TWM', mark: 'H' },
+      { name: 'Shrouded Fable', code: 'SHF', mark: 'H' },
+      { name: 'Stellar Crown', code: 'SCR', mark: 'H' },
+      { name: 'Surging Sparks', code: 'SSP', mark: 'H' },
+      { name: 'Prismatic Evolutions', code: 'PRE', mark: 'H' },
+      { name: 'Journey Together', code: 'JTG', mark: 'I' },
+      { name: 'Destined Rivals', code: 'DRI', mark: 'I' },
+      { name: 'Mega Evolution', code: 'MEG', mark: 'I' },
+      { name: 'Phantasmal Flames', code: 'PFL', mark: 'I' },
+      { name: 'Ascended Heroes', code: 'ASC', mark: 'J' },
+      { name: 'Perfect Order', code: 'POR', mark: 'J' }
+    ],
+    rotatedSets: [
+      { name: 'Scarlet & Violet', code: 'SVI', mark: 'G' },
+      { name: 'Paldea Evolved', code: 'PAL', mark: 'G' },
+      { name: 'Obsidian Flames', code: 'OBF', mark: 'G' },
+      { name: '151', code: 'MEW', mark: 'G' },
+      { name: 'Paradox Rift', code: 'PAR', mark: 'G' },
+      { name: 'Paldean Fates', code: 'PAF', mark: 'G' }
+    ],
+    notes: 'Mid-season rotation effective April 10, 2026. All early Scarlet & Violet sets (G mark, SV1–SV4) rotate out. J-mark sets become legal.'
+  },
+  {
     seasonYear: '2025-2026',
     rotationDate: '2025-08-15',
     legalMarks: ['G', 'H', 'I'],

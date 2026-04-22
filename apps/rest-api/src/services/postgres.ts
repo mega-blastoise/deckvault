@@ -165,6 +165,7 @@ export interface LgsReportRow {
   lgs_name: string | null;
   region: string | null;
   result: string | null;
+  loss_reason: string | null;
   reported_at: Date;
 }
 
@@ -674,9 +675,10 @@ export class PostgresService implements Service {
     lgsName?: string;
     region?: string;
     result?: string;
+    lossReason?: string;
   }): Promise<LgsReportRow> {
     const rows = await this.instance`
-      INSERT INTO lgs_reports (user_id, archetype, archetype_name, format, lgs_name, region, result)
+      INSERT INTO lgs_reports (user_id, archetype, archetype_name, format, lgs_name, region, result, loss_reason)
       VALUES (
         ${input.userId},
         ${input.archetype},
@@ -684,7 +686,8 @@ export class PostgresService implements Service {
         ${input.format},
         ${input.lgsName ?? null},
         ${input.region ?? null},
-        ${input.result ?? null}
+        ${input.result ?? null},
+        ${input.lossReason ?? null}
       )
       RETURNING *
     `;

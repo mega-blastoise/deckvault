@@ -24,6 +24,7 @@ interface SeedDeck {
   name: string;
   archetype: string;
   format: string;
+  tier?: string;
   placement?: string;
   eventName?: string;
   eventDate?: string;
@@ -53,13 +54,14 @@ for (const deck of decks) {
   }
 
   const result = await db.unsafe(
-    `INSERT INTO meta_decks (name, archetype, format, placement, event_name, event_date, source_url, last_updated)
-     VALUES ($1, $2, $3, $4, $5, $6::date, $7, now())
+    `INSERT INTO meta_decks (name, archetype, format, tier, placement, event_name, event_date, source_url, last_updated)
+     VALUES ($1, $2, $3, $4, $5, $6, $7::date, $8, now())
      RETURNING id`,
     [
       deck.name,
       deck.archetype,
       deck.format,
+      deck.tier ?? null,
       deck.placement ?? null,
       deck.eventName ?? null,
       deck.eventDate ?? null,

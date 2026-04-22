@@ -129,7 +129,11 @@ export const REACT_ROUTER_ROUTES: RouteObject[] = [
       },
       {
         path: '/scaffold',
-        element: <ScaffolderPage />
+        element: (
+          <AdminRoute>
+            <ScaffolderPage />
+          </AdminRoute>
+        )
       },
       {
         path: '/simulate',

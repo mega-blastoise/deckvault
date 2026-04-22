@@ -175,3 +175,33 @@
   width: 100%;
   justify-content: center;
 }
+
+.report-match-form__loss-reasons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.report-match-form__loss-reason-btn {
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 0.4rem 0.6rem;
+  font-size: 0.8rem;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s;
+}
+
+.report-match-form__loss-reason-btn:hover {
+  border-color: var(--accent);
+  color: var(--text-primary);
+}
+
+.report-match-form__loss-reason-btn--active {
+  border-color: var(--accent);
+  color: var(--text-primary);
+  background: rgba(32, 129, 226, 0.1);
+}
