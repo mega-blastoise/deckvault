@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PokemonCard {
     pub id: String,
     pub name: String,
@@ -26,6 +27,7 @@ pub struct PokemonCard {
     pub images: Option<CardImages>,
     pub tcgplayer_url: Option<String>,
     pub cardmarket_url: Option<String>,
+    pub regulation_mark: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

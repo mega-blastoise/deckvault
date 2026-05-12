@@ -63,6 +63,7 @@ impl Database {
         hp_min: Option<i32>,
         hp_max: Option<i32>,
         limit: i64,
+        standard_only: bool,
     ) -> Result<Vec<PokemonCard>, DomainError> {
         let conn = self.lock()?;
 
@@ -98,10 +99,20 @@ impl Database {
             param_values.push(Box::new(max));
         }
 
-        let where_clause = if conditions.is_empty() {
+        // Build WHERE clause, optionally restricting to current Standard rotation.
+        // Basic Energy has no regulation_mark (NULL / empty) and is always legal.
+        let mut where_parts: Vec<String> =
+            conditions.iter().map(|s| (*s).to_string()).collect();
+        if standard_only {
+            where_parts.push(
+                "(regulation_mark IN ('H', 'I', 'J') OR regulation_mark IS NULL OR regulation_mark = '')".to_string(),
+            );
+        }
+
+        let where_clause = if where_parts.is_empty() {
             String::new()
         } else {
-            format!("WHERE {}", conditions.join(" AND "))
+            format!("WHERE {}", where_parts.join(" AND "))
         };
 
         let sql = format!("SELECT * FROM pokemon_cards {where_clause} LIMIT ?");
@@ -235,6 +246,7 @@ fn row_to_card(row: &Row) -> PokemonCard {
         images: parse_json_object(row, "images"),
         tcgplayer_url: row.get("tcgplayer_url").ok().flatten(),
         cardmarket_url: row.get("cardmarket_url").ok().flatten(),
+        regulation_mark: row.get("regulation_mark").ok().flatten(),
     }
 }
 

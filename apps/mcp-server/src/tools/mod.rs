@@ -4,4 +4,6 @@ pub mod get_card_by_id;
 pub mod get_price_info;
 pub mod get_set_cards;
 pub mod list_sets;
+pub mod load_deck;
 pub mod search_cards;
+pub mod validate_deck;

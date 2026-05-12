@@ -1,0 +1,138 @@
+---
+title: CLI Reference
+description: All flags, options, exit codes, and environment variables for the johto CLI.
+---
+
+# CLI Reference
+
+```
+johto [options]
+```
+
+## Options
+
+### `-d, --deck <path>`
+
+Path to a deck file (`.toml` or `.json`). Repeatable — pass multiple `--deck` flags to
+load more than one deck in the same session.
+
+```bash
+johto --deck ./decks/deck-a.toml --deck ./decks/deck-b.toml
+```
+
+Required when `--provider anthropic`. Optional when `--provider chrome` (opens the
+empty deck builder if omitted).
+
+### `--provider <name>`
+
+LLM provider for the session. Default: `anthropic`.
+
+| Value | Description |
+|---|---|
+| `anthropic` | Interactive REPL via Anthropic API. Requires `ANTHROPIC_API_KEY`. |
+| `chrome` | Local browser server with Chrome Prompt API. No API key required. |
+
+```bash
+johto --deck ./decks/my-deck.toml --provider anthropic
+johto --provider chrome
+```
+
+### `--mcp-server <path>`
+
+Absolute or relative path to the `pokemon-mcp-server` binary. Defaults to the
+auto-resolved monorepo path:
+
+```
+<monorepo-root>/apps/mcp-server/target/release/pokemon-mcp-server
+```
+
+Override this when running the CLI outside the monorepo or with a custom server build:
+
+```bash
+johto --deck ./deck.toml --mcp-server /usr/local/bin/pokemon-mcp-server
+```
+
+### `--dry-run`
+
+Print the assembled system prompt and exit without opening a session. No API call is made.
+The MCP server is still spawned to enrich card IDs.
+
+Incompatible with `--provider chrome`.
+
+```bash
+johto --deck ./decks/my-deck.toml --dry-run
+```
+
+### `-h, --help`
+
+Print usage and exit.
+
+### `-v, --version`
+
+Print version (`0.1.0`) and exit.
+
+---
+
+## Environment variables
+
+### `ANTHROPIC_API_KEY`
+
+Anthropic API key. Required for `--provider anthropic` unless `--dry-run` is set.
+
+```bash
+export ANTHROPIC_API_KEY=sk-ant-...
+johto --deck ./decks/my-deck.toml
+```
+
+### `DATABASE_PATH`
+
+Path to the SQLite database. Defaults to `database/pokemon-data.sqlite3.db` relative
+to the current working directory.
+
+```bash
+DATABASE_PATH=/opt/pokemon/pokemon-data.sqlite3.db \
+  johto --deck ./decks/my-deck.toml --dry-run
+```
+
+The MCP server reads this variable — the CLI itself passes it through the child process environment.
+
+---
+
+## Exit codes
+
+| Code | Meaning |
+|---|---|
+| `0` | Clean exit (session ended, `--dry-run` completed, `--help`, `--version`) |
+| `1` | Error: missing required argument, unknown provider, missing API key, MCP failure |
+
+---
+
+## Guard rules
+
+The following combinations are rejected before spawning the MCP server:
+
+| Condition | Error |
+|---|---|
+| `--provider anthropic` with no `--deck` | `Error: --deck is required for --provider anthropic` |
+| `--provider invalid` | `Error: Unknown provider "invalid". Valid options: anthropic, chrome` |
+| `--provider chrome --dry-run` | `Error: --dry-run is not applicable in browser mode (--provider chrome)` |
+| `--provider anthropic` without `ANTHROPIC_API_KEY` (no `--dry-run`) | `Error: ANTHROPIC_API_KEY environment variable is required...` |
+
+---
+
+## Development aliases
+
+The package exposes two bin entries:
+
+| Bin | Resolves to | Use case |
+|---|---|---|
+| `johto` | `dist/johto.mjs` | Production binary (requires `bun run build`) |
+| `bun-johto` | `src/index.ts` | Development — runs source directly, no build step |
+
+```bash
+# Development (source, live changes)
+bun-johto --deck ./decks/example.toml --dry-run
+
+# Or via script alias
+bun run dev -- --deck ./decks/example.toml --dry-run
+```

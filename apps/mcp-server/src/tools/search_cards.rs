@@ -60,6 +60,10 @@ impl Tool for SearchCardsTool {
                 "limit": {
                     "type": "integer",
                     "description": "Max results to return (default: 10, max: 50)"
+                },
+                "standard_only": {
+                    "type": "boolean",
+                    "description": "When true, restrict results to current Standard-legal cards (regulation marks H, I, J). Basic Energy is always included. Default: false."
                 }
             }
         })
@@ -78,9 +82,12 @@ impl Tool for SearchCardsTool {
         let set_id = arguments.get("set_id").and_then(|v| v.as_str());
         let hp_min = arguments.get("hp_min").and_then(|v| v.as_i64()).map(|v| v as i32);
         let hp_max = arguments.get("hp_max").and_then(|v| v.as_i64()).map(|v| v as i32);
+        let standard_only = arguments.get("standard_only")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
 
         let results = self.db.search_cards_filtered(
-            query, pokemon_type, supertype, rarity, set_id, hp_min, hp_max, limit,
+            query, pokemon_type, supertype, rarity, set_id, hp_min, hp_max, limit, standard_only,
         )?;
 
         Ok(format_card_results(&results))

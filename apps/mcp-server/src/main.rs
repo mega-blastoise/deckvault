@@ -5,12 +5,14 @@ use pokemon_mcp_server::domains::db::Database;
 use pokemon_mcp_server::domains::pricing::PricingClient;
 use pokemon_mcp_server::registry::ToolRegistry;
 use pokemon_mcp_server::tools::{
-    search_cards::SearchCardsTool,
-    get_card_by_id::GetCardByIdTool,
-    list_sets::ListSetsTool,
-    get_set_cards::GetSetCardsTool,
     compare_cards::CompareCardsTool,
+    get_card_by_id::GetCardByIdTool,
     get_price_info::GetPriceInfoTool,
+    get_set_cards::GetSetCardsTool,
+    list_sets::ListSetsTool,
+    load_deck::LoadDeckTool,
+    search_cards::SearchCardsTool,
+    validate_deck::ValidateDeckTool,
 };
 use pokemon_mcp_server::transport;
 
@@ -45,6 +47,8 @@ async fn main() -> anyhow::Result<()> {
     registry.register(GetSetCardsTool::new(Arc::clone(&db)));
     registry.register(CompareCardsTool::new(Arc::clone(&db)));
     registry.register(GetPriceInfoTool::new(Arc::clone(&db), Arc::clone(&pricing)));
+    registry.register(LoadDeckTool::new(Arc::clone(&db)));
+    registry.register(ValidateDeckTool::new(Arc::clone(&db)));
 
     tracing::info!("Registered {} tools", registry.tool_count());
 

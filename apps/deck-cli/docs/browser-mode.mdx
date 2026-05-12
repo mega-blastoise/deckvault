@@ -1,0 +1,160 @@
+---
+title: Browser Mode
+description: Local deck builder and on-device AI chat powered by Chrome Prompt API and Gemini Nano.
+---
+
+# Browser Mode
+
+`--provider chrome` serves a local three-panel web page and opens it in your default browser.
+No API key required — AI responses run on-device via the Chrome Prompt API and Gemini Nano.
+
+```bash
+# Empty deck builder
+johto --provider chrome
+
+# Pre-populate from an existing deck
+johto --deck ./decks/my-deck.toml --provider chrome
+```
+
+## What opens
+
+```
+┌──────────────────┬───────────────────┬──────────────────────────┐
+│   Card Search    │   Deck Builder    │        Chat              │
+│                  │                  │                           │
+│  [search box]    │  Deck name ___    │  Gemini Nano (on-device) │
+│  [type filter]   │  34 / 60          │                           │
+│                  │  Export TOML      │  [message log]           │
+│  Results:        │                  │                           │
+│  - Ralts         │  Pokémon (12)    │  Refresh context          │
+│    I · Basic     │    4x Ralts...   │                           │
+│    [Add]         │  Trainers (33)   │  [textarea]  [Send]       │
+│  - Kirlia        │    4x Ultra...   │                           │
+│    I · Stage 1   │  Energy (15)     │                           │
+│    [Add]         │    15x Psych...  │                           │
+└──────────────────┴───────────────────┴──────────────────────────┘
+```
+
+## Card search panel
+
+- Search cards by name across the full 19,818-card SQLite database
+- Filter by supertype (Pokémon / Trainer / Energy)
+- Each result shows name, HP, supertype, and a regulation mark badge:
+  - **Green** = H/I/J (Standard legal)
+  - **Red** = outside H/I/J (rotated or not in Standard)
+  - **Amber** = no regulation mark (Basic Energy, promo cards)
+- Click **Add** to insert the card into the builder (or increment its quantity)
+
+## Deck builder panel
+
+- `+` / `−` steppers adjust quantity per card
+- `+` is disabled at 4 copies for non-Basic Energy cards (rule R4)
+- `+` is disabled when the deck total reaches 60 (rule R1)
+- Count badge: **green** at exactly 60, **amber** under, **red** over
+- Cards grouped by Pokémon / Trainers / Energy / Unknown
+- **Export TOML** downloads a `.toml` file in the exact SPEC_01 format, ready for:
+  ```bash
+  johto --deck ~/Downloads/my-deck.toml
+  ```
+
+## Chat panel
+
+Powered by the Chrome Prompt API (`window.ai.languageModel`) with Gemini Nano running
+on-device. The system prompt is injected at session creation with:
+
+- The same static competitive knowledge layer as the REPL (Standard rules, prize trade math, archetype frameworks)
+- Your current deck context rendered as a structured list
+
+**Refresh context** rebuilds the AI session from the current state of the deck builder.
+Use this after adding or removing cards so the model sees your latest list.
+
+<Callout variant="info">
+  Gemini Nano is a small on-device model. Responses will be shallower than the Claude
+  REPL session. Browser mode is intended for quick lookups, deck building, and basic
+  Q&A — not deep competitive analysis.
+</Callout>
+
+## Setup for Chrome Prompt API
+
+<Steps>
+  <Step title="Install Chrome Canary or Dev channel">
+
+Download from [google.com/chrome/canary](https://www.google.com/chrome/canary/).
+
+  </Step>
+  <Step title="Enable the Prompt API flag">
+
+Open `chrome://flags/#prompt-api-for-gemini-nano` and set to **Enabled**. Relaunch Chrome.
+
+  </Step>
+  <Step title="Download the on-device model">
+
+Open `chrome://components/`, find **Optimization Guide On Device Model**, and click
+**Check for update**. Wait for the download to complete.
+
+  </Step>
+  <Step title="Verify">
+
+Open DevTools console and run:
+
+```javascript
+window.ai?.languageModel != null  // → true
+```
+
+  </Step>
+</Steps>
+
+If `window.ai` is unavailable, the chat panel renders a setup guide with these same
+steps instead of showing an error.
+
+## API endpoints
+
+The browser page communicates with the running CLI process via two JSON endpoints served
+locally:
+
+### `GET /api/search`
+
+Proxies to the MCP `search_cards` tool.
+
+| Query param | Description |
+|---|---|
+| `q` | Text search on card name |
+| `supertype` | Filter: `Pokémon`, `Trainer`, or `Energy` |
+| `type` | Filter by Pokémon type (Fire, Water, etc.) |
+| `set_id` | Filter by set ID |
+| `hp_min` / `hp_max` | HP range filter |
+| `limit` | Max results (default 15, max 50) |
+
+### `GET /api/card/:id`
+
+Returns the full card JSON for a specific ID. Used by the builder to display enriched
+card data for cards added by ID rather than search result.
+
+## TOML export format
+
+The exported file is valid SPEC_01 TOML:
+
+```toml
+name = "My Deck"
+format = "standard"
+regulation_marks = ["H", "I"]
+
+[[cards]]
+id = "me1-60"
+quantity = 3
+
+[[cards]]
+id = "me1-58"
+quantity = 4
+```
+
+`regulation_marks` is derived from the `regulationMark` field of the cards currently
+in the builder. If a card has no regulation mark (e.g. Basic Energy), it is excluded
+from the derived marks list.
+
+## Limitations
+
+- Single deck at a time (multi-deck builder deferred)
+- Deck state is not persisted across page reloads
+- No full in-page legality validation (export and use `validate_deck` via MCP for that)
+- Gemini Nano availability depends on Chrome version and hardware

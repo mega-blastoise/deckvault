@@ -1,0 +1,48 @@
+export default {
+  title: 'johto',
+  description: 'Competitive Pokémon TCG deck refinement CLI with Anthropic agent loop and browser mode.',
+
+  navigation: [
+    { type: 'page', path: '/', title: 'Overview' },
+    {
+      type: 'group',
+      title: 'Getting Started',
+      items: [
+        { type: 'page', path: '/quickstart', title: 'Quickstart' },
+        { type: 'page', path: '/deck-format', title: 'Deck File Format' },
+      ]
+    },
+    {
+      type: 'group',
+      title: 'Modes',
+      items: [
+        { type: 'page', path: '/agent-session', title: 'Agent Session (REPL)' },
+        { type: 'page', path: '/browser-mode', title: 'Browser Mode' },
+      ]
+    },
+    {
+      type: 'group',
+      title: 'Reference',
+      items: [
+        { type: 'page', path: '/cli-reference', title: 'CLI Reference' },
+        { type: 'page', path: '/mcp-tools', title: 'MCP Tools' },
+      ]
+    }
+  ],
+
+  headerLinks: [
+    {
+      label: 'GitHub',
+      href: 'https://github.com/mega-blastoise',
+      icon: 'github'
+    }
+  ],
+
+  theme: {
+    darkMode: 'media'
+  },
+
+  output: {
+    outDir: './site'
+  }
+};

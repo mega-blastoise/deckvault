@@ -1,0 +1,87 @@
+name = "Mega Gardevoir ex — Psychic Control"
+format = "standard"
+regulation_marks = ["H", "I"]
+
+# Pokémon — 14
+[[cards]]
+id = "me1-58"        # Ralts (Ascended Heroes)
+quantity = 4
+
+[[cards]]
+id = "me1-59"        # Kirlia (Ascended Heroes)
+quantity = 3
+
+[[cards]]
+id = "me1-60"        # Mega Gardevoir ex (Ascended Heroes)
+quantity = 3
+
+[[cards]]
+id = "sv7-98"        # Jirachi (Stellar Crown)
+quantity = 2
+
+[[cards]]
+id = "sv7-59"        # Mewtwo (Stellar Crown)
+quantity = 2
+
+# Trainers — 31
+
+# Supporters (9)
+[[cards]]
+id = "me1-119"       # Lillie's Determination
+quantity = 4
+
+[[cards]]
+id = "me1-114"       # Boss's Orders
+quantity = 3
+
+[[cards]]
+id = "me1-132"       # Wally's Compassion
+quantity = 2
+
+# Items (18)
+[[cards]]
+id = "me1-131"       # Ultra Ball
+quantity = 4
+
+[[cards]]
+id = "me1-167"       # Buddy-Buddy Poffin
+quantity = 4
+
+[[cards]]
+id = "me1-125"       # Rare Candy
+quantity = 4
+
+[[cards]]
+id = "me1-130"       # Switch
+quantity = 2
+
+[[cards]]
+id = "me1-121"       # Mega Signal
+quantity = 2
+
+[[cards]]
+id = "me1-173"       # Night Stretcher
+quantity = 1
+
+[[cards]]
+id = "sv5-157"       # Prime Catcher (ACE SPEC)
+quantity = 1
+
+# Stadiums (4)
+[[cards]]
+id = "me1-122"       # Mystery Garden
+quantity = 2
+
+[[cards]]
+id = "me1-117"       # Forest of Vitality
+quantity = 2
+
+# Energy — 15
+[[cards]]
+id = "sve-5"         # Basic Psychic Energy
+quantity = 15
+
+[meta]
+archetype = "mega-gardevoir-ex"
+version = "1.0"
+notes = "Mega Gardevoir ex with Lillie's Determination draw engine and Prime Catcher ACE SPEC"

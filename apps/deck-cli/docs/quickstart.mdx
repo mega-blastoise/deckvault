@@ -1,0 +1,121 @@
+---
+title: Quickstart
+description: Build johto and run your first deck session in under five minutes.
+---
+
+# Quickstart
+
+## Prerequisites
+
+| Requirement | Notes |
+|---|---|
+| Bun ≥ 1.3 | Runtime, package manager, and bundler |
+| Rust + Cargo | For the MCP card server |
+| SQLite database | `database/pokemon-data.sqlite3.db` at the monorepo root |
+| `ANTHROPIC_API_KEY` | Only needed for REPL mode |
+
+The SQLite database ships with the monorepo. No external data sync is required.
+
+## Build
+
+<Steps>
+  <Step title="Build the MCP card server">
+
+This is a one-time build. The release binary is used by the CLI at runtime.
+
+```bash
+cargo build --release \
+  --manifest-path apps/mcp-server/Cargo.toml
+```
+
+  </Step>
+  <Step title="Install CLI dependencies and build the binary">
+
+```bash
+cd apps/deck-cli
+bun install
+bun run build
+```
+
+Output: `dist/johto.mjs` — executable, `#!/usr/bin/env bun` shebang, ~126 kB.
+
+  </Step>
+  <Step title="Verify the build">
+
+```bash
+./dist/johto.mjs --help
+```
+
+```
+johto/0.1.0
+
+Options:
+  -d, --deck <path>    Deck file (.toml or .json). Repeatable.
+  --provider <name>    anthropic (default) or chrome
+  --mcp-server <path>  Path to pokemon-mcp-server binary
+  --dry-run            Print system prompt and exit
+  -h, --help           Display this message
+```
+
+  </Step>
+</Steps>
+
+## First session
+
+Use the bundled example deck to confirm everything is wired correctly:
+
+```bash
+# Preview the system prompt (no API key needed)
+DATABASE_PATH=/path/to/database/pokemon-data.sqlite3.db \
+  ./dist/johto.mjs --deck ./decks/example.toml --dry-run
+```
+
+If you see the Mega Gardevoir ex decklist followed by `×2 Weakness` and `3 prizes` in the output, the pipeline is working.
+
+Start a live session:
+
+```bash
+ANTHROPIC_API_KEY=sk-ant-... \
+DATABASE_PATH=/path/to/database/pokemon-data.sqlite3.db \
+  ./dist/johto.mjs --deck ./decks/example.toml
+```
+
+```
+Starting MCP server...
+MCP server ready.
+Loading deck: ./decks/example.toml
+Loaded 1 deck(s): Mega Gardevoir ex — Psychic Control
+
+Session ready. Type your question or "quit" to exit.
+
+You: what's my turn 1 plan?
+```
+
+<Callout variant="info">
+  If you always run from the monorepo root with the default database path
+  (`database/pokemon-data.sqlite3.db`), the `DATABASE_PATH` override is not needed.
+</Callout>
+
+## Working with your own deck
+
+Create a TOML file in `decks/`:
+
+```toml
+name = "My Deck"
+format = "standard"
+regulation_marks = ["H", "I"]
+
+[[cards]]
+id = "me1-58"   # Ralts
+quantity = 4
+
+# ... 56 more cards ...
+```
+
+Then run:
+
+```bash
+./dist/johto.mjs --deck ./decks/my-deck.toml
+```
+
+See the [Deck File Format](/deck-format) guide for the full schema and validation rules.
