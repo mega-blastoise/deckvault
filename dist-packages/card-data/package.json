@@ -1,7 +1,7 @@
 {
-  "name": "@johto/card-data",
+  "name": "@johto-ai/card-data",
   "version": "0.0.0",
-  "description": "Pokemon TCG card database for @johto/cli — prebuilt SQLite plus the deterministic JSON-to-SQLite rebuild pipeline.",
+  "description": "Pokemon TCG card database for @johto-ai/cli — prebuilt SQLite plus the deterministic JSON-to-SQLite rebuild pipeline.",
   "license": "MIT",
   "main": "./scripts/rebuild.ts",
   "bin": { "johto-card-data-rebuild": "./scripts/rebuild.ts" },

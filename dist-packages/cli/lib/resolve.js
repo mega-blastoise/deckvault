@@ -35,9 +35,9 @@ function resolvePackage(pkgName) {
 
 function resolveBinaries() {
   const suffix = platformSuffix();
-  const cliPkg = resolvePackage(`@johto/cli-${suffix}`);
-  const mcpPkg = resolvePackage(`@johto/mcp-server-${suffix}`);
-  const dataPkg = resolvePackage('@johto/card-data');
+  const cliPkg = resolvePackage(`@johto-ai/cli-${suffix}`);
+  const mcpPkg = resolvePackage(`@johto-ai/mcp-server-${suffix}`);
+  const dataPkg = resolvePackage('@johto-ai/card-data');
 
   const cliBin = path.join(cliPkg, 'bin', 'johto');
   const mcpBin = path.join(mcpPkg, 'bin', 'pokemon-mcp-server');
@@ -45,7 +45,7 @@ function resolveBinaries() {
 
   for (const [p, label] of [[cliBin, 'CLI binary'], [mcpBin, 'MCP server'], [dbPath, 'card database']]) {
     if (!fs.existsSync(p)) {
-      throw new Error(`${label} not found at ${p}. Try reinstalling: \`npm install -g @johto/cli\`.`);
+      throw new Error(`${label} not found at ${p}. Try reinstalling: \`npm install -g @johto-ai/cli\`.`);
     }
   }
 

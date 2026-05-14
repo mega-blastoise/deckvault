@@ -1,4 +1,4 @@
-# @johto-ai/cli-${SUFFIX}
+# @johto-ai/cli-linux-arm64
 
 Platform-specific binary for [@johto-ai/cli](https://www.npmjs.com/package/@johto-ai/cli).
 

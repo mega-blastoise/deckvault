@@ -83,18 +83,18 @@ function nextVersion(current: string, bump: BumpLevel): string {
 function resolvePackageJson(pkgName: string): string {
   const root = resolve(import.meta.dir, '..', 'dist-packages');
 
-  if (pkgName === '@johto/cli') {
+  if (pkgName === '@johto-ai/cli') {
     return join(root, 'cli', 'package.json');
   }
-  if (pkgName === '@johto/card-data') {
+  if (pkgName === '@johto-ai/card-data') {
     return join(root, 'card-data', 'package.json');
   }
-  if (pkgName.startsWith('@johto/cli-')) {
-    const suffix = pkgName.replace('@johto/cli-', '');
+  if (pkgName.startsWith('@johto-ai/cli-')) {
+    const suffix = pkgName.replace('@johto-ai/cli-', '');
     return join(root, 'cli-platforms', suffix, 'package.json');
   }
-  if (pkgName.startsWith('@johto/mcp-server-')) {
-    const suffix = pkgName.replace('@johto/mcp-server-', '');
+  if (pkgName.startsWith('@johto-ai/mcp-server-')) {
+    const suffix = pkgName.replace('@johto-ai/mcp-server-', '');
     return join(root, 'mcp-server-platforms', suffix, 'package.json');
   }
 

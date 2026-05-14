@@ -22,7 +22,7 @@ for (const dir of targets) {
       const deps = pkg[key] as Record<string, string> | undefined;
       if (!deps) continue;
       for (const dep of Object.keys(deps)) {
-        if (deps[dep] === 'workspace:*' && dep.startsWith('@johto/')) {
+        if (deps[dep] === 'workspace:*' && dep.startsWith('@johto-ai/')) {
           deps[dep] = version;
         }
       }

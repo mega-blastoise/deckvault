@@ -1,0 +1,11 @@
+{
+  "name": "@johto-ai/mcp-server-linux-arm64",
+  "version": "0.0.0",
+  "description": "Platform-specific MCP server binary for @johto-ai/cli (linux-arm64)",
+  "license": "MIT",
+  "os": ["linux"],
+  "cpu": ["arm64"],
+  "bin": { "pokemon-mcp-server": "./bin/pokemon-mcp-server" },
+  "files": ["bin/"],
+  "repository": "https://github.com/nicholasgalante1997/deckvault"
+}

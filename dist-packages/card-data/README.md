@@ -1,6 +1,6 @@
-# @johto/card-data
+# @johto-ai/card-data
 
-Pokemon TCG card database for [@johto/cli](https://www.npmjs.com/package/@johto/cli).
+Pokemon TCG card database for [@johto-ai/cli](https://www.npmjs.com/package/@johto-ai/cli).
 
 Ships a prebuilt SQLite database of all Pokemon TCG cards. Also includes the deterministic JSON-to-SQLite rebuild pipeline for advanced users.
 
