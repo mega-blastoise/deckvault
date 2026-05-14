@@ -85,5 +85,7 @@ docsites/*/site/*
 # dist-packages build artifacts
 dist-packages/*/data/*.db
 dist-packages/cli/node_modules
-dist-packages/cli-platforms/*/bin
-dist-packages/mcp-server-platforms/*/bin
+dist-packages/cli-platforms/linux-*/
+dist-packages/cli-platforms/darwin-*/
+dist-packages/mcp-server-platforms/linux-*/
+dist-packages/mcp-server-platforms/darwin-*/

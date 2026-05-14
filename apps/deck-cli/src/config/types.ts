@@ -6,6 +6,7 @@ export interface JohtoConfig {
   readonly paths?: {
     readonly decks_dir?: string;
     readonly card_data?: string;
+    readonly mcp_server?: string;
   };
   readonly defaults?: {
     readonly provider?: 'anthropic' | 'chrome';

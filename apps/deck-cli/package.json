@@ -30,11 +30,14 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.36.3",
     "cac": "^6.7.14",
+    "sanitize-html": "^2.17.4",
+    "serialize-javascript": "^7.0.5",
     "smol-toml": "^1.3.0"
   },
   "devDependencies": {
     "@bundt/dxdocs": "^0.4.0",
     "@types/bun": "latest",
+    "@types/sanitize-html": "^2.16.1",
     "typescript": "^5.5.0"
   }
 }

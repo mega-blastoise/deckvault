@@ -1,5 +1,11 @@
+import sanitizeHtml from 'sanitize-html';
+import serialize from 'serialize-javascript';
+
 import { buildSystemPrompt } from '../agent/prompt';
 import type { EnrichedDeck } from '../deck/types';
+
+const stripTags = (s: string): string =>
+  sanitizeHtml(s, { allowedTags: [], allowedAttributes: {} });
 
 // ── Browser static system prompt ─────────────────────────────────────────────
 
@@ -1692,17 +1698,17 @@ initAI();
 // ── HTML template ─────────────────────────────────────────────────────────────
 
 export function generatePage(deck: EnrichedDeck | null): string {
-  const staticPromptJson = JSON.stringify(BROWSER_STATIC_PROMPT);
-  const initialCtxJson   = JSON.stringify(deck ? renderDeckContext(deck) : '');
-  const deckJson         = JSON.stringify(deck);
-  const deckName         = deck ? deck.name.replace(/"/g, '&quot;') : '';
+  const staticPromptJson = serialize(BROWSER_STATIC_PROMPT, { isJSON: true });
+  const initialCtxJson   = serialize(deck ? renderDeckContext(deck) : '', { isJSON: true });
+  const deckJson         = serialize(deck, { isJSON: true });
+  const deckName         = deck ? stripTags(deck.name) : '';
 
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>johto${deck ? ` — ${deck.name}` : ''}</title>
+  <title>johto${deck ? ` — ${stripTags(deck.name)}` : ''}</title>
   <style>${PAGE_CSS}</style>
   <script>
     window.__STATIC_PROMPT__ = ${staticPromptJson};

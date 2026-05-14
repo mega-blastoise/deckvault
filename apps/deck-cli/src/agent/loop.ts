@@ -4,6 +4,7 @@ import type { McpClient } from '../mcp/client';
 import { AGENT_TOOLS, dispatchTool } from './tools';
 
 const MODEL = 'claude-sonnet-4-6';
+const MAX_TURNS = 50;
 
 export async function runAgentTurn(
   client: Anthropic,
@@ -12,8 +13,15 @@ export async function runAgentTurn(
   mcp: McpClient
 ): Promise<Anthropic.MessageParam[]> {
   const updated = [...messages];
+  let turns = 0;
 
   while (true) {
+    if (turns >= MAX_TURNS) {
+      process.stderr.write(`Warning: agent reached maximum turn limit (${MAX_TURNS}). Ending session.\n`);
+      break;
+    }
+    turns++;
+
     const stream = client.messages.stream({
       model: MODEL,
       max_tokens: 4096,
@@ -24,16 +32,22 @@ export async function runAgentTurn(
 
     process.stdout.write('\n');
 
-    for await (const event of stream) {
-      if (
-        event.type === 'content_block_delta' &&
-        event.delta.type === 'text_delta'
-      ) {
-        process.stdout.write(event.delta.text);
+    let final: Anthropic.Message;
+    try {
+      for await (const event of stream) {
+        if (
+          event.type === 'content_block_delta' &&
+          event.delta.type === 'text_delta'
+        ) {
+          process.stdout.write(event.delta.text);
+        }
       }
+      final = await stream.finalMessage();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      process.stderr.write(`Stream error: ${message}. Session may be incomplete.\n`);
+      throw err;
     }
-
-    const final = await stream.finalMessage();
     updated.push({ role: 'assistant', content: final.content });
 
     if (final.stop_reason !== 'tool_use') {

@@ -36,6 +36,27 @@ DATA_DIR="$INSTALL_DIR/card-data"
 mkdir -p "$DATA_DIR"
 curl -fsSL "$DATA_URL" | tar -xz -C "$DATA_DIR" --strip-components=1
 
+# Write default config so the CLI can locate the MCP server and card database.
+# Environment variables JOHTO_MCP_SERVER_PATH and JOHTO_DB_PATH take precedence
+# over the config file at runtime, but the config file provides sensible defaults
+# for users who install via curl | sh and never set env vars.
+CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/johto"
+CONFIG_FILE="$CONFIG_DIR/config.toml"
+MCP_PATH="$INSTALL_DIR/bin/pokemon-mcp-server"
+DB_PATH="$INSTALL_DIR/card-data/data/pokemon-data.sqlite3.db"
+
+mkdir -p "$CONFIG_DIR"
+if [ ! -f "$CONFIG_FILE" ]; then
+  cat > "$CONFIG_FILE" <<TOML
+[paths]
+mcp_server = "$MCP_PATH"
+card_data = "$DB_PATH"
+TOML
+  echo "Config written to $CONFIG_FILE"
+else
+  echo "Existing config found at $CONFIG_FILE — skipping"
+fi
+
 echo
 echo "johto $TAG installed to $INSTALL_DIR"
 echo "Symlinked to $BIN_DIR/johto"

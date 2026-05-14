@@ -1,3 +1,5 @@
+import { resolveDbPath } from '../config/loader';
+
 export interface SyncDataOptions {
   readonly rebuild?: boolean;
   readonly source?: string;
@@ -13,7 +15,7 @@ async function isBunAvailable(): Promise<boolean> {
 }
 
 export async function syncDataCommand(options: SyncDataOptions): Promise<void> {
-  const dbPath = process.env['JOHTO_DB_PATH'] ?? '(default)';
+  const dbPath = (await resolveDbPath()) ?? '(default)';
 
   if (!options.rebuild) {
     console.log(`Card database is up to date.`);

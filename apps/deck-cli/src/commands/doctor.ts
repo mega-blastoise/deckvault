@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 import { Database } from 'bun:sqlite';
 
 import { resolveDefaultMcpPath } from '../args';
-import { loadConfig, getConfigPath, resolveApiKey } from '../config/loader';
+import { loadConfig, getConfigPath, resolveApiKey, resolveDbPath } from '../config/loader';
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -46,7 +46,7 @@ export async function doctorCommand(): Promise<void> {
   // MCP server binary
   let mcpPath: string | undefined;
   try {
-    mcpPath = resolveDefaultMcpPath();
+    mcpPath = await resolveDefaultMcpPath();
   } catch {
     // not available
   }
@@ -58,7 +58,7 @@ export async function doctorCommand(): Promise<void> {
   }
 
   // Card database
-  const dbPath = process.env['JOHTO_DB_PATH'];
+  const dbPath = await resolveDbPath();
   if (dbPath) {
     const dbExists = existsSync(dbPath);
     if (dbExists) {

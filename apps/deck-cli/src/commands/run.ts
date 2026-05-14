@@ -7,7 +7,7 @@ import { McpClient } from '../mcp/client';
 import { buildSystemPrompt } from '../agent/prompt';
 import { runAgentTurn } from '../agent/loop';
 import { formatProbabilityReport } from '../probability/format';
-import { resolveApiKey } from '../config/loader';
+import { resolveApiKey, resolveDbPath } from '../config/loader';
 import type { ProbabilityReport } from '../probability/types';
 import type { McpToolResult } from '../mcp/types';
 
@@ -65,10 +65,11 @@ export async function runCommand(options: RunOptions): Promise<void> {
     }
   }
 
-  const mcpServerPath = options.mcpServer ?? resolveDefaultMcpPath();
+  const mcpServerPath = options.mcpServer ?? await resolveDefaultMcpPath();
+  const dbPath = await resolveDbPath();
 
   console.log('Starting MCP server...');
-  const mcp = new McpClient(mcpServerPath, process.env['JOHTO_DB_PATH']);
+  const mcp = new McpClient(mcpServerPath, dbPath);
   await mcp.initialize();
   console.log('MCP server ready.');
 

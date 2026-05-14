@@ -35,3 +35,19 @@ export async function resolveApiKey(): Promise<string | undefined> {
   const config = await loadConfig();
   return config.anthropic?.api_key;
 }
+
+export async function resolveDbPath(): Promise<string | undefined> {
+  const envPath = process.env['JOHTO_DB_PATH'];
+  if (envPath) return envPath;
+
+  const config = await loadConfig();
+  return config.paths?.card_data;
+}
+
+export async function resolveMcpServerPath(): Promise<string | undefined> {
+  const envPath = process.env['JOHTO_MCP_SERVER_PATH'];
+  if (envPath) return envPath;
+
+  const config = await loadConfig();
+  return config.paths?.mcp_server;
+}

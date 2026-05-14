@@ -1,8 +1,10 @@
 import cac from 'cac';
 
-export function resolveDefaultMcpPath(): string {
-  const fromEnv = process.env['JOHTO_MCP_SERVER_PATH'];
-  if (fromEnv) return fromEnv;
+import { resolveMcpServerPath } from './config/loader';
+
+export async function resolveDefaultMcpPath(): Promise<string> {
+  const fromConfig = await resolveMcpServerPath();
+  if (fromConfig) return fromConfig;
 
   if (import.meta.url.startsWith('file://')) {
     const root = new URL('../../..', import.meta.url).pathname;
@@ -27,45 +29,70 @@ export function buildCli() {
     .option('--mcp-server <path>', 'Path to pokemon-mcp-server binary')
     .option('--browser-port <port>', 'Port for browser mode (default: random)')
     .action(async (options) => {
-      const { runCommand } = await import('./commands/run');
-      await runCommand(options);
+      try {
+        const { runCommand } = await import('./commands/run');
+        await runCommand(options);
+      } catch (err) {
+        console.error('Fatal error:', err instanceof Error ? err.message : String(err));
+        process.exit(1);
+      }
     });
 
   cli.command('init', 'Interactive first-run setup wizard')
     .action(async () => {
-      const { initCommand } = await import('./commands/init');
-      await initCommand();
+      try {
+        const { initCommand } = await import('./commands/init');
+        await initCommand();
+      } catch (err) {
+        console.error('Fatal error:', err instanceof Error ? err.message : String(err));
+        process.exit(1);
+      }
     });
 
   cli.command('sync-data', 'Refresh the card database')
     .option('--rebuild', 'Rebuild from JSON sources (requires Bun on PATH)')
     .option('--source <dir>', 'Path to tcg-data JSON tree (with --rebuild)')
     .action(async (options) => {
-      const { syncDataCommand } = await import('./commands/sync-data');
-      await syncDataCommand(options);
+      try {
+        const { syncDataCommand } = await import('./commands/sync-data');
+        await syncDataCommand(options);
+      } catch (err) {
+        console.error('Fatal error:', err instanceof Error ? err.message : String(err));
+        process.exit(1);
+      }
     });
 
   cli.command('doctor', 'Diagnose install — binaries, DB, API key, network')
     .action(async () => {
-      const { doctorCommand } = await import('./commands/doctor');
-      await doctorCommand();
+      try {
+        const { doctorCommand } = await import('./commands/doctor');
+        await doctorCommand();
+      } catch (err) {
+        console.error('Fatal error:', err instanceof Error ? err.message : String(err));
+        process.exit(1);
+      }
     });
 
   cli.command('auth <action> [...args]', 'Auth management: set <provider> <key> | show')
     .action(async (action: string, args: string[]) => {
-      const { authCommand } = await import('./commands/auth');
-      if (action === 'set') {
-        const provider = args[0];
-        const key = args[1];
-        if (!provider || !key) {
-          console.error('Usage: johto auth set <provider> <key>');
+      try {
+        const { authCommand } = await import('./commands/auth');
+        if (action === 'set') {
+          const provider = args[0];
+          const key = args[1];
+          if (!provider || !key) {
+            console.error('Usage: johto auth set <provider> <key>');
+            process.exit(1);
+          }
+          await authCommand.set(provider, key);
+        } else if (action === 'show') {
+          await authCommand.show();
+        } else {
+          console.error(`Unknown auth action: "${action}". Use "set" or "show".`);
           process.exit(1);
         }
-        await authCommand.set(provider, key);
-      } else if (action === 'show') {
-        await authCommand.show();
-      } else {
-        console.error(`Unknown auth action: "${action}". Use "set" or "show".`);
+      } catch (err) {
+        console.error('Fatal error:', err instanceof Error ? err.message : String(err));
         process.exit(1);
       }
     });
@@ -79,12 +106,17 @@ export function buildCli() {
     .option('--mcp-server <path>', '')
     .option('--browser-port <port>', '')
     .action(async (options) => {
-      if (process.argv.length <= 2) {
-        cli.outputHelp();
-        return;
+      try {
+        if (process.argv.length <= 2) {
+          cli.outputHelp();
+          return;
+        }
+        const { runCommand } = await import('./commands/run');
+        await runCommand(options);
+      } catch (err) {
+        console.error('Fatal error:', err instanceof Error ? err.message : String(err));
+        process.exit(1);
       }
-      const { runCommand } = await import('./commands/run');
-      await runCommand(options);
     });
 
   cli.help();

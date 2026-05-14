@@ -81,6 +81,7 @@ export async function initCommand(): Promise<void> {
     paths: {
       decks_dir: decksDir,
       card_data: existing.paths?.card_data,
+      mcp_server: existing.paths?.mcp_server,
     },
     defaults: {
       provider,
