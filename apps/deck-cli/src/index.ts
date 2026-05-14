@@ -25,7 +25,7 @@ async function main(): Promise<void> {
   }
 
   console.log('Starting MCP server...');
-  const mcp = new McpClient(args.mcpServerPath);
+  const mcp = new McpClient(args.mcpServerPath, process.env['JOHTO_DB_PATH']);
   await mcp.initialize();
   console.log('MCP server ready.');
 

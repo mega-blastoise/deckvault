@@ -93,6 +93,16 @@ export function parseArgs(): CliArgs {
 }
 
 function resolveDefaultMcpPath(): string {
-  const root = new URL('../../..', import.meta.url).pathname;
-  return `${root}/apps/mcp-server/target/release/pokemon-mcp-server`;
+  const fromEnv = process.env['JOHTO_MCP_SERVER_PATH'];
+  if (fromEnv) return fromEnv;
+
+  if (import.meta.url.startsWith('file://')) {
+    const root = new URL('../../..', import.meta.url).pathname;
+    return `${root}/apps/mcp-server/target/release/pokemon-mcp-server`;
+  }
+
+  throw new Error(
+    'JOHTO_MCP_SERVER_PATH is not set and no monorepo-relative fallback is available. ' +
+    'This is unexpected — run `johto doctor` to diagnose.'
+  );
 }

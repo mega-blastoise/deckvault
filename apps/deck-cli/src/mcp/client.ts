@@ -24,9 +24,14 @@ export class McpClient {
   private idCounter = 1;
   private initialized = false;
 
-  constructor(serverPath: string) {
+  constructor(serverPath: string, dbPath?: string) {
+    const env = dbPath
+      ? { ...process.env, DATABASE_PATH: dbPath }
+      : process.env;
+
     this.proc = spawn(serverPath, [], {
       stdio: ['pipe', 'pipe', 'inherit'],
+      env,
     });
 
     if (!this.proc.stdout || !this.proc.stdin) {

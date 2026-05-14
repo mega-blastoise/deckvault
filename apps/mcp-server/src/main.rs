@@ -29,7 +29,14 @@ async fn main() -> anyhow::Result<()> {
     let db_path = std::env::var("DATABASE_PATH")
         .unwrap_or_else(|_| "database/pokemon-data.sqlite3.db".to_string());
 
-    let db = Arc::new(Database::open(db_path.as_ref())?);
+    let db = Arc::new(
+        Database::open(db_path.as_ref())
+            .map_err(|e| anyhow::anyhow!(
+                "Failed to open card database at {db_path:?}: {e}. \
+                 Set DATABASE_PATH to the location of pokemon-data.sqlite3.db \
+                 or install @johto/card-data via the CLI."
+            ))?
+    );
 
     tracing::info!(
         "Database opened: {} cards, {} sets",
