@@ -5,6 +5,11 @@ description: Local deck builder and on-device AI chat powered by Chrome Prompt A
 
 # Browser Mode
 
+<Callout variant="warning">
+  Browser mode is experimental. The Chrome Prompt API is an early-stage web platform feature
+  and its availability varies by Chrome version and device. Expect rough edges.
+</Callout>
+
 `--provider chrome` serves a local three-panel web page and opens it in your default browser.
 No API key required — AI responses run on-device via the Chrome Prompt API and Gemini Nano.
 
@@ -106,6 +111,23 @@ window.ai?.languageModel != null  // → true
 
 If `window.ai` is unavailable, the chat panel renders a setup guide with these same
 steps instead of showing an error.
+
+## Docker
+
+Browser mode works in Docker but requires port mapping:
+
+```bash
+docker run --rm -it \
+  -p 7777:7777 \
+  -v "$PWD/decks:/decks" \
+  ghcr.io/nicholasgalante1997/johto:latest \
+  run --provider chrome --deck /decks/my-deck.toml --browser-port 7777
+```
+
+Then open `http://localhost:7777` in your browser on the host.
+
+The `--browser-port` flag is required when using Docker (or any environment where the port
+must be fixed in advance for port mapping). Without it, the server binds to a random port.
 
 ## API endpoints
 

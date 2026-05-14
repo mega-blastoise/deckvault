@@ -2,53 +2,42 @@
 
 Competitive Pokémon TCG deck refinement CLI. Load a `.toml` deck file, start an AI agent session pre-loaded with your 60 cards, connected to a local 19,818-card SQLite database via MCP — no services, no Docker, no internet required for card data.
 
+---
+
+## Install
+
 ```bash
-johto --deck ./decks/my-deck.toml
+npm install -g @johto-ai/cli
+johto init
 ```
 
----
-
-## Prerequisites
-
-| Requirement | Notes |
-|---|---|
-| **Bun ≥ 1.3** | Runtime and package manager |
-| **Rust + Cargo** | To build the MCP card server (one-time) |
-| **SQLite database** | `database/pokemon-data.sqlite3.db` in the monorepo root |
-| **`ANTHROPIC_API_KEY`** | Required for `--provider anthropic` (REPL mode) only |
-
----
-
-## Build
+Or via Docker:
 
 ```bash
-# 1. Build the MCP card server (Rust — one-time, ~30s)
-cargo build --release --manifest-path apps/mcp-server/Cargo.toml
+docker run --rm -it \
+  -v "$PWD/decks:/decks" \
+  -e ANTHROPIC_API_KEY \
+  ghcr.io/nicholasgalante1997/johto:latest \
+  run --deck /decks/my-deck.toml
+```
 
-# 2. Install CLI deps and build the binary
-cd apps/deck-cli
-bun install
-bun run build
-# → dist/johto.mjs  (shebang + chmod +x, ~2s)
+Or via the curl installer:
+
+```bash
+curl -fsSL https://johto.deckvault.gg/install.sh | sh
 ```
 
 ---
 
 ## Usage
 
-```
-johto [options]
-
-Options:
-  -d, --deck <path>       Deck file (.toml or .json). Repeatable.
-                          Optional with --provider chrome.
-  --provider <name>       anthropic (default) · chrome
-  --mcp-server <path>     Path to pokemon-mcp-server binary.
-                          Default: auto-resolved from monorepo root.
-  --dry-run               Print assembled system prompt and exit.
-                          No API key required.
-  -h, --help              Show help
-  -v, --version           Show version
+```bash
+johto init                              # first-run setup wizard
+johto run --deck ./decks/my-deck.toml  # REPL session
+johto run --provider chrome            # browser mode
+johto doctor                           # verify install
+johto auth set anthropic <key>         # persist API key
+johto --help                           # all subcommands
 ```
 
 ### REPL mode (Anthropic)
@@ -56,7 +45,7 @@ Options:
 Starts an interactive agent session. The agent receives your full decklist — card names, HP, attacks, regulation marks — as the system prompt, and has four MCP tools for live card lookups.
 
 ```bash
-ANTHROPIC_API_KEY=sk-ant-... johto --deck ./decks/mega-gardevoir-ex.toml
+johto run --deck ./decks/mega-gardevoir-ex.toml
 ```
 
 Type questions at the `You:` prompt. `quit` or `exit` ends the session.
@@ -72,20 +61,20 @@ Serves a local three-panel page — card search, deck builder, and on-device cha
 
 ```bash
 # Open deck builder (no deck pre-loaded)
-johto --provider chrome
+johto run --provider chrome
 
 # Pre-populate builder from an existing deck
-johto --deck ./decks/mega-gardevoir-ex.toml --provider chrome
+johto run --deck ./decks/mega-gardevoir-ex.toml --provider chrome
 ```
 
-The builder exports decks as `.toml` files in SPEC_01 format, ready to drop into `johto --deck <file>`.
+The builder exports decks as `.toml` files in SPEC_01 format, ready to drop into `johto run --deck <file>`.
 
 Requires Chrome Canary / Dev with `chrome://flags/#prompt-api-for-gemini-nano` enabled. The page renders a setup guide (not a blank state) when `window.ai` is unavailable.
 
 ### Dry run
 
 ```bash
-johto --deck ./decks/mega-gardevoir-ex.toml --dry-run
+johto run --deck ./decks/mega-gardevoir-ex.toml --dry-run
 ```
 
 Prints the assembled system prompt — static competitive knowledge layer + injected deck context — then exits. No API calls, no API key required. Useful for verifying prompt construction or diffing prompt changes.
@@ -236,7 +225,7 @@ Mark G rotated out **2026-04-10**.
 ```
 apps/deck-cli/src/
 ├── index.ts          entry point — wires all modules, REPL loop
-├── args.ts           cac-based flag parsing (--deck, --provider, --dry-run)
+├── args.ts           subcommand parser (johto run / init / doctor / auth / sync-data)
 ├── mcp/
 │   ├── client.ts     JSON-RPC 2.0 over stdio — spawns pokemon-mcp-server
 │   └── types.ts      McpContent, McpToolResult
@@ -258,19 +247,21 @@ The MCP server runs as a child process (stdin/stdout JSON-RPC). The CLI never ta
 
 ---
 
-## Development
+## From source
 
 ```bash
+# 1. Build the MCP card server (Rust — one-time, ~30s)
+cargo build --release --manifest-path apps/mcp-server/Cargo.toml
+
+# 2. Install CLI deps
 cd apps/deck-cli
+bun install
+
+# 3. Run from source without building
+bun run dev -- --deck ./decks/example.toml --dry-run
 
 # Type check (no emit)
 bun run typecheck
-
-# Build binary
-bun run build
-
-# Run from source without building
-bun run dev -- --deck ./decks/example.toml --dry-run
 
 # Smoke tests (all 5 phases)
 cd ../../__tests__/deck-cli/smoke
@@ -286,3 +277,5 @@ Phase 3 — CLI guards            (requires CLI binary)
 Phase 4 — System prompt content (requires all of the above + --dry-run)
 Phase 5 — Browser mode          (requires all of the above)
 ```
+
+See [Developing Locally](docs/development.mdx) for the full contributor workflow.
