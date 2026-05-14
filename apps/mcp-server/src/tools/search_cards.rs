@@ -64,6 +64,10 @@ impl Tool for SearchCardsTool {
                 "standard_only": {
                     "type": "boolean",
                     "description": "When true, restrict results to current Standard-legal cards (regulation marks H, I, J). Basic Energy is always included. Default: false."
+                },
+                "format": {
+                    "type": "string",
+                    "description": "Response format: \"text\" (default, human-readable markdown) or \"json\" (camelCase JSON array of card objects, suitable for programmatic use)."
                 }
             }
         })
@@ -86,11 +90,35 @@ impl Tool for SearchCardsTool {
             .and_then(|v| v.as_bool())
             .unwrap_or(false);
 
+        let use_json = arguments.get("format")
+            .and_then(|v| v.as_str())
+            .map(|s| s == "json")
+            .unwrap_or(false);
+
         let results = self.db.search_cards_filtered(
             query, pokemon_type, supertype, rarity, set_id, hp_min, hp_max, limit, standard_only,
         )?;
 
-        Ok(format_card_results(&results))
+        if use_json {
+            Ok(format_card_results_json(&results))
+        } else {
+            Ok(format_card_results(&results))
+        }
+    }
+}
+
+fn format_card_results_json(cards: &[PokemonCard]) -> CallToolResult {
+    match serde_json::to_string(cards) {
+        Ok(text) => CallToolResult {
+            content: vec![Content::Text { text }],
+            is_error: None,
+        },
+        Err(e) => CallToolResult {
+            content: vec![Content::Text {
+                text: format!("Serialisation error: {e}"),
+            }],
+            is_error: Some(true),
+        },
     }
 }
 

@@ -5,6 +5,7 @@ use pokemon_mcp_server::domains::db::Database;
 use pokemon_mcp_server::domains::pricing::PricingClient;
 use pokemon_mcp_server::registry::ToolRegistry;
 use pokemon_mcp_server::tools::{
+    analyze_probability::AnalyzeProbabilityTool,
     compare_cards::CompareCardsTool,
     get_card_by_id::GetCardByIdTool,
     get_price_info::GetPriceInfoTool,
@@ -49,6 +50,7 @@ async fn main() -> anyhow::Result<()> {
     registry.register(GetPriceInfoTool::new(Arc::clone(&db), Arc::clone(&pricing)));
     registry.register(LoadDeckTool::new(Arc::clone(&db)));
     registry.register(ValidateDeckTool::new(Arc::clone(&db)));
+    registry.register(AnalyzeProbabilityTool::new(Arc::clone(&db)));
 
     tracing::info!("Registered {} tools", registry.tool_count());
 
