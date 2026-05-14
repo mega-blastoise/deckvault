@@ -1,0 +1,24 @@
+{
+  "name": "@johto/cli",
+  "version": "0.0.0",
+  "description": "Competitive Pokémon TCG deck refinement CLI with Anthropic agent loop and browser mode.",
+  "license": "MIT",
+  "bin": { "johto": "./bin/johto.js" },
+  "files": ["bin/", "lib/", "README.md"],
+  "engines": { "node": ">=20" },
+  "dependencies": {
+    "@johto/card-data": "workspace:*"
+  },
+  "optionalDependencies": {
+    "@johto/cli-linux-x64": "workspace:*",
+    "@johto/cli-linux-arm64": "workspace:*",
+    "@johto/cli-darwin-x64": "workspace:*",
+    "@johto/cli-darwin-arm64": "workspace:*",
+    "@johto/mcp-server-linux-x64": "workspace:*",
+    "@johto/mcp-server-linux-arm64": "workspace:*",
+    "@johto/mcp-server-darwin-x64": "workspace:*",
+    "@johto/mcp-server-darwin-arm64": "workspace:*"
+  },
+  "repository": "https://github.com/nicholasgalante1997/deckvault",
+  "homepage": "https://johto.dev"
+}
