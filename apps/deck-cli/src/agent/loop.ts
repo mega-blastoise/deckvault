@@ -3,7 +3,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import type { McpClient } from '../mcp/client';
 import { AGENT_TOOLS, dispatchTool } from './tools';
 
-const MODEL = 'claude-sonnet-4-5';
+const MODEL = 'claude-sonnet-4-6';
 
 export async function runAgentTurn(
   client: Anthropic,
