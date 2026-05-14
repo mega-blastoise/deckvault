@@ -1,4 +1,4 @@
-import { buildSystemPrompt, renderDeck } from '../agent/prompt';
+import { buildSystemPrompt } from '../agent/prompt';
 import type { EnrichedDeck } from '../deck/types';
 
 // ── Browser static system prompt ─────────────────────────────────────────────
@@ -71,589 +71,857 @@ function renderDeckContext(deck: EnrichedDeck): string {
 // ── CSS ───────────────────────────────────────────────────────────────────────
 
 const PAGE_CSS = `
+@import url('https://rsms.me/inter/inter.css');
+
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --bg:          #080a0d;
-  --bg-panel:    #0c1018;
-  --bg-cell:     #111820;
-  --bg-input:    #0d1520;
-  --bdr:         #1a2a3a;
-  --bdr-hi:      #1e3a5a;
-  --text:        #c9d8e8;
-  --text-2:      #4d6a84;
-  --text-3:      #243444;
-  --accent:      #0ea5e9;
-  --accent-dim:  #062030;
-  --green:       #22c55e;
-  --amber:       #f59e0b;
-  --red:         #ef4444;
-  --green-dim:   #0a2010;
-  --amber-dim:   #2a1800;
-  --red-dim:     #2a0808;
-  font-size: 13px;
+  --bg-root:       #F7F7F5;
+  --bg-panel:      #FFFFFF;
+  --bg-raised:     #FAFAF8;
+  --bg-input:      #F4F4F2;
+  --border:        rgba(0,0,0,.08);
+  --border-strong: rgba(0,0,0,.14);
+  --text-primary:  #111110;
+  --text-secondary:#6F6E6B;
+  --text-tertiary: #B0AFA9;
+
+  --accent:        #2563EB;
+  --accent-light:  #EFF6FF;
+  --accent-border: #BFDBFE;
+  --accent-text:   #1D4ED8;
+
+  --green:         #16A34A;
+  --green-light:   #F0FDF4;
+  --green-border:  #BBF7D0;
+  --amber:         #D97706;
+  --amber-light:   #FFFBEB;
+  --amber-border:  #FDE68A;
+  --red:           #DC2626;
+  --red-light:     #FEF2F2;
+  --red-border:    #FECACA;
+
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.04), 0 0 0 1px rgba(0,0,0,.04);
+  --shadow-md: 0 4px 12px rgba(0,0,0,.08), 0 0 0 1px rgba(0,0,0,.05);
+  --shadow-lg: 0 16px 40px rgba(0,0,0,.14), 0 0 0 1px rgba(0,0,0,.06);
+
+  font-size: 15px;
 }
 
 body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', ui-monospace, monospace;
-  height: 100dvh;
+  background: var(--bg-root);
+  color: var(--text-primary);
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  height: auto;
   overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
-/* ── Layout ──────────────────────────────────────────────────────── */
+/* ── Scrollbars ──────────────────────────────────────────────────────────── */
+
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-tertiary); }
+
+/* ── App bar ─────────────────────────────────────────────────────────────── */
+
+.japp-bar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 36px;
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 16px;
+  z-index: 50;
+}
+.japp-name {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: -.02em;
+  color: var(--text-primary);
+}
+.japp-sub {
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+/* ── Layout ──────────────────────────────────────────────────────────────── */
 
 .jdck {
   display: grid;
-  grid-template-columns: 360px 340px 1fr;
-  grid-template-rows: 100dvh;
-  height: 100dvh;
+  grid-template-columns: 380px 360px 1fr;
+  grid-template-rows: calc(100dvh - 36px);
+  height: calc(100dvh - 36px);
+  margin-top: 36px;
 }
 
-/* ── Panel shell ─────────────────────────────────────────────────── */
+/* ── Panel shell ─────────────────────────────────────────────────────────── */
 
 .jpanel {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border-right: 1px solid var(--bdr);
+  background: var(--bg-panel);
+  border-right: 1px solid var(--border);
 }
 .jpanel:last-child { border-right: none; }
 
-.jpanel__hd {
+.jpanel-hd {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--bdr);
-  background: var(--bg-panel);
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
   flex-shrink: 0;
-  min-height: 40px;
+  min-height: 52px;
 }
 
-.jpanel__label {
-  font-size: 0.62rem;
+/* ── Panel label ─────────────────────────────────────────────────────────── */
+
+.jpanel-label {
+  font-size: 10px;
   font-weight: 700;
-  letter-spacing: 0.12em;
+  letter-spacing: .08em;
   text-transform: uppercase;
-  color: var(--text-2);
-  white-space: nowrap;
-}
-
-/* ── Search panel ────────────────────────────────────────────────── */
-
-.jsearch__bar {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex: 1;
-  background: var(--bg-input);
-  border: 1px solid var(--bdr);
-  border-radius: 4px;
-  padding: 4px 8px;
-}
-
-.jsearch__prompt {
-  color: var(--accent);
-  font-size: 0.75rem;
+  color: var(--text-tertiary);
   flex-shrink: 0;
   user-select: none;
 }
 
-.jsearch__input {
+/* ── Search input ────────────────────────────────────────────────────────── */
+
+.jsearch-wrap {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex: 1;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 8px 12px;
+  transition: border-color .15s, background .15s, box-shadow .15s;
+}
+.jsearch-wrap:focus-within {
+  border-color: var(--accent);
+  background: #fff;
+  box-shadow: 0 0 0 3px var(--accent-light);
+}
+
+.jsearch-icon { color: var(--text-tertiary); font-size: 13px; flex-shrink: 0; user-select: none; }
+
+.jsearch-input {
   flex: 1;
   background: none;
   border: none;
   outline: none;
-  color: var(--text);
+  color: var(--text-primary);
   font-family: inherit;
-  font-size: 0.78rem;
+  font-size: 13.5px;
   caret-color: var(--accent);
 }
-.jsearch__input::placeholder { color: var(--text-3); }
+.jsearch-input::placeholder { color: var(--text-tertiary); }
 
-.jtabs {
+/* ── Type filter bar ─────────────────────────────────────────────────────── */
+
+.jtype-bar {
   display: flex;
-  gap: 2px;
-  padding: 6px 12px;
-  border-bottom: 1px solid var(--bdr);
-  background: var(--bg-panel);
+  gap: 6px;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-raised);
   flex-shrink: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
 }
+.jtype-bar::-webkit-scrollbar { display: none; }
 
-.jtab {
-  padding: 3px 8px;
+.jtype-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 11px;
+  border: 1.5px solid var(--border);
+  border-radius: 20px;
+  background: var(--bg-panel);
+  color: var(--text-secondary);
   font-family: inherit;
-  font-size: 0.65rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  border: 1px solid var(--bdr);
-  border-radius: 3px;
-  background: none;
-  color: var(--text-2);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: .01em;
   cursor: pointer;
+  white-space: nowrap;
+  transition: all .1s;
 }
-.jtab:hover { border-color: var(--bdr-hi); color: var(--text); }
-.jtab.active { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+.jtype-tab:hover { border-color: var(--accent-border); color: var(--accent-text); background: var(--accent-light); }
+.jtype-tab.active { background: var(--accent-light); border-color: var(--accent-border); color: var(--accent-text); }
+.jtype-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.jtype-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+/* ── Card search grid ────────────────────────────────────────────────────── */
 
 .jcard-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  padding: 10px;
+  gap: 10px;
+  padding: 12px;
   overflow-y: auto;
   flex: 1;
   align-content: start;
-  overflow: auto;
+  background: var(--bg-raised);
 }
 
-/* Individual card in search grid */
+/* ── Card tile ───────────────────────────────────────────────────────────── */
+
 .jcard {
+  position: relative;
   display: flex;
   flex-direction: column;
-  background: var(--bg-cell);
-  border: 1px solid var(--bdr);
-  border-radius: 5px;
+  background: var(--bg-panel);
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
   overflow: hidden;
-  cursor: default;
-  min-height: 400px;
-  min-width: 240px;
+  cursor: pointer;
+  transition: border-color .12s, box-shadow .12s;
 }
-.jcard:hover { border-color: var(--bdr-hi); }
+.jcard:hover { box-shadow: var(--shadow-md); border-color: transparent; }
+.jcard:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-.jcard__img-wrap {
+.jcard-img-wrap {
   position: relative;
   aspect-ratio: 5 / 7;
   background: var(--bg-input);
   overflow: hidden;
 }
 
-.jcard__img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
+.jcard-img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
-/* Regulation mark badge overlaid on top-right of card image */
-.jcard__mark {
+.jcard-overlay {
   position: absolute;
-  top: 5px;
-  right: 5px;
-  font-size: 0.55rem;
-  font-weight: 800;
-  letter-spacing: 0.05em;
-  padding: 2px 5px;
-  border-radius: 3px;
-  line-height: 1;
-}
-.jcard__mark.ok  { background: var(--green-dim); color: var(--green); border: 1px solid var(--green); }
-.jcard__mark.no  { background: var(--red-dim);   color: var(--red);   border: 1px solid var(--red);   }
-.jcard__mark.unk { background: var(--amber-dim); color: var(--amber); border: 1px solid var(--amber); }
-
-.jcard__foot {
+  inset: 0;
+  background: rgba(28,25,23,.42);
   display: flex;
   align-items: center;
-  gap: 5px;
-  padding: 5px 7px 2px;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity .15s;
+}
+.jcard:hover .jcard-overlay,
+.jcard:focus-within .jcard-overlay { opacity: 1; }
+
+.jcard-add-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid rgba(255,255,255,.3);
+  color: #fff;
+  font-size: 22px;
+  font-weight: 300;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-md);
+  transition: transform .1s, background .1s;
+}
+.jcard-add-btn:hover { transform: scale(1.1); background: var(--accent-text); }
+.jcard-add-btn:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+
+.jcard-mark {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  font-size: 9px;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 20px;
+  letter-spacing: .05em;
+  line-height: 1.4;
+  pointer-events: none;
+}
+.jcard-mark.ok  { background: var(--green); color: #fff; }
+.jcard-mark.no  { background: var(--red);   color: #fff; }
+.jcard-mark.unk { background: var(--amber); color: #fff; }
+
+.jcard-footer {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 10px;
+  border-top: 1px solid var(--border);
+  background: var(--bg-panel);
 }
 
-.jcard__name {
-  font-size: 0.68rem;
+.jcard-type-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+.jcard-name {
+  font-size: 12.5px;
   font-weight: 600;
+  letter-spacing: -.01em;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  color: var(--text-primary);
   flex: 1;
-  color: var(--text);
 }
 
-.jtype-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  display: inline-block;
-}
-
-.jcard__add {
-  width: 100%;
-  padding: 5px 0;
-  background: var(--accent-dim);
-  border: none;
-  border-top: 1px solid var(--bdr);
-  color: var(--accent);
-  font-family: inherit;
-  font-size: 0.9rem;
-  font-weight: 700;
-  cursor: pointer;
-  letter-spacing: 0.05em;
-}
-.jcard__add:hover { background: var(--accent); color: #fff; }
-
-.jsearch__empty {
-  padding: 32px 16px;
+.jsearch-empty {
+  grid-column: 1 / -1;
+  padding: 48px 16px;
   text-align: center;
-  font-size: 0.72rem;
-  color: var(--text-3);
-  line-height: 2;
+  font-size: 13px;
+  color: var(--text-tertiary);
+  line-height: 1.9;
 }
 
-/* ── Deck builder panel ──────────────────────────────────────────── */
+.jcard-skel {
+  background: var(--bg-panel);
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.jcard-skel-img {
+  aspect-ratio: 5/7;
+  background: linear-gradient(90deg, var(--bg-input) 25%, var(--border) 50%, var(--bg-input) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+}
+@keyframes shimmer { to { background-position: -200% 0; } }
+.jcard-skel-foot { height: 34px; background: var(--bg-raised); }
 
-.jdeck__name {
+/* ── Card detail popover ─────────────────────────────────────────────────── */
+
+.jpopover {
+  position: fixed;
+  width: 316px;
+  background: var(--bg-panel);
+  border: 1.5px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100dvh - 24px);
+}
+.jpopover[hidden] { display: none; }
+
+.jpopover-inner {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  gap: 12px;
+  padding: 14px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.jpopover-img { width: 100%; aspect-ratio: 5/7; object-fit: cover; border-radius: 7px; display: block; }
+
+.jpopover-info { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
+
+.jpopover-name { font-size: 14px; font-weight: 700; color: var(--text-primary); line-height: 1.3; }
+
+.jpopover-meta { display: flex; flex-wrap: wrap; gap: 4px; font-size: 11px; color: var(--text-secondary); }
+
+.jpopover-chip {
+  padding: 1px 7px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .03em;
+  border: 1px solid;
+}
+.jpopover-chip.ok  { background: var(--green-light); color: var(--green); border-color: var(--green-border); }
+.jpopover-chip.no  { background: var(--red-light);   color: var(--red);   border-color: var(--red-border); }
+.jpopover-chip.unk { background: var(--amber-light); color: var(--amber); border-color: var(--amber-border); }
+
+.jpopover-section {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  padding-top: 4px;
+  border-top: 1px solid var(--border);
+  margin-top: 2px;
+}
+
+.jpopover-attack { padding: 5px 0; border-bottom: 1px solid var(--border); }
+.jpopover-attack:last-child { border-bottom: none; }
+.jpopover-attack-hd { display: flex; justify-content: space-between; font-weight: 600; font-size: 12px; color: var(--text-primary); }
+.jpopover-attack-sub { font-size: 10px; color: var(--text-tertiary); margin-top: 2px; line-height: 1.4; }
+.jpopover-attack-cost { font-family: ui-monospace, monospace; font-size: 10px; color: var(--accent-text); }
+
+.jpopover-ability { padding: 5px 0; border-bottom: 1px solid var(--border); }
+.jpopover-ability:last-child { border-bottom: none; }
+.jpopover-ability-name { font-weight: 600; font-size: 12px; color: var(--accent-text); }
+.jpopover-ability-text { font-size: 10px; color: var(--text-tertiary); margin-top: 2px; line-height: 1.4; }
+
+.jpopover-footer { padding: 10px 14px; border-top: 1px solid var(--border); background: var(--bg-raised); flex-shrink: 0; }
+
+.jpop-add-btn {
+  width: 100%;
+  padding: 9px;
+  background: var(--accent);
+  border: none;
+  border-radius: 9px;
+  color: #fff;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: .02em;
+  cursor: pointer;
+  transition: background .12s;
+}
+.jpop-add-btn:hover { background: var(--accent-text); }
+.jpop-add-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ── Deck builder panel ──────────────────────────────────────────────────── */
+
+.jdeck-name {
   flex: 1;
   background: none;
   border: none;
   outline: none;
-  color: var(--text);
+  color: var(--text-primary);
   font-family: inherit;
-  font-size: 0.8rem;
+  font-size: 15px;
   font-weight: 600;
   min-width: 0;
 }
-.jdeck__name::placeholder { color: var(--text-3); }
+.jdeck-name::placeholder { color: var(--text-tertiary); }
 
-.jdeck__count {
-  font-size: 0.72rem;
+.jdeck-count {
+  font-size: 11px;
   font-weight: 700;
-  padding: 3px 7px;
-  border-radius: 3px;
-  border: 1px solid var(--bdr);
+  padding: 3px 9px;
+  letter-spacing: .02em;
+  border-radius: 20px;
+  border: 1.5px solid;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
+  transition: all .15s;
+  flex-shrink: 0;
 }
-.jdeck__count.ok   { color: var(--green); border-color: var(--green); background: var(--green-dim); }
-.jdeck__count.warn { color: var(--amber); border-color: var(--amber); background: var(--amber-dim); }
-.jdeck__count.no   { color: var(--red);   border-color: var(--red);   background: var(--red-dim); }
+.jdeck-count.ok   { color: var(--green); border-color: var(--green-border); background: var(--green-light); }
+.jdeck-count.warn { color: var(--amber); border-color: var(--amber-border); background: var(--amber-light); }
+.jdeck-count.no   { color: var(--red);   border-color: var(--red-border);   background: var(--red-light); }
+
+@keyframes countPulse {
+  0%   { transform: scale(1); }
+  35%  { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+.jdeck-count.pulse { animation: countPulse .5s ease-out; }
 
 .jexport-btn {
-  padding: 4px 10px;
-  background: none;
-  border: 1px solid var(--green);
-  border-radius: 3px;
-  color: var(--green);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  background: var(--green);
+  border: none;
+  border-radius: 7px;
+  color: #fff;
   font-family: inherit;
-  font-size: 0.65rem;
+  font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.06em;
+  letter-spacing: .04em;
   cursor: pointer;
   white-space: nowrap;
+  flex-shrink: 0;
+  transition: background .12s;
 }
-.jexport-btn:hover { background: var(--green); color: #000; }
-.jexport-btn:disabled { opacity: 0.25; cursor: not-allowed; }
+.jexport-btn:hover { background: #15803d; }
+.jexport-btn:disabled { opacity: .4; cursor: not-allowed; background: var(--text-tertiary); }
+.jexport-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-.jdeck-body {
-  flex: 1;
-  overflow-y: auto;
-  padding: 4px 0;
-}
+/* Section stats bar */
+.jstats-bar { padding: 7px 16px 9px; border-bottom: 1px solid var(--border); background: var(--bg-raised); flex-shrink: 0; }
 
-.jdck-empty {
-  padding: 32px 16px;
-  text-align: center;
-  font-size: 0.72rem;
-  color: var(--text-3);
-  line-height: 2.2;
-}
+.jstats-row { display: flex; justify-content: space-between; font-size: 10.5px; font-weight: 600; margin-bottom: 5px; letter-spacing: .01em; }
 
-/* Section header inside deck list */
-.jsec-hd {
+.jstats-segment { font-weight: 600; }
+.jstats-segment--pk { color: #0EA5E9; }
+.jstats-segment--tr { color: #8B5CF6; }
+.jstats-segment--en { color: #F59E0B; }
+
+.jstats-track { height: 3px; background: var(--bg-input); border-radius: 3px; overflow: hidden; display: flex; }
+.jstats-fill { height: 100%; transition: width .3s ease; }
+.jstats-fill--pk { background: #0EA5E9; }
+.jstats-fill--tr { background: #8B5CF6; }
+.jstats-fill--en { background: #F59E0B; }
+
+/* Rotation warning */
+.jrot-warn {
+  margin: 10px 14px 0;
+  padding: 8px 10px;
+  background: var(--amber-light);
+  border: 1px solid var(--amber-border);
+  border-left: 3px solid var(--amber);
+  border-radius: 8px;
+  font-size: 11px;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 12px 4px;
-  font-size: 0.6rem;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-  color: var(--text-2);
-  border-top: 1px solid var(--bdr);
-  margin-top: 2px;
+  gap: 7px;
+  align-items: flex-start;
 }
-.jsec-hd:first-child { border-top: none; margin-top: 0; }
-.jsec-hd--pokmon  { color: #38bdf8; border-top-color: #38bdf820; }
-.jsec-hd--trainer { color: #a78bfa; border-top-color: #a78bfa20; }
-.jsec-hd--energy  { color: #fbbf24; border-top-color: #fbbf2420; }
-.jsec-ct {
-  font-size: 0.58rem;
-  color: var(--text-3);
-  font-weight: 400;
+.jrot-warn-icon { color: var(--amber); flex-shrink: 0; font-size: 13px; line-height: 1.5; }
+.jrot-warn-body { flex: 1; line-height: 1.5; color: var(--text-secondary); }
+.jrot-warn-title { font-weight: 700; color: var(--amber); display: block; margin-bottom: 1px; }
+.jrot-warn-dismiss {
+  background: none;
+  border: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  flex-shrink: 0;
+  padding: 0;
 }
+.jrot-warn-dismiss:hover { color: var(--amber); }
+
+/* Deck body */
+.jdeck-body { flex: 1; overflow-y: auto; padding-bottom: 8px; }
+
+.jdeck-empty {
+  padding: 48px 16px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-tertiary);
+  line-height: 2;
+}
+
+/* Section header */
+.jsec-hd { padding: 14px 16px 5px; }
+.jsec-hd-row { display: flex; align-items: center; justify-content: space-between; }
+.jsec-hd-label { font-size: 9.5px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.jsec-hd-label--pk { color: #0EA5E9; }
+.jsec-hd-label--tr { color: #8B5CF6; }
+.jsec-hd-label--en { color: #F59E0B; }
+.jsec-hd-label--un { color: var(--text-tertiary); }
+.jsec-hd-ct { font-size: 11px; font-weight: 600; color: var(--text-tertiary); }
+
+.jsec-divider { height: 1px; background: var(--border); margin: 0 14px 4px; }
 
 /* Deck card row */
 .jdrow {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 4px 12px;
+  gap: 11px;
+  padding: 6px 16px;
+  transition: background .1s;
 }
-.jdrow:hover { background: var(--bg-cell); }
+.jdrow:hover { background: var(--bg-raised); }
 
-.jdrow__img-wrap {
-  width: 44px;
-  height: 62px;
+.jdrow-thumb {
+  width: 38px;
+  height: 53px;
   flex-shrink: 0;
-  border-radius: 3px;
+  border-radius: 4px;
   overflow: hidden;
   background: var(--bg-input);
-  border: 1px solid var(--bdr);
+  border: 1px solid var(--border);
+  position: relative;
 }
+.jdrow-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
-.jdrow__img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
+.jdrow-info { flex: 1; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 
-.jdrow__info {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  min-width: 0;
-}
-
-.jdrow__name {
-  font-size: 0.72rem;
+.jdrow-name {
+  font-size: 13px;
   font-weight: 600;
+  letter-spacing: -.01em;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  color: var(--text);
+  color: var(--text-primary);
 }
 
-.jdrow__mark {
-  display: inline-block;
-  font-size: 0.55rem;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  padding: 1px 4px;
-  border-radius: 2px;
-  width: fit-content;
-}
-.jdrow__mark.ok  { background: var(--green-dim); color: var(--green); }
-.jdrow__mark.no  { background: var(--red-dim);   color: var(--red);   }
-.jdrow__mark.unk { background: var(--amber-dim); color: var(--amber); }
+.jdrow-meta { display: flex; align-items: center; gap: 5px; font-size: 10.5px; color: var(--text-tertiary); }
 
-.jdrow__ctrl {
+.jdrow-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.jdrow-dot.ok  { background: var(--green); }
+.jdrow-dot.no  { background: var(--red); }
+.jdrow-dot.unk { background: var(--amber); }
+
+.jdrow-ctrl {
   display: flex;
   align-items: center;
-  gap: 3px;
+  gap: 0;
   flex-shrink: 0;
-}
-
-.jdrow__btn {
-  width: 22px;
-  height: 22px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   background: var(--bg-input);
-  border: 1px solid var(--bdr);
-  border-radius: 3px;
-  color: var(--text-2);
-  font-family: inherit;
-  font-size: 0.85rem;
-  cursor: pointer;
-  line-height: 1;
-}
-.jdrow__btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
-.jdrow__btn:disabled { opacity: 0.3; cursor: not-allowed; }
-
-.jdrow__qty {
-  font-size: 0.75rem;
-  font-weight: 700;
-  min-width: 18px;
-  text-align: center;
-  font-variant-numeric: tabular-nums;
-  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 2px;
 }
 
-.jdrow__rm {
-  width: 18px;
-  height: 18px;
+.jdrow-btn {
+  width: 24px;
+  height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: none;
   border: none;
-  color: var(--text-3);
+  color: var(--text-secondary);
   font-family: inherit;
-  font-size: 0.75rem;
+  font-size: 14px;
   cursor: pointer;
-  padding: 0;
-  margin-left: 2px;
+  border-radius: 5px;
+  transition: background .1s, color .1s;
   line-height: 1;
 }
-.jdrow__rm:hover { color: var(--red); }
+.jdrow-btn:hover:not(:disabled) { background: var(--accent-light); color: var(--accent); }
+.jdrow-btn:disabled { opacity: .35; cursor: not-allowed; }
+.jdrow-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
-/* ── Chat panel ──────────────────────────────────────────────────── */
-
-.jchat__status {
-  font-size: 0.65rem;
-  color: var(--text-2);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.jdrow-qty {
+  font-size: 12.5px;
+  font-weight: 700;
+  min-width: 22px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
 }
-.jchat__status.ok    { color: var(--green); }
-.jchat__status.error { color: var(--red); }
 
-.jchat__msgs {
+.jdrow-rm {
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  font-size: 14px;
+  border-radius: 4px;
+  transition: background .1s, color .1s;
+  margin-left: 3px;
+}
+.jdrow-rm:hover { background: var(--red-light); color: var(--red); }
+.jdrow-rm:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+/* ── Chat panel ──────────────────────────────────────────────────────────── */
+
+.jchat-hd {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  min-height: 52px;
+}
+
+.jchat-hd-label { font-size: 14px; font-weight: 600; color: var(--text-primary); flex: 1; }
+/* chat hd uses .jpanel-label — kept for back-compat */
+
+.jai-status { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text-secondary); }
+.jai-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; background: var(--text-tertiary); }
+.jai-status.ok .jai-dot    { background: var(--green); }
+.jai-status.error .jai-dot { background: var(--red); }
+.jai-status.init .jai-dot  { background: var(--amber); animation: dotPulse 1.2s ease-in-out infinite; }
+@keyframes dotPulse { 0%,100% { opacity: 1; } 50% { opacity: .3; } }
+
+.jrebuild-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 9px;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: .02em;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all .12s;
+}
+.jrebuild-btn:hover { border-color: var(--accent-border); color: var(--accent-text); }
+.jrebuild-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Messages */
+.jchat-msgs {
   flex: 1;
   overflow-y: auto;
-  padding: 14px 14px 6px;
+  padding: 16px 14px 8px;
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
-.jmsg { display: flex; flex-direction: column; gap: 3px; max-width: 560px; }
-.jmsg--user      { align-self: flex-end; }
-.jmsg--assistant { align-self: flex-start; }
-
-.jmsg__role {
-  font-size: 0.58rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-.jmsg--user .jmsg__role      { color: var(--accent); text-align: right; }
-.jmsg--assistant .jmsg__role { color: var(--text-3); }
-
-.jmsg__text {
-  padding: 8px 11px;
-  border-radius: 5px;
-  font-size: 0.8rem;
-  line-height: 1.7;
+.jmsg-user {
+  align-self: flex-end;
+  max-width: 86%;
+  background: var(--accent);
+  color: #fff;
+  border-radius: 13px 13px 3px 13px;
+  padding: 9px 13px;
+  font-size: 13.5px;
+  line-height: 1.6;
   white-space: pre-wrap;
   word-break: break-word;
 }
-.jmsg--user .jmsg__text      { background: var(--accent-dim); border: 1px solid var(--bdr-hi); }
-.jmsg--assistant .jmsg__text { background: var(--bg-cell); border: 1px solid var(--bdr); }
 
-.jchat__foot {
-  border-top: 1px solid var(--bdr);
-  background: var(--bg-panel);
-  flex-shrink: 0;
+.jmsg-asst {
+  align-self: flex-start;
+  max-width: 94%;
+  background: var(--bg-raised);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 13px 13px 13px 3px;
+  padding: 9px 13px;
+  font-size: 13.5px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
-.jchat__toolbar {
+/* Setup guide */
+.jsetup {
+  align-self: stretch;
+  border: 1px solid var(--amber-border);
+  border-left: 3px solid var(--amber);
+  border-radius: 9px;
+  background: var(--amber-light);
+  overflow: hidden;
+  margin: 4px 0;
+}
+.jsetup-hd {
   display: flex;
-  justify-content: flex-end;
-  padding: 4px 10px;
-  border-bottom: 1px solid var(--bdr);
+  align-items: center;
+  gap: 7px;
+  padding: 10px 13px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--amber);
+  border-bottom: 1px solid var(--amber-border);
+}
+.jsetup-body { padding: 10px 13px; font-size: 12px; color: var(--text-secondary); line-height: 1.7; }
+.jsetup-body ol { padding-left: 16px; display: flex; flex-direction: column; gap: 6px; }
+.jsetup-body code {
+  font-family: ui-monospace, 'JetBrains Mono', monospace;
+  font-size: 11px;
+  background: rgba(0,0,0,.07);
+  padding: 1px 5px;
+  border-radius: 4px;
+  color: var(--text-primary);
+}
+.jsetup-footer {
+  padding: 8px 13px;
+  border-top: 1px solid var(--amber-border);
+  font-size: 11px;
+  color: var(--text-tertiary);
 }
 
-.jrefresh-btn {
-  background: none;
-  border: 1px solid var(--bdr);
-  border-radius: 3px;
-  color: var(--text-2);
-  font-family: inherit;
-  font-size: 0.62rem;
-  padding: 3px 8px;
-  cursor: pointer;
-}
-.jrefresh-btn:hover { border-color: var(--bdr-hi); color: var(--text); }
+/* Chat input footer */
+.jchat-foot { border-top: 1px solid var(--border); background: var(--bg-panel); padding: 10px 14px; flex-shrink: 0; }
 
-.jchat__form {
-  display: flex;
-  align-items: flex-end;
-  gap: 6px;
-  padding: 8px 10px;
-}
+.jchat-form { display: flex; align-items: flex-end; gap: 8px; }
 
-.jchat__prompt {
-  color: var(--accent);
-  font-size: 0.75rem;
-  padding-bottom: 7px;
-  flex-shrink: 0;
-  user-select: none;
-}
-
-.jchat__input {
+.jchat-input {
   flex: 1;
   background: var(--bg-input);
-  border: 1px solid var(--bdr);
-  border-radius: 4px;
-  color: var(--text);
+  border: 1.5px solid var(--border);
+  border-radius: 9px;
+  color: var(--text-primary);
   font-family: inherit;
-  font-size: 0.78rem;
-  padding: 6px 10px;
+  font-size: 13.5px;
+  padding: 9px 13px;
   resize: none;
   outline: none;
   line-height: 1.5;
   caret-color: var(--accent);
+  overflow-y: auto;
+  transition: border-color .15s, background .15s, box-shadow .15s;
+  field-sizing: content;
+  min-height: 42px;
+  max-height: 120px;
 }
-.jchat__input:focus { border-color: var(--bdr-hi); }
-.jchat__input::placeholder { color: var(--text-3); }
+.jchat-input:focus { border-color: var(--accent); background: var(--bg-panel); box-shadow: 0 0 0 3px var(--accent-light); }
+.jchat-input::placeholder { color: var(--text-tertiary); }
 
 .jsend-btn {
-  background: var(--accent-dim);
-  border: 1px solid var(--accent);
-  border-radius: 4px;
-  color: var(--accent);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 14px;
+  background: var(--accent);
+  border: none;
+  border-radius: 8px;
+  color: #fff;
   font-family: inherit;
-  font-size: 0.72rem;
+  font-size: 12.5px;
   font-weight: 700;
-  letter-spacing: 0.06em;
-  padding: 6px 12px;
+  letter-spacing: .03em;
   cursor: pointer;
   white-space: nowrap;
+  flex-shrink: 0;
   align-self: flex-end;
+  transition: background .12s, opacity .12s;
 }
-.jsend-btn:hover:not(:disabled) { background: var(--accent); color: #000; }
-.jsend-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.jsend-btn:hover:not(:disabled) { background: var(--accent-text); }
+.jsend-btn:disabled { opacity: .4; cursor: not-allowed; }
+.jsend-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-/* ── Setup guide ─────────────────────────────────────────────────── */
+/* ── Toast notifications ─────────────────────────────────────────────────── */
 
-.jsetup {
-  padding: 20px 16px;
-  font-size: 0.75rem;
-  line-height: 1.8;
-  color: var(--text-2);
-}
-.jsetup__title {
-  color: var(--amber);
-  font-size: 0.78rem;
-  font-weight: 700;
-  margin-bottom: 12px;
+.jtoast-container {
+  position: fixed;
+  top: 14px;
+  right: 14px;
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: 6px;
-}
-.jsetup ol { padding-left: 16px; display: flex; flex-direction: column; gap: 6px; }
-.jsetup code {
-  background: var(--bg-cell);
-  border: 1px solid var(--bdr);
-  padding: 1px 5px;
-  border-radius: 3px;
-  font-size: 0.7rem;
-  color: var(--accent);
-}
-.jsetup__note {
-  margin-top: 14px;
-  font-size: 0.7rem;
-  color: var(--text-3);
-  border-top: 1px solid var(--bdr);
-  padding-top: 10px;
+  z-index: 200;
+  pointer-events: none;
 }
 
-/* ── Responsive ──────────────────────────────────────────────────── */
+.jtoast {
+  background: var(--text-primary);
+  color: #fff;
+  padding: 8px 14px;
+  border-radius: 9px;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: .01em;
+  box-shadow: var(--shadow-md);
+  opacity: 0;
+  transform: translateX(16px);
+  transition: opacity .2s, transform .2s;
+}
+.jtoast--show { opacity: 1; transform: translateX(0); }
+.jtoast--hide { opacity: 0; transform: translateX(16px); }
+
+/* ── Chat hint ───────────────────────────────────────────────────────────── */
+
+.jchat-hint {
+  margin-top: 6px;
+  font-size: 10px;
+  color: var(--text-tertiary);
+  text-align: center;
+  letter-spacing: .02em;
+}
+
+/* ── Responsive ──────────────────────────────────────────────────────────── */
 
 @media (max-width: 1100px) {
-  .jdck {
-    grid-template-columns: 320px 300px 1fr;
-  }
+  .jdck { grid-template-columns: 340px 320px 1fr; }
 }
 @media (max-width: 900px) {
-  .jdck {
-    grid-template-columns: 1fr 1fr;
-    grid-template-rows: 50dvh 50dvh;
-  }
+  .jdck { grid-template-columns: 1fr 1fr; grid-template-rows: calc(50dvh - 18px) calc(50dvh - 18px); }
   .jpanel:first-child  { grid-column: 1; grid-row: 1; }
   .jpanel:nth-child(2) { grid-column: 2; grid-row: 1; }
   .jpanel:last-child   { grid-column: 1 / -1; grid-row: 2; border-right: none; }
@@ -668,61 +936,318 @@ body {
 //   - Use \\n    for a JS-level \n escape (becomes \n in the embedded script).
 
 const PAGE_JS = `
-'use strict';
+"use strict";
+
+// ── Constants ─────────────────────────────────────────────────────────────────
+
+var TYPE_THEMES = {
+  Fire:      { accent:"#EA580C", light:"#FFF7ED", border:"#FED7AA", text:"#9A3412" },
+  Water:     { accent:"#2563EB", light:"#EFF6FF", border:"#BFDBFE", text:"#1E40AF" },
+  Grass:     { accent:"#16A34A", light:"#F0FDF4", border:"#BBF7D0", text:"#166534" },
+  Lightning: { accent:"#D97706", light:"#FFFBEB", border:"#FDE68A", text:"#92400E" },
+  Psychic:   { accent:"#DB2777", light:"#FDF2F8", border:"#FBCFE8", text:"#9D174D" },
+  Fighting:  { accent:"#C2410C", light:"#FFF7ED", border:"#FDBA74", text:"#7C2D12" },
+  Darkness:  { accent:"#4F46E5", light:"#EEF2FF", border:"#C7D2FE", text:"#3730A3" },
+  Metal:     { accent:"#475569", light:"#F1F5F9", border:"#CBD5E1", text:"#334155" },
+  Dragon:    { accent:"#7C3AED", light:"#F5F3FF", border:"#DDD6FE", text:"#5B21B6" },
+  Colorless: { accent:"#78716C", light:"#F5F5F4", border:"#D6D3D1", text:"#57534E" },
+  Fairy:     { accent:"#E11D48", light:"#FFF1F2", border:"#FECDD3", text:"#BE123C" }
+};
+
+var TYPE_CLR = {
+  Fire:"#F97316", Water:"#38BDF8", Grass:"#4ADE80", Lightning:"#FACC15",
+  Psychic:"#E879F9", Fighting:"#FB7185", Darkness:"#818CF8", Metal:"#94A3B8",
+  Dragon:"#A78BFA", Colorless:"#64748B", Fairy:"#F9A8D4"
+};
+
+var LEGAL_MARKS = { H:true, I:true, J:true };
 
 // ── State ─────────────────────────────────────────────────────────────────────
 
 var state = { deck: [], chatSession: null };
-var _sr = [];           // current search result set (indexed by data-search-idx)
-var _curFilter = '';    // active supertype tab filter
+var _sr = [];
+var _curFilter = "";
+var _popCardId = null;
+var _warnDismissed = false;
 
 // ── Image helpers ─────────────────────────────────────────────────────────────
 
 function deriveImgUrl(id) {
-  var d = id.indexOf('-');
-  if (d < 0) return '';
-  return 'https://images.pokemontcg.io/' + id.slice(0, d) + '/' + id.slice(d + 1) + '.png';
+  var d = id.indexOf("-");
+  if (d < 0) return "";
+  return "https://images.pokemontcg.io/" + id.slice(0, d) + "/" + id.slice(d + 1) + ".png";
 }
 
-function cardImg(entry) {
-  if (entry.card && entry.card.images && entry.card.images.small) return entry.card.images.small;
-  return deriveImgUrl(entry.id);
+function deriveLargeImgUrl(id) {
+  var d = id.indexOf("-");
+  if (d < 0) return "";
+  return "https://images.pokemontcg.io/" + id.slice(0, d) + "/" + id.slice(d + 1) + "_hires.png";
 }
 
-// ── Type color dot ────────────────────────────────────────────────────────────
-
-var TYPE_CLR = {
-  Fire:'#f97316', Water:'#38bdf8', Grass:'#4ade80', Lightning:'#facc15',
-  Psychic:'#e879f9', Fighting:'#fb7185', Darkness:'#818cf8', Metal:'#94a3b8',
-  Dragon:'#a78bfa', Colorless:'#64748b', Fairy:'#f9a8d4'
-};
-
-function typeDot(types) {
-  var t = types && types[0];
-  var c = (t && TYPE_CLR[t]) || '#334155';
-  return '<span class="jtype-dot" style="background:' + c + '" title="' + (t || '') + '"></span>';
+function onImgError(img) {
+  img.hidden = true;
+  var type = img.getAttribute("data-type") || "";
+  var clr = TYPE_CLR[type] || "#A8A29E";
+  var ph = document.createElement("div");
+  ph.style.cssText = "position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;font-size:11px;font-weight:600;color:#fff;opacity:.85;background:" + clr;
+  ph.innerHTML = "<span style=\\"font-size:28px\\">♦</span><span>" + (type || "—") + "</span>";
+  if (img.parentElement) img.parentElement.appendChild(ph);
 }
 
-// ── Mark badge class ──────────────────────────────────────────────────────────
+// ── Type theme ────────────────────────────────────────────────────────────────
 
-var LEGAL_MARKS = { H: true, I: true, J: true };
-
-function markBadge(mark) {
-  if (!mark) return '';
-  var cls = LEGAL_MARKS[mark] ? 'ok' : 'no';
-  return '<span class="jcard__mark ' + cls + '">' + mark + '</span>';
+function detectPrimaryType(deckCards) {
+  var counts = {};
+  for (var i = 0; i < deckCards.length; i++) {
+    var e = deckCards[i];
+    if (!e.card || e.card.supertype !== "Energy") continue;
+    var types = e.card.types || [];
+    for (var j = 0; j < types.length; j++) {
+      var t = types[j];
+      counts[t] = (counts[t] || 0) + e.quantity;
+    }
+  }
+  var best = null, bestCt = 0;
+  Object.keys(counts).forEach(function(t) {
+    if (counts[t] > bestCt) { best = t; bestCt = counts[t]; }
+  });
+  return best || "Colorless";
 }
 
-function markRowBadge(mark) {
-  if (!mark) return '';
-  var cls = LEGAL_MARKS[mark] ? 'ok' : 'no';
-  return '<span class="jdrow__mark ' + cls + '">' + mark + '</span>';
+function applyTypeTheme(type) {
+  var theme = TYPE_THEMES[type] || TYPE_THEMES["Colorless"];
+  var s = document.documentElement.style;
+  s.setProperty("--accent",        theme.accent);
+  s.setProperty("--accent-light",  theme.light);
+  s.setProperty("--accent-border", theme.border);
+  s.setProperty("--accent-text",   theme.text);
 }
+
+// ── Utilities ─────────────────────────────────────────────────────────────────
+
+function escHtml(s) {
+  return String(s || "")
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+function showToast(msg) {
+  var container = document.getElementById("toast-container");
+  var el = document.createElement("div");
+  el.className = "jtoast";
+  el.textContent = msg;
+  container.appendChild(el);
+  requestAnimationFrame(function() {
+    requestAnimationFrame(function() { el.classList.add("jtoast--show"); });
+  });
+  setTimeout(function() {
+    el.classList.remove("jtoast--show");
+    el.classList.add("jtoast--hide");
+    setTimeout(function() { el.remove(); }, 300);
+  }, 2500);
+}
+
+// ── Card detail popover ───────────────────────────────────────────────────────
+
+function showCardPopover(card, tileEl) {
+  if (_popCardId === card.id) { hideCardPopover(); return; }
+
+  var pop = document.getElementById("card-popover");
+  var rect = tileEl.getBoundingClientRect();
+  var popW = 316;
+  var left = rect.right + 8;
+  var top  = rect.top;
+
+  if (left + popW > window.innerWidth - 8) left = rect.left - popW - 8;
+  if (top + 440 > window.innerHeight - 8)  top  = window.innerHeight - 440 - 8;
+  if (top < 8)  top  = 8;
+  if (left < 8) left = 8;
+
+  pop.style.left = left + "px";
+  pop.style.top  = top  + "px";
+  pop.innerHTML  = renderPopoverContent(card);
+  pop.hidden     = false;
+  _popCardId     = card.id;
+
+  var addBtn = pop.querySelector("[data-pop-add]");
+  if (addBtn) {
+    addBtn.addEventListener("click", function() {
+      addCard(card);
+      showToast("Added " + card.name);
+      hideCardPopover();
+    });
+  }
+}
+
+function hideCardPopover() {
+  var pop = document.getElementById("card-popover");
+  if (pop) pop.hidden = true;
+  _popCardId = null;
+}
+
+function renderPopoverContent(card) {
+  var imgUrl  = (card.images && card.images.large) || deriveLargeImgUrl(card.id) || deriveImgUrl(card.id);
+  var mark    = card.regulationMark || null;
+  var markCls = mark ? (LEGAL_MARKS[mark] ? "ok" : "no") : "unk";
+  var hp      = card.hp ? card.hp + " HP" : null;
+  var types   = (card.types || []).join(", ");
+  var setId   = card.setId || "";
+
+  var chipHtml = mark
+    ? "<span class=\\"jpopover-chip " + markCls + "\\">" + escHtml(mark) + "</span>"
+    : "";
+
+  var metaParts = [];
+  if (card.supertype) metaParts.push("<span>" + escHtml(card.supertype) + "</span>");
+  if (types)          metaParts.push("<span>·</span><span>" + escHtml(types) + "</span>");
+  if (hp)             metaParts.push("<span>·</span><strong>" + escHtml(hp) + "</strong>");
+
+  var attacksHtml = "";
+  var attacks = card.attacks || [];
+  if (attacks.length) {
+    attacksHtml += "<div class=\\"jpopover-section\\">Attacks</div>";
+    for (var i = 0; i < attacks.length; i++) {
+      var a = attacks[i];
+      var cost = (a.cost || []).join(" ") || "—";
+      attacksHtml +=
+        "<div class=\\"jpopover-attack\\">" +
+          "<div class=\\"jpopover-attack-hd\\">" +
+            "<span>" + escHtml(a.name || "") + "</span>" +
+            "<span>" + escHtml(a.damage || "") + "</span>" +
+          "</div>" +
+          "<div class=\\"jpopover-attack-cost\\">" + escHtml(cost) + "</div>" +
+          (a.text ? "<div class=\\"jpopover-attack-sub\\">" + escHtml(a.text) + "</div>" : "") +
+        "</div>";
+    }
+  }
+
+  var abilitiesHtml = "";
+  var abilities = card.abilities || [];
+  if (abilities.length) {
+    abilitiesHtml += "<div class=\\"jpopover-section\\">Abilities</div>";
+    for (var j = 0; j < abilities.length; j++) {
+      var ab = abilities[j];
+      abilitiesHtml +=
+        "<div class=\\"jpopover-ability\\">" +
+          "<div class=\\"jpopover-ability-name\\">" + escHtml(ab.name || "") + "</div>" +
+          (ab.text ? "<div class=\\"jpopover-ability-text\\">" + escHtml(ab.text) + "</div>" : "") +
+        "</div>";
+    }
+  }
+
+  return (
+    "<div class=\\"jpopover-inner\\">" +
+      "<img class=\\"jpopover-img\\" src=\\"" + escHtml(imgUrl) + "\\" alt=\\"" + escHtml(card.name || "") + "\\" loading=\\"lazy\\" />" +
+      "<div class=\\"jpopover-info\\">" +
+        "<div class=\\"jpopover-name\\">" + escHtml(card.name || "") + "</div>" +
+        "<div class=\\"jpopover-meta\\">" + metaParts.join("") + "</div>" +
+        (chipHtml ? "<div>" + chipHtml + "</div>" : "") +
+        (setId ? "<div style=\\"font-size:10px;color:var(--text-tertiary);font-family:ui-monospace,monospace\\">" + escHtml(setId) + "</div>" : "") +
+        abilitiesHtml +
+        attacksHtml +
+      "</div>" +
+    "</div>" +
+    "<div class=\\"jpopover-footer\\">" +
+      "<button class=\\"jpop-add-btn\\" data-pop-add=\\"1\\" type=\\"button\\">Add to deck  +</button>" +
+    "</div>"
+  );
+}
+
+// ── Global events ─────────────────────────────────────────────────────────────
+
+document.addEventListener("click", function(e) {
+  if (!_popCardId) return;
+  var pop = document.getElementById("card-popover");
+  if (!pop) return;
+  if (!pop.contains(e.target) && !e.target.closest("[data-tile-idx]")) {
+    hideCardPopover();
+  }
+});
+
+document.addEventListener("keydown", function(e) {
+  if (e.key === "Escape") { hideCardPopover(); return; }
+  if (e.key === "/" && document.activeElement !== document.getElementById("search-input")) {
+    e.preventDefault();
+    document.getElementById("search-input").focus();
+  }
+});
 
 // ── Deck helpers ──────────────────────────────────────────────────────────────
 
 function deckTotal() {
   return state.deck.reduce(function(n, e) { return n + e.quantity; }, 0);
+}
+
+function updateDeckCount() {
+  var ct = deckTotal();
+  var badge = document.getElementById("deck-count");
+  var wasOk = badge.classList.contains("ok");
+  badge.textContent = ct + "/60";
+  var cls = ct === 60 ? "ok" : ct > 60 ? "no" : "warn";
+  badge.className = "jdeck-count " + cls;
+  if (ct === 60 && !wasOk) {
+    badge.classList.add("pulse");
+    setTimeout(function() { badge.classList.remove("pulse"); }, 600);
+  }
+}
+
+function renderStats() {
+  var pkCt = 0, trCt = 0, enCt = 0;
+  for (var i = 0; i < state.deck.length; i++) {
+    var e = state.deck[i];
+    var st = e.card && e.card.supertype;
+    if (st === "Pok\\u00e9mon") pkCt += e.quantity;
+    else if (st === "Trainer")  trCt += e.quantity;
+    else if (st === "Energy")   enCt += e.quantity;
+  }
+  var total = pkCt + trCt + enCt;
+  var row = document.getElementById("stats-row");
+  var track = document.getElementById("stats-track");
+  if (row) {
+    row.innerHTML =
+      "<span class=\\"jstats-segment jstats-segment--pk\\">Pok\\u00e9mon " + pkCt + "</span>" +
+      "<span class=\\"jstats-segment jstats-segment--tr\\">Trainers " + trCt + "</span>" +
+      "<span class=\\"jstats-segment jstats-segment--en\\">Energy " + enCt + "</span>";
+  }
+  if (track) {
+    var pkP = total ? (pkCt / total * 100).toFixed(1) : 0;
+    var trP = total ? (trCt / total * 100).toFixed(1) : 0;
+    var enP = total ? (enCt / total * 100).toFixed(1) : 0;
+    track.innerHTML =
+      "<div class=\\"jstats-fill jstats-fill--pk\\" style=\\"width:" + pkP + "%\\"></div>" +
+      "<div class=\\"jstats-fill jstats-fill--tr\\" style=\\"width:" + trP + "%\\"></div>" +
+      "<div class=\\"jstats-fill jstats-fill--en\\" style=\\"width:" + enP + "%\\"></div>";
+  }
+}
+
+function renderRotationWarning() {
+  var container = document.getElementById("rotation-warn");
+  if (!container) return;
+  if (_warnDismissed) { container.innerHTML = ""; return; }
+  var rotating = state.deck.filter(function(e) {
+    if (!e.card || !e.card.regulationMark) return false;
+    return !LEGAL_MARKS[e.card.regulationMark];
+  });
+  if (!rotating.length) { container.innerHTML = ""; return; }
+  var names = rotating.slice(0, 3).map(function(e) {
+    return e.card.name + " (" + (e.card.setId || e.id) + "\\u00b7" + e.card.regulationMark + ")";
+  }).join(", ");
+  if (rotating.length > 3) names += ", +" + (rotating.length - 3) + " more";
+  container.innerHTML =
+    "<div class=\\"jrot-warn\\">" +
+      "<span class=\\"jrot-warn-icon\\">&#9888;</span>" +
+      "<span class=\\"jrot-warn-body\\">" +
+        "<span class=\\"jrot-warn-title\\">" +
+          rotating.length + " card" + (rotating.length > 1 ? "s are" : " is") + " not legal in Standard" +
+        "</span>" +
+        escHtml(names) +
+      "</span>" +
+      "<button class=\\"jrot-warn-dismiss\\" type=\\"button\\" aria-label=\\"Dismiss\\">&times;</button>" +
+    "</div>";
+  var btn = container.querySelector(".jrot-warn-dismiss");
+  if (btn) btn.addEventListener("click", function() { _warnDismissed = true; renderRotationWarning(); });
 }
 
 function adjustQty(id, delta) {
@@ -740,7 +1265,7 @@ function removeCard(id) {
 
 function addCard(card) {
   var existing = state.deck.find(function(e) { return e.id === card.id; });
-  var isBasicEnergy = card.supertype === 'Energy' && (card.subtypes || []).includes('Basic');
+  var isBasicEnergy = card.supertype === "Energy" && (card.subtypes || []).indexOf("Basic") >= 0;
   var limit = isBasicEnergy ? 60 : 4;
   if (existing) {
     if (existing.quantity < limit) existing.quantity++;
@@ -753,7 +1278,7 @@ function addCard(card) {
 
 async function enrichCardAsync(id) {
   try {
-    var res = await fetch('/api/card/' + id);
+    var res = await fetch("/api/card/" + id);
     var full = await res.json();
     if (!full || full.error) return;
     var entry = state.deck.find(function(e) { return e.id === id; });
@@ -764,63 +1289,77 @@ async function enrichCardAsync(id) {
 // ── Deck builder render ───────────────────────────────────────────────────────
 
 function renderBuilder() {
-  var body = document.getElementById('builder-body');
-  var ct = deckTotal();
+  updateDeckCount();
+  renderStats();
+  renderRotationWarning();
+  applyTypeTheme(detectPrimaryType(state.deck));
 
-  var badge = document.getElementById('deck-count');
-  badge.textContent = ct + '/60';
-  badge.className = 'jdeck__count ' + (ct === 60 ? 'ok' : ct > 60 ? 'no' : 'warn');
-
-  var exportBtn = document.getElementById('export-btn');
-  exportBtn.disabled = state.deck.length === 0;
+  var body    = document.getElementById("builder-body");
+  var expBtn  = document.getElementById("export-btn");
+  expBtn.disabled = state.deck.length === 0;
 
   if (!state.deck.length) {
-    body.innerHTML = '<div class="jdck-empty">search for cards ›<br>click + to add to deck</div>';
+    body.innerHTML = "<div class=\\"jdeck-empty\\">search for cards &#8250;<br>click + to add to deck</div>";
     return;
   }
 
   var groups = [
-    { key: 'Pokemon',  label: 'POKEMON',  entries: state.deck.filter(function(e) { return e.card && e.card.supertype === 'Pokémon'; }) },
-    { key: 'Trainer',  label: 'TRAINERS', entries: state.deck.filter(function(e) { return e.card && e.card.supertype === 'Trainer'; }) },
-    { key: 'Energy',   label: 'ENERGY',   entries: state.deck.filter(function(e) { return e.card && e.card.supertype === 'Energy'; }) },
-    { key: 'unknown',  label: '—',        entries: state.deck.filter(function(e) { return !e.card; }) },
+    { key: "pk", label: "POK\\u00c9MON", entries: state.deck.filter(function(e) { return e.card && e.card.supertype === "Pok\\u00e9mon"; }) },
+    { key: "tr", label: "TRAINERS",  entries: state.deck.filter(function(e) { return e.card && e.card.supertype === "Trainer"; }) },
+    { key: "en", label: "ENERGY",    entries: state.deck.filter(function(e) { return e.card && e.card.supertype === "Energy"; }) },
+    { key: "un", label: "UNKNOWN",   entries: state.deck.filter(function(e) { return !e.card; }) },
   ];
 
-  var html = '';
+  var html = "";
   for (var gi = 0; gi < groups.length; gi++) {
     var grp = groups[gi];
     if (!grp.entries.length) continue;
     var secTotal = grp.entries.reduce(function(n, e) { return n + e.quantity; }, 0);
-    html += '<div class="jsec-hd jsec-hd--' + grp.key.toLowerCase() + '">' +
-      grp.label +
-      '<span class="jsec-ct">' + secTotal + '</span>' +
-    '</div>';
+    html +=
+      "<div class=\\"jsec-hd\\">" +
+        "<div class=\\"jsec-hd-row\\">" +
+          "<span class=\\"jsec-hd-label jsec-hd-label--" + grp.key + "\\">" + grp.label + "</span>" +
+          "<span class=\\"jsec-hd-ct\\">" + secTotal + "</span>" +
+        "</div>" +
+      "</div>" +
+      "<div class=\\"jsec-divider\\"></div>";
 
     for (var ei = 0; ei < grp.entries.length; ei++) {
       var entry = grp.entries[ei];
-      var imgUrl = cardImg(entry);
-      var name = entry.card ? entry.card.name : entry.id;
-      var mark = entry.card ? (entry.card.regulationMark || null) : null;
-      var isBasicE = entry.card && entry.card.supertype === 'Energy' &&
-        (entry.card.subtypes || []).includes('Basic');
-      var atLim = !isBasicE && entry.quantity >= 4;
-      var atMax = ct >= 60;
-      html += '<div class="jdrow">' +
-        '<div class="jdrow__img-wrap">' +
-          '<img class="jdrow__img" src="' + imgUrl + '" alt="' + name + '" loading="lazy" onerror="this.hidden=true" />' +
-        '</div>' +
-        '<div class="jdrow__info">' +
-          '<span class="jdrow__name">' + name + '</span>' +
-          markRowBadge(mark) +
-        '</div>' +
-        '<div class="jdrow__ctrl">' +
-          '<button class="jdrow__btn" data-id="' + entry.id + '" data-delta="-1">-</button>' +
-          '<span class="jdrow__qty">' + entry.quantity + '</span>' +
-          '<button class="jdrow__btn" data-id="' + entry.id + '" data-delta="1"' +
-            ((atLim || atMax) ? ' disabled' : '') + '>+</button>' +
-          '<button class="jdrow__rm" data-remove-id="' + entry.id + '">&times;</button>' +
-        '</div>' +
-      '</div>';
+      var imgUrl = entry.card && entry.card.images && entry.card.images.small
+        ? entry.card.images.small
+        : deriveImgUrl(entry.id);
+      var name   = entry.card ? entry.card.name : entry.id;
+      var mark   = entry.card ? (entry.card.regulationMark || null) : null;
+      var setId  = entry.card ? (entry.card.setId || "") : "";
+      var dotCls = mark ? (LEGAL_MARKS[mark] ? "ok" : "no") : "unk";
+      var isBasicE = entry.card && entry.card.supertype === "Energy"
+        && (entry.card.subtypes || []).indexOf("Basic") >= 0;
+      var atLim  = !isBasicE && entry.quantity >= 4;
+      var atMax  = deckTotal() >= 60;
+      var metaText = [mark || "?", setId].filter(Boolean).join(" · ");
+
+      html +=
+        "<div class=\\"jdrow\\">" +
+          "<div class=\\"jdrow-thumb\\">" +
+            "<img src=\\"" + imgUrl + "\\" alt=\\"" + escHtml(name) + "\\" loading=\\"lazy\\" onerror=\\"this.hidden=true\\" />" +
+          "</div>" +
+          "<div class=\\"jdrow-info\\">" +
+            "<span class=\\"jdrow-name\\">" + escHtml(name) + "</span>" +
+            "<div class=\\"jdrow-meta\\">" +
+              "<span class=\\"jdrow-dot " + dotCls + "\\"></span>" +
+              "<span>" + escHtml(metaText) + "</span>" +
+            "</div>" +
+          "</div>" +
+          "<div class=\\"jdrow-ctrl\\">" +
+            "<button class=\\"jdrow-btn\\" data-id=\\"" + entry.id + "\\" data-delta=\\"-1\\" aria-label=\\"Remove one\\" " +
+              (entry.quantity <= 1 ? " disabled" : "") + ">&#8722;</button>" +
+            "<span class=\\"jdrow-qty\\">" + entry.quantity + "</span>" +
+            "<button class=\\"jdrow-btn\\" data-id=\\"" + entry.id + "\\" data-delta=\\"1\\" aria-label=\\"Add one\\" " +
+              ((atLim || atMax) ? " disabled" : "") + ">+</button>" +
+          "</div>" +
+          "<button class=\\"jdrow-rm\\" data-remove-id=\\"" + entry.id + "\\" aria-label=\\"Remove " + escHtml(name) + "\\">&times;</button>" +
+        "</div>";
     }
   }
 
@@ -828,54 +1367,73 @@ function renderBuilder() {
 }
 
 // Builder event delegation
-document.getElementById('builder-body').addEventListener('click', function(e) {
-  var d = e.target.closest('[data-delta]');
-  if (d) { adjustQty(d.getAttribute('data-id'), parseInt(d.getAttribute('data-delta'), 10)); return; }
-  var r = e.target.closest('[data-remove-id]');
-  if (r) removeCard(r.getAttribute('data-remove-id'));
+document.getElementById("builder-body").addEventListener("click", function(e) {
+  var d = e.target.closest("[data-delta]");
+  if (d) { adjustQty(d.getAttribute("data-id"), parseInt(d.getAttribute("data-delta"), 10)); return; }
+  var r = e.target.closest("[data-remove-id]");
+  if (r) removeCard(r.getAttribute("data-remove-id"));
 });
 
-// ── Initialise from loaded deck ───────────────────────────────────────────────
+// ── Init from loaded deck ─────────────────────────────────────────────────────
 
 if (window.__DECK_CONTEXT__) {
   var loaded = window.__DECK_CONTEXT__;
-  document.getElementById('deck-name').value = loaded.name || '';
-  state.deck = loaded.cards.map(function(c) {
+  var nameInput = document.getElementById("deck-name");
+  if (nameInput) nameInput.value = loaded.name || "";
+  state.deck = (loaded.cards || []).map(function(c) {
     return { id: c.id, quantity: c.quantity, card: c.card || null };
   });
+  applyTypeTheme(detectPrimaryType(state.deck));
   renderBuilder();
 }
 
-// Sync header deck name with input
-document.getElementById('deck-name').addEventListener('input', function(e) {
-  renderBuilder();
-});
+document.getElementById("deck-name").addEventListener("input", function() { renderBuilder(); });
 
 // ── Card search ───────────────────────────────────────────────────────────────
 
 var _searchTimer = null;
 
-document.getElementById('search-input').addEventListener('input', function(e) {
+document.getElementById("search-input").addEventListener("input", function(e) {
   clearTimeout(_searchTimer);
   var q = e.target.value.trim();
   _searchTimer = setTimeout(function() { runSearch(q); }, 280);
 });
 
-document.getElementById('type-tabs').addEventListener('click', function(e) {
-  var btn = e.target.closest('[data-filter]');
+document.getElementById("type-tabs").addEventListener("click", function(e) {
+  var btn = e.target.closest("[data-filter]");
   if (!btn) return;
-  document.querySelectorAll('.jtab').forEach(function(t) { t.classList.remove('active'); });
-  btn.classList.add('active');
-  _curFilter = btn.getAttribute('data-filter');
-  runSearch(document.getElementById('search-input').value.trim());
+  document.querySelectorAll(".jtype-tab").forEach(function(t) {
+    t.classList.remove("active");
+    t.setAttribute("aria-selected", "false");
+  });
+  btn.classList.add("active");
+  btn.setAttribute("aria-selected", "true");
+  _curFilter = btn.getAttribute("data-filter");
+  runSearch(document.getElementById("search-input").value.trim());
 });
 
+function showSkeletons() {
+  var grid = document.getElementById("search-results");
+  var html = "";
+  for (var i = 0; i < 8; i++) {
+    html += "<div class=\\"jcard-skel\\"><div class=\\"jcard-skel-img\\"></div><div class=\\"jcard-skel-foot\\"></div></div>";
+  }
+  grid.innerHTML = html;
+}
+
 async function runSearch(q) {
-  var params = new URLSearchParams({ limit: '16' });
-  if (q) params.set('q', q);
-  if (_curFilter) params.set('supertype', _curFilter);
+  var grid = document.getElementById("search-results");
+  if (!q && !_curFilter) {
+    _sr = [];
+    grid.innerHTML = "<div class=\\"jsearch-empty\\" style=\\"grid-column:1/-1\\">type to search<br>19,818 cards</div>";
+    return;
+  }
+  showSkeletons();
+  var params = new URLSearchParams({ limit: "16" });
+  if (q) params.set("q", q);
+  if (_curFilter) params.set("supertype", _curFilter);
   try {
-    var res = await fetch('/api/search?' + params);
+    var res = await fetch("/api/search?" + params);
     var cards = await res.json();
     renderSearchResults(Array.isArray(cards) ? cards : []);
   } catch(_) {
@@ -885,110 +1443,136 @@ async function runSearch(q) {
 
 function renderSearchResults(cards) {
   _sr = cards.slice();
-  var grid = document.getElementById('search-results');
+  var grid = document.getElementById("search-results");
   if (!cards.length) {
-    grid.innerHTML = '';
+    grid.innerHTML = "<div class=\\"jsearch-empty\\" style=\\"grid-column:1/-1\\">no cards found</div>";
     return;
   }
   grid.innerHTML = cards.map(function(card, i) {
     var imgUrl = (card.images && card.images.small) || deriveImgUrl(card.id);
-    var mark = card.regulationMark || null;
-    var types = card.types || [];
-    return '<div class="jcard" role="listitem">' +
-      '<div class="jcard__img-wrap">' +
-        '<img class="jcard__img" src="' + imgUrl + '" alt="' + card.name + '" loading="lazy" onerror="this.hidden=true" />' +
-        markBadge(mark) +
-      '</div>' +
-      '<div class="jcard__foot">' +
-        typeDot(types) +
-        '<span class="jcard__name">' + card.name + '</span>' +
-      '</div>' +
-      '<button class="jcard__add" data-search-idx="' + i + '">+</button>' +
-    '</div>';
-  }).join('');
+    var mark   = card.regulationMark || null;
+    var mCls   = mark ? (LEGAL_MARKS[mark] ? "ok" : "no") : "unk";
+    var types  = card.types || [];
+    var tClr   = (types[0] && TYPE_CLR[types[0]]) || "#A8A29E";
+    var mBadge = mark ? ("<span class=\\"jcard-mark " + mCls + "\\">" + escHtml(mark) + "</span>") : "";
+    return (
+      "<div class=\\"jcard\\" tabindex=\\"0\\" role=\\"button\\" data-tile-idx=\\"" + i + "\\" aria-label=\\"" + escHtml(card.name) + "\\">"+
+        "<div class=\\"jcard-img-wrap\\">" +
+          "<img class=\\"jcard-img\\" src=\\"" + escHtml(imgUrl) + "\\" alt=\\"" + escHtml(card.name) + "\\" loading=\\"lazy\\" data-type=\\"" + escHtml(types[0] || "") + "\\" onerror=\\"onImgError(this)\\" />" +
+          mBadge +
+          "<div class=\\"jcard-overlay\\">" +
+            "<button class=\\"jcard-add-btn\\" data-add-idx=\\"" + i + "\\" type=\\"button\\" aria-label=\\"Add " + escHtml(card.name) + " to deck\\">+</button>" +
+          "</div>" +
+        "</div>" +
+        "<div class=\\"jcard-footer\\">" +
+          "<span class=\\"jcard-type-dot\\" style=\\"background:" + tClr + "\\"></span>" +
+          "<span class=\\"jcard-name\\">" + escHtml(card.name) + "</span>" +
+        "</div>" +
+      "</div>"
+    );
+  }).join("");
 }
 
-// Search click delegation
-document.getElementById('search-results').addEventListener('click', function(e) {
-  var btn = e.target.closest('[data-search-idx]');
-  if (!btn) return;
-  var idx = parseInt(btn.getAttribute('data-search-idx'), 10);
+// Search event delegation
+document.getElementById("search-results").addEventListener("click", function(e) {
+  var addBtn = e.target.closest("[data-add-idx]");
+  if (addBtn) {
+    var idx = parseInt(addBtn.getAttribute("data-add-idx"), 10);
+    var card = _sr[idx];
+    if (card) { addCard(card); showToast("Added " + card.name); }
+    return;
+  }
+  var tile = e.target.closest("[data-tile-idx]");
+  if (tile) {
+    var idx = parseInt(tile.getAttribute("data-tile-idx"), 10);
+    var card = _sr[idx];
+    if (card) showCardPopover(card, tile);
+  }
+});
+
+document.getElementById("search-results").addEventListener("keydown", function(e) {
+  if (e.key !== "Enter" && e.key !== " ") return;
+  var tile = e.target.closest("[data-tile-idx]");
+  if (!tile) return;
+  e.preventDefault();
+  var idx = parseInt(tile.getAttribute("data-tile-idx"), 10);
   var card = _sr[idx];
-  if (card) addCard(card);
+  if (card) { addCard(card); showToast("Added " + card.name); }
 });
 
 // ── TOML export ───────────────────────────────────────────────────────────────
 
 function escToml(s) {
-  return s.replace(/\\\\/g, '\\\\\\\\').replace(/"/g, '\\\\"');
+  return s.replace(/\\\\/g, "\\\\\\\\").replace(/"/g, "\\\\\\"");
 }
 
 function exportDeck() {
-  var name = document.getElementById('deck-name').value.trim() || 'Untitled Deck';
-  var marks = [];
-  var seenMarks = {};
+  var name  = document.getElementById("deck-name").value.trim() || "Untitled Deck";
+  var marks = {};
+  var markList = [];
   state.deck.forEach(function(e) {
     var m = e.card && e.card.regulationMark;
-    if (m && !seenMarks[m]) { seenMarks[m] = true; marks.push(m); }
+    if (m && !marks[m]) { marks[m] = true; markList.push(m); }
   });
-  marks.sort();
-  var marksToml = marks.length
-    ? '[' + marks.map(function(m) { return '"' + m + '"'; }).join(', ') + ']'
-    : '["H", "I"]';
+  markList.sort();
+  var marksToml = markList.length
+    ? "[" + markList.map(function(m) { return "\\"" + m + "\\""; }).join(", ") + "]"
+    : "[\\"H\\", \\"I\\"]";
 
-  var out = 'name = "' + escToml(name) + '"\\n';
-  out += 'format = "standard"\\n';
-  out += 'regulation_marks = ' + marksToml + '\\n';
+  var out = "name = \\"" + escToml(name) + "\\"\\n";
+  out += "format = \\"standard\\"\\n";
+  out += "regulation_marks = " + marksToml + "\\n";
   state.deck.forEach(function(entry) {
-    out += '\\n[[cards]]\\n';
-    out += 'id = "' + entry.id + '"\\n';
-    out += 'quantity = ' + entry.quantity + '\\n';
+    out += "\\n[[cards]]\\n";
+    out += "id = \\"" + entry.id + "\\"\\n";
+    out += "quantity = " + entry.quantity + "\\n";
   });
 
-  var slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-  var blob = new Blob([out], { type: 'text/plain; charset=utf-8' });
-  var url = URL.createObjectURL(blob);
-  var a = document.createElement('a');
-  a.href = url;
-  a.download = (slug || 'deck') + '.toml';
+  var slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  var blob = new Blob([out], { type: "text/plain; charset=utf-8" });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement("a");
+  a.href   = url;
+  a.download = (slug || "deck") + ".toml";
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
 
-document.getElementById('export-btn').addEventListener('click', exportDeck);
+document.getElementById("export-btn").addEventListener("click", exportDeck);
 
 // ── Chrome AI ─────────────────────────────────────────────────────────────────
 
 function setAiStatus(msg, cls) {
-  var el = document.getElementById('ai-status');
-  el.textContent = msg;
-  el.className = 'jchat__status' + (cls ? ' ' + cls : '');
+  var statusEl  = document.getElementById("ai-status");
+  var statusTxt = document.getElementById("ai-status-text");
+  if (statusTxt) statusTxt.textContent = msg;
+  statusEl.className = "jai-status" + (cls ? " " + cls : " init");
 }
 
 function buildCurrentPrompt() {
-  var name = document.getElementById('deck-name').value.trim() || 'Untitled Deck';
+  var name  = document.getElementById("deck-name").value.trim() || "Untitled Deck";
   var total = deckTotal();
-  var ctx = '---\\n## Session Context\\n\\n';
-  ctx += '## Current Deck: ' + name + '\\n';
-  ctx += 'Total: ' + total + ' / 60\\n\\n';
+  var ctx   = "---\\n## Session Context\\n\\n";
+  ctx += "## Current Deck: " + name + "\\n";
+  ctx += "Total: " + total + " / 60\\n\\n";
   var groups = [
-    { label: 'Pokemon',  items: state.deck.filter(function(e) { return e.card && e.card.supertype === 'Pokémon'; }) },
-    { label: 'Trainers', items: state.deck.filter(function(e) { return e.card && e.card.supertype === 'Trainer'; }) },
-    { label: 'Energy',   items: state.deck.filter(function(e) { return e.card && e.card.supertype === 'Energy'; }) },
-    { label: 'Unknown',  items: state.deck.filter(function(e) { return !e.card; }) },
+    { label: "Pokemon",  items: state.deck.filter(function(e) { return e.card && e.card.supertype === "Pok\\u00e9mon"; }) },
+    { label: "Trainers", items: state.deck.filter(function(e) { return e.card && e.card.supertype === "Trainer"; }) },
+    { label: "Energy",   items: state.deck.filter(function(e) { return e.card && e.card.supertype === "Energy"; }) },
+    { label: "Unknown",  items: state.deck.filter(function(e) { return !e.card; }) },
   ];
   groups.forEach(function(g) {
     if (!g.items.length) return;
     var st = g.items.reduce(function(n, e) { return n + e.quantity; }, 0);
-    ctx += '### ' + g.label + ' (' + st + ' cards)\\n';
+    ctx += "### " + g.label + " (" + st + " cards)\\n";
     g.items.forEach(function(e) {
-      if (!e.card) { ctx += '  ' + e.quantity + 'x [Unknown: ' + e.id + ']\\n'; return; }
-      ctx += '  ' + e.quantity + 'x ' + e.card.name + ' (' + e.card.setId + ')';
-      ctx += ' [Mark: ' + (e.card.regulationMark || 'unknown') + ']\\n';
+      if (!e.card) { ctx += "  " + e.quantity + "x [Unknown: " + e.id + "]\\n"; return; }
+      ctx += "  " + e.quantity + "x " + e.card.name + " (" + (e.card.setId || e.id) + ")";
+      ctx += " [Mark: " + (e.card.regulationMark || "unknown") + "]\\n";
     });
-    ctx += '\\n';
+    ctx += "\\n";
   });
   return window.__STATIC_PROMPT__ + ctx;
 }
@@ -1003,90 +1587,104 @@ async function createAiSession(prompt) {
 
 async function initAI() {
   if (!window.ai || !window.ai.languageModel) {
-    document.getElementById('chat-msgs').innerHTML =
-      '<div class="jsetup">' +
-        '<div class="jsetup__title">Chrome Prompt API unavailable</div>' +
-        '<ol>' +
-          '<li>Open <code>chrome://flags/#prompt-api-for-gemini-nano</code></li>' +
-          '<li>Set to <strong>Enabled</strong> and relaunch Chrome</li>' +
-          '<li>Open <code>chrome://components/</code> and update <strong>Optimization Guide On Device Model</strong></li>' +
-        '</ol>' +
-        '<div class="jsetup__note">' +
-          'For full Claude-powered analysis: <code>johto --deck &lt;file&gt;</code> in your terminal.' +
-        '</div>' +
-      '</div>';
-    setAiStatus('Prompt API unavailable', 'error');
+    var chatMsgsEl = document.getElementById("chat-msgs");
+    chatMsgsEl.innerHTML =
+      "<div class=\\"jsetup\\">" +
+        "<div class=\\"jsetup-hd\\">&#9888; Chrome Prompt API unavailable</div>" +
+        "<div class=\\"jsetup-body\\">" +
+          "<ol>" +
+            "<li>Open <code>chrome://flags/#prompt-api-for-gemini-nano</code><br>Set to <strong>Enabled</strong> and relaunch Chrome</li>" +
+            "<li>Open <code>chrome://components/</code><br>Click <strong>Check for Update</strong> on <em>Optimization Guide On Device Model</em></li>" +
+          "</ol>" +
+        "</div>" +
+        "<div class=\\"jsetup-footer\\">Card search and deck builder work without the AI.\\u2003For full Claude analysis: <code>johto --deck &lt;file&gt;</code></div>" +
+      "</div>";
+    setAiStatus("Prompt API unavailable", "error");
     return;
   }
   try {
-    setAiStatus('initializing gemini nano...');
+    setAiStatus("initializing Gemini Nano…");
     await createAiSession(window.__STATIC_PROMPT__ + window.__INITIAL_CTX__);
-    document.getElementById('send-btn').disabled = false;
-    setAiStatus('gemini nano ready', 'ok');
+    document.getElementById("send-btn").disabled = false;
+    setAiStatus("ready", "ok");
   } catch(err) {
-    setAiStatus('init failed: ' + err.message, 'error');
+    setAiStatus("init failed: " + err.message, "error");
   }
 }
 
-document.getElementById('refresh-btn').addEventListener('click', async function() {
-  setAiStatus('rebuilding context...');
+document.getElementById("refresh-btn").addEventListener("click", async function() {
+  setAiStatus("rebuilding context…");
   try {
     await createAiSession(buildCurrentPrompt());
-    document.getElementById('send-btn').disabled = false;
-    setAiStatus('context updated', 'ok');
+    document.getElementById("send-btn").disabled = false;
+    setAiStatus("context updated", "ok");
   } catch(err) {
-    setAiStatus('refresh failed: ' + err.message, 'error');
+    setAiStatus("refresh failed: " + err.message, "error");
   }
 });
 
 // ── Chat ──────────────────────────────────────────────────────────────────────
 
-var chatMsgs = document.getElementById('chat-msgs');
+var chatMsgs = document.getElementById("chat-msgs");
 
 function appendMsg(role, text) {
-  var div = document.createElement('div');
-  div.className = 'jmsg jmsg--' + role;
-  var roleLabel = role === 'user' ? 'you' : 'assistant';
-  div.innerHTML = '<div class="jmsg__role">' + roleLabel + '</div><div class="jmsg__text"></div>';
-  div.querySelector('.jmsg__text').textContent = text;
+  var div = document.createElement("div");
+  div.className = role === "user" ? "jmsg-user" : "jmsg-asst";
+  div.textContent = text;
   chatMsgs.appendChild(div);
   chatMsgs.scrollTop = chatMsgs.scrollHeight;
-  return div.querySelector('.jmsg__text');
+  return div;
 }
 
-document.getElementById('chat-form').addEventListener('submit', async function(e) {
+// Textarea auto-grow fallback for browsers without field-sizing support
+(function() {
+  var ta = document.getElementById("chat-input");
+  if (ta && !("fieldSizing" in ta.style)) {
+    ta.addEventListener("input", function() {
+      this.style.height = "auto";
+      this.style.height = Math.min(this.scrollHeight, 120) + "px";
+    });
+  }
+})();
+
+document.getElementById("chat-form").addEventListener("submit", async function(e) {
   e.preventDefault();
   if (!state.chatSession) return;
-  var input = document.getElementById('chat-input');
+  var input = document.getElementById("chat-input");
   var text = input.value.trim();
   if (!text) return;
-  input.value = '';
-  document.getElementById('send-btn').disabled = true;
-  appendMsg('user', text);
-  var aEl = appendMsg('assistant', '...');
+  input.value = "";
+  input.style.height = "";
+  document.getElementById("send-btn").disabled = true;
+  appendMsg("user", text);
+  var aEl = appendMsg("asst", "");
   try {
     var stream = state.chatSession.promptStreaming(text);
     var lastLen = 0;
-    var full = '';
+    var full = "";
     for await (var chunk of stream) {
       full += chunk.slice(lastLen);
       lastLen = chunk.length;
-      aEl.textContent = full;
+      aEl.textContent = full + "\\u258c";
       chatMsgs.scrollTop = chatMsgs.scrollHeight;
     }
+    aEl.textContent = full;
   } catch(err) {
-    aEl.textContent = 'Error: ' + err.message;
+    aEl.textContent = "Error: " + err.message;
   } finally {
-    document.getElementById('send-btn').disabled = false;
+    document.getElementById("send-btn").disabled = false;
+    chatMsgs.scrollTop = chatMsgs.scrollHeight;
   }
 });
 
-document.getElementById('chat-input').addEventListener('keydown', function(e) {
-  if (e.key === 'Enter' && !e.shiftKey) {
+document.getElementById("chat-input").addEventListener("keydown", function(e) {
+  if (e.key === "Enter" && !e.shiftKey) {
     e.preventDefault();
-    document.getElementById('chat-form').dispatchEvent(new Event('submit'));
+    document.getElementById("chat-form").dispatchEvent(new Event("submit"));
   }
 });
+
+// ── Bootstrap ─────────────────────────────────────────────────────────────────
 
 initAI();
 `;
@@ -1113,26 +1711,37 @@ export function generatePage(deck: EnrichedDeck | null): string {
   </script>
 </head>
 <body>
+<header class="japp-bar">
+  <span class="japp-name">johto</span>
+  <span class="japp-sub">Pokemon TCG deck tool</span>
+</header>
 <div class="jdck">
 
   <!-- Panel 1 — Card search -->
   <aside class="jpanel">
-    <div class="jpanel__hd">
-      <span class="jpanel__label">search</span>
-      <div class="jsearch__bar">
-        <span class="jsearch__prompt">›</span>
-        <input class="jsearch__input" id="search-input"
-          type="search" placeholder="name, set, type…" autocomplete="off" spellcheck="false" />
+    <div class="jpanel-hd">
+      <span class="jpanel-label">Search</span>
+      <div class="jsearch-wrap">
+        <span class="jsearch-icon" aria-hidden="true">&#128269;</span>
+        <input class="jsearch-input" id="search-input"
+          type="search" placeholder="search cards…" autocomplete="off" spellcheck="false"
+          aria-label="Search cards" />
       </div>
     </div>
-    <div class="jtabs" id="type-tabs">
-      <button class="jtab active" data-filter="">ALL</button>
-      <button class="jtab" data-filter="Pokémon">PKM</button>
-      <button class="jtab" data-filter="Trainer">TRN</button>
-      <button class="jtab" data-filter="Energy">NRG</button>
+    <div class="jtype-bar" id="type-tabs" role="tablist" aria-label="Filter by card type">
+      <button class="jtype-tab active" data-filter="" role="tab" aria-selected="true">All</button>
+      <button class="jtype-tab" data-filter="Pokémon" role="tab" aria-selected="false">
+        <span class="jtype-dot" style="background:#38BDF8" aria-hidden="true"></span>Pokémon
+      </button>
+      <button class="jtype-tab" data-filter="Trainer" role="tab" aria-selected="false">
+        <span class="jtype-dot" style="background:#8B5CF6" aria-hidden="true"></span>Trainer
+      </button>
+      <button class="jtype-tab" data-filter="Energy" role="tab" aria-selected="false">
+        <span class="jtype-dot" style="background:#F59E0B" aria-hidden="true"></span>Energy
+      </button>
     </div>
-    <div class="jcard-grid" id="search-results" role="list">
-      <div class="jsearch__empty" style="grid-column:1/-1">
+    <div class="jcard-grid" id="search-results" role="list" aria-label="Search results">
+      <div class="jsearch-empty" style="grid-column:1/-1">
         type to search<br>19,818 cards
       </div>
     </div>
@@ -1140,42 +1749,60 @@ export function generatePage(deck: EnrichedDeck | null): string {
 
   <!-- Panel 2 — Deck builder -->
   <main class="jpanel">
-    <div class="jpanel__hd">
-      <input class="jdeck__name" id="deck-name"
+    <div class="jpanel-hd">
+      <span class="jpanel-label">Deck</span>
+      <input class="jdeck-name" id="deck-name"
         type="text" placeholder="deck name…" maxlength="80"
-        value="${deckName}" />
-      <span class="jdeck__count warn" id="deck-count">0/60</span>
-      <button class="jexport-btn" id="export-btn" type="button" disabled>↓ TOML</button>
+        value="${deckName}" aria-label="Deck name" />
+      <span class="jdeck-count warn" id="deck-count" aria-live="polite">0/60</span>
+      <button class="jexport-btn" id="export-btn" type="button" disabled aria-label="Export deck as TOML file">&#8595; TOML</button>
     </div>
-    <div class="jdeck-body" id="builder-body">
-      <div class="jdck-empty">search for cards ›<br>click + to add to deck</div>
+    <div class="jstats-bar" aria-hidden="true">
+      <div class="jstats-row" id="stats-row">
+        <span class="jstats-segment jstats-segment--pk">Pokémon 0</span>
+        <span class="jstats-segment jstats-segment--tr">Trainers 0</span>
+        <span class="jstats-segment jstats-segment--en">Energy 0</span>
+      </div>
+      <div class="jstats-track" id="stats-track">
+        <div class="jstats-fill jstats-fill--pk" style="width:0%"></div>
+        <div class="jstats-fill jstats-fill--tr" style="width:0%"></div>
+        <div class="jstats-fill jstats-fill--en" style="width:0%"></div>
+      </div>
+    </div>
+    <div id="rotation-warn"></div>
+    <div class="jdeck-body" id="builder-body" role="list" aria-label="Current deck">
+      <div class="jdeck-empty">search for cards &#8250;<br>click + to add to deck</div>
     </div>
   </main>
 
   <!-- Panel 3 — AI assistant -->
   <section class="jpanel" style="border-right:none">
-    <div class="jpanel__hd">
-      <span class="jpanel__label">assistant</span>
-      <span class="jchat__status" id="ai-status">initializing…</span>
+    <div class="jchat-hd">
+      <span class="jpanel-label">Assistant</span>
+      <span class="jai-status init" id="ai-status" aria-live="polite">
+        <span class="jai-dot" aria-hidden="true"></span>
+        <span id="ai-status-text">initializing…</span>
+      </span>
+      <button class="jrebuild-btn" id="refresh-btn" type="button" aria-label="Rebuild AI context from current deck">
+        &#8635; context
+      </button>
     </div>
-    <div class="jchat__msgs" id="chat-msgs" role="log" aria-live="polite"></div>
-    <div class="jchat__foot">
-      <div class="jchat__toolbar">
-        <button class="jrefresh-btn" id="refresh-btn" type="button">
-          ↺ rebuild context from deck
-        </button>
-      </div>
-      <form class="jchat__form" id="chat-form">
-        <span class="jchat__prompt">›</span>
-        <textarea class="jchat__input" id="chat-input"
-          placeholder="ask about your deck…" rows="2"
-          aria-label="Message input" spellcheck="false"></textarea>
-        <button class="jsend-btn" id="send-btn" type="submit" disabled>SEND</button>
+    <div class="jchat-msgs" id="chat-msgs" role="log" aria-live="polite" aria-label="Chat messages"></div>
+    <div class="jchat-foot">
+      <form class="jchat-form" id="chat-form">
+        <textarea class="jchat-input" id="chat-input"
+          placeholder="ask about your deck…" rows="1"
+          aria-label="Message" spellcheck="false"></textarea>
+        <button class="jsend-btn" id="send-btn" type="submit" disabled aria-label="Send message">Send &#8594;</button>
       </form>
+      <p class="jchat-hint">Shift+Enter for new line · / to search</p>
     </div>
   </section>
 
 </div>
+
+<div id="card-popover" class="jpopover" hidden role="dialog" aria-label="Card details" aria-modal="false"></div>
+<div id="toast-container" class="jtoast-container" aria-live="polite" aria-atomic="false"></div>
 <script>${PAGE_JS}</script>
 </body>
 </html>`;
