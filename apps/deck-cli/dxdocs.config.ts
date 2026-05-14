@@ -22,6 +22,14 @@ export default {
     },
     {
       type: 'group',
+      title: 'Guides',
+      items: [
+        { type: 'page', path: '/strategy-guide', title: 'Strategy Guide' },
+        { type: 'page', path: '/probability', title: 'Probability Analysis' },
+      ]
+    },
+    {
+      type: 'group',
       title: 'Reference',
       items: [
         { type: 'page', path: '/cli-reference', title: 'CLI Reference' },

@@ -63,6 +63,32 @@ Incompatible with `--provider chrome`.
 johto --deck ./decks/my-deck.toml --dry-run
 ```
 
+### `--stats`
+
+Print a probability table (opening hand odds, prize risk, turn curve) for each loaded
+deck immediately after loading, before the REPL prompt opens.
+
+```bash
+johto --deck ./decks/my-deck.toml --stats
+```
+
+Compatible with `--dry-run` — when both are set, only the stats table is printed (no
+system prompt, no REPL). Not available with `--provider chrome`.
+
+### `--spotlight <id>`
+
+Pin a specific card ID to the ★ spotlight section of the `--stats` output. Repeatable.
+
+```bash
+johto --deck ./decks/my-deck.toml \
+  --stats \
+  --spotlight sv8pt5-117 \
+  --spotlight sv8pt5-37
+```
+
+ACE SPEC cards are spotlighted automatically; `--spotlight` is for other high-priority
+singletons you want to track explicitly.
+
 ### `-h, --help`
 
 Print usage and exit.
@@ -117,6 +143,7 @@ The following combinations are rejected before spawning the MCP server:
 | `--provider invalid` | `Error: Unknown provider "invalid". Valid options: anthropic, chrome` |
 | `--provider chrome --dry-run` | `Error: --dry-run is not applicable in browser mode (--provider chrome)` |
 | `--provider anthropic` without `ANTHROPIC_API_KEY` (no `--dry-run`) | `Error: ANTHROPIC_API_KEY environment variable is required...` |
+| `--stats` with `--provider chrome` | `Error: --stats is not applicable in browser mode (--provider chrome)` |
 
 ---
 

@@ -1,0 +1,126 @@
+---
+title: Probability Analysis
+description: Opening hand probabilities, prize risk, and turn curve analysis using the hypergeometric distribution.
+---
+
+# Probability Analysis
+
+## What this does
+
+The `--stats` flag computes hypergeometric probabilities from your deck list — opening hand odds for every card, prize risk for singletons, and a T1-T4 draw curve. No game state is modelled. The inputs are copy count, deck size, and hand size; the output is exact math.
+
+<Callout variant="info">
+  Probability analysis runs entirely on the local MCP server. It does not call the Anthropic API and does not consume tokens.
+</Callout>
+
+## Using `--stats`
+
+```bash
+johto --deck ./decks/mega-sharpedo-ex-2.toml --stats
+```
+
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  Deck: Mega Sharpedo ex / Dusknoir   [58/60 — incomplete]
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Opening hand (7 from 58)
+  ────────────────────────────────────────────────────────
+  Card                      ×  open 1+   T2     T3     T4
+  ────────────────────────────────────────────────────────
+  Buddy-Buddy Poffin        4   39.5%  45.8%  51.7%  57.0%
+  Poké Pad                  4   39.5%  45.8%  51.7%  57.0%
+  Ultra Ball                4   39.5%  45.8%  51.7%  57.0%
+  Lillie's Determination    4   39.5%  45.8%  51.7%  57.0%
+  Salvatore                 3   30.8%  36.2%  41.3%  46.1%
+  Boss's Orders             3   30.8%  36.2%  41.3%  46.1%
+  Janine's Secret Art       2   21.5%  25.6%  29.5%  33.3%
+  Night Stretcher           2   21.5%  25.6%  29.5%  33.3%
+  Dawn                      1   11.0%  12.8%  14.5%  16.3%
+  Binding Mochi             1   11.0%  12.8%  14.5%  16.3%
+  Rare Candy                1   11.0%  12.8%  14.5%  16.3%
+  Energy Recycler           1   11.0%  12.8%  14.5%  16.3%
+  Mega Signal               1   11.0%  12.8%  14.5%  16.3%
+  Maximum Belt    ★         1   11.0%  12.8%  14.5%  16.3%
+  Dusknoir        ★         1   11.0%  12.8%  14.5%  16.3%
+  ────────────────────────────────────────────────────────
+
+  ⚠  Prize risk  (singletons — each has 10.0% chance of being prized)
+     Maximum Belt · Dusknoir · Mega Signal · Dawn · Binding Mochi
+     Rare Candy · Energy Recycler
+
+  ★  = spotlight cards (high-impact singletons)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+| Column | Meaning |
+|---|---|
+| `x` | Copy count in the deck |
+| `open 1+` | P(at least 1 copy in opening hand of 7) |
+| `T2` | P(at least 1 seen by end of Turn 2, going second) |
+| `T3` | P(at least 1 seen by end of Turn 3) |
+| `T4` | P(at least 1 seen by end of Turn 4) |
+
+Cards marked with **★** are spotlight cards — high-impact singletons flagged automatically (ACE SPECs) or manually via `--spotlight`. The **⚠ Prize risk** section lists all singletons and their chance of being stuck in prizes.
+
+<Callout variant="tip">
+  `--stats` can be combined with `--dry-run` — only the probability table is printed, no system prompt, no REPL.
+</Callout>
+
+## Opening hand probability reference
+
+For a complete 60-card deck with a 7-card opening hand:
+
+| Copies | open 1+ | p(prized) |
+|:------:|:-------:|:---------:|
+| 1      | 11.7%   | 10.0%     |
+| 2      | 22.1%   | 19.2%     |
+| 3      | 31.5%   | 27.5%     |
+| 4      | 39.9%   | 35.1%     |
+
+<Callout variant="warning">
+  These values assume a complete 60-card deck. The CLI computes probabilities on the actual deck size when `complete: false` — numbers will shift when missing slots are filled.
+</Callout>
+
+## Prize risk
+
+Six cards are randomly removed from your deck before the game begins as prize cards. Any card stuck in prizes is inaccessible until you take a knockout.
+
+- Singleton (1 copy): 10.0% chance of being prized
+- 2-of (2 copies): ~19.2% chance at least one copy is prized
+- Relevant for ACE SPECs, tech singletons, and combo pieces
+
+The Mega Sharpedo ex / Dusknoir example has 7 singletons, each with a 10% prized risk: Maximum Belt, Dusknoir, Mega Signal, Dawn, Binding Mochi, Rare Candy, and Energy Recycler. Seven independent 10% risks means a meaningful chance that at least one key card is prized in any given game.
+
+## Turn curve
+
+The T1-T4 columns show the cumulative probability of seeing at least one copy by the end of each turn, assuming you go second (draw one card per turn after the opening hand).
+
+This is the key metric for deciding between copy counts. Example: deciding between 2 and 3 copies of Rare Candy.
+
+- 2 copies: open 1+ = 22.1%, by T3 = 29.5%
+- 3 copies: open 1+ = 31.5%, by T3 = 41.3%
+
+The third copy adds roughly 10 percentage points to your T3 odds — meaningful when the Stage 2 evolution is your primary attacker.
+
+## Asking the agent
+
+The agent has access to `analyze_deck_probability` as a tool and can reason about consistency questions in the context of your full deck.
+
+```
+How consistent is this deck?
+
+Should I run 2 or 3 copies of Rare Candy?
+
+What's the prize risk on my singletons?
+
+If I cut a Buddy-Buddy Poffin to add a third Salvatore, how does that affect consistency?
+```
+
+## Combo probability (future)
+
+Joint probability — the chance of seeing two or more specific cards together in the opening hand — is computable from the multivariate hypergeometric distribution but is not yet implemented in the CLI.
+
+<Callout variant="info">
+  Multi-card combo analysis is tracked in the project backlog. For now, ask the agent — it can reason through joint probabilities manually when you describe the combo.
+</Callout>
