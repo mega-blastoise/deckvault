@@ -97,12 +97,13 @@ export async function doctorCommand(): Promise<void> {
     check(false, 'Anthropic API key', 'Not set (env or config)', results);
   }
 
-  // Network check
+  // Network check — any HTTP response means the host is reachable. Only flag
+  // failure when the request itself errors (DNS, TCP, timeout).
   try {
     const start = performance.now();
-    const res = await fetch('https://api.anthropic.com', { method: 'HEAD' });
+    await fetch('https://api.anthropic.com', { method: 'HEAD' });
     const latency = (performance.now() - start).toFixed(0);
-    check(res.ok || res.status === 401, 'Network (api.anthropic.com)', `${latency}ms`, results);
+    check(true, 'Network (api.anthropic.com)', `${latency}ms`, results);
   } catch (err) {
     check(false, 'Network (api.anthropic.com)', `unreachable: ${err}`, results);
   }
