@@ -79,7 +79,7 @@ export function buildCli() {
     .option('--mcp-server <path>', '')
     .option('--browser-port <port>', '')
     .action(async (options) => {
-      if (!options.deck) {
+      if (process.argv.length <= 2) {
         cli.outputHelp();
         return;
       }
