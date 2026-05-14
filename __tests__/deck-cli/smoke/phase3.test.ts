@@ -7,7 +7,15 @@
  */
 
 import { describe, test, expect } from 'bun:test';
-import { runCli, CLI_AVAILABLE, CLI_BIN, DECK_PATH } from './helpers';
+import {
+  runCli,
+  runCliFromSource,
+  CLI_AVAILABLE,
+  CLI_BIN,
+  DECK_PATH,
+  MCP_AVAILABLE,
+  DB_AVAILABLE,
+} from './helpers';
 
 const skip = !CLI_AVAILABLE;
 const skipReason = 'CLI binary not found — run: cd apps/deck-cli && bun run build';
@@ -68,4 +76,57 @@ describe.skipIf(skip)(`Phase 3 — CLI application guards${skip ? ` (SKIP: ${ski
     expect(proc.exitCode).not.toBe(0);
     expect(output).toMatch(/ANTHROPIC_API_KEY/i);
   });
+});
+
+describe('Phase 3b — Subcommand form guards', () => {
+  test('run --provider invalid exits non-zero with "Unknown provider"', () => {
+    const { stdout, stderr, exitCode } = runCliFromSource(['run', '--provider', 'invalid']);
+    const output = stdout + stderr;
+    expect(exitCode).not.toBe(0);
+    expect(output).toMatch(/unknown provider/i);
+  });
+
+  test('run --provider anthropic (no --deck) exits non-zero', () => {
+    const { stdout, stderr, exitCode } = runCliFromSource(['run', '--provider', 'anthropic']);
+    const output = stdout + stderr;
+    expect(exitCode).not.toBe(0);
+    expect(output).toMatch(/required/i);
+  });
+
+  test('run --provider chrome --dry-run exits non-zero with "not applicable"', () => {
+    const { stdout, stderr, exitCode } = runCliFromSource(['run', '--provider', 'chrome', '--dry-run']);
+    const output = stdout + stderr;
+    expect(exitCode).not.toBe(0);
+    expect(output).toMatch(/not applicable/i);
+  });
+
+  test('run --stats --provider chrome exits non-zero with "not applicable"', () => {
+    const { stdout, stderr, exitCode } = runCliFromSource(['run', '--stats', '--provider', 'chrome']);
+    const output = stdout + stderr;
+    expect(exitCode).not.toBe(0);
+    expect(output).toMatch(/not applicable/i);
+  });
+
+  test('johto --help output includes subcommand names', () => {
+    const { stdout, stderr } = runCliFromSource(['--help']);
+    const output = stdout + stderr;
+    expect(output).toMatch(/\binit\b/);
+    expect(output).toMatch(/\bdoctor\b/);
+    expect(output).toMatch(/\bauth\b/);
+    expect(output).toMatch(/\bsync-data\b/);
+    expect(output).toMatch(/\brun\b/);
+  });
+
+  describe.skipIf(!MCP_AVAILABLE || !DB_AVAILABLE)(
+    `backward compat${!MCP_AVAILABLE || !DB_AVAILABLE ? ' (SKIP: MCP binary or DB not found)' : ''}`,
+    () => {
+      test('backward compat: --deck <path> --dry-run (no subcommand) succeeds if MCP+DB available', () => {
+        const { stdout, stderr, exitCode } = runCliFromSource(['--deck', DECK_PATH, '--dry-run']);
+        const output = stdout + stderr;
+        // dry-run prints the system prompt and exits 0
+        expect(exitCode).toBe(0);
+        expect(output.length).toBeGreaterThan(0);
+      });
+    }
+  );
 });

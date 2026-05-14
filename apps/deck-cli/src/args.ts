@@ -1,98 +1,6 @@
 import cac from 'cac';
 
-export type LlmProvider = 'anthropic' | 'chrome';
-
-export interface CliArgs {
-  readonly deckPaths: readonly string[];
-  readonly dryRun: boolean;
-  readonly mcpServerPath: string;
-  readonly provider: LlmProvider;
-  readonly stats: boolean;
-  readonly spotlightIds: readonly string[];
-}
-
-export function parseArgs(): CliArgs {
-  const cli = cac('johto');
-
-  cli
-    .option(
-      '-d, --deck <path>',
-      'Deck file (.toml or .json). Repeatable. Optional with --provider chrome.'
-    )
-    .option(
-      '--provider <name>',
-      'LLM provider: anthropic (default) or chrome (opens browser, no API key needed)',
-      { default: 'anthropic' }
-    )
-    .option(
-      '--mcp-server <path>',
-      'Path to pokemon-mcp-server binary (default: auto-resolved from monorepo root)'
-    )
-    .option(
-      '--dry-run',
-      'Print assembled system prompt then exit without opening a session (REPL mode only)'
-    )
-    .option('--stats', 'Print probability table after deck load, before REPL')
-    .option('--spotlight <id>', 'Pin card ID to ★ in --stats output. Repeatable.');
-
-  cli.help();
-  cli.version('0.1.0');
-
-  const { options } = cli.parse();
-
-  const provider = options['provider'] as string;
-  if (provider !== 'anthropic' && provider !== 'chrome') {
-    console.error(`Error: Unknown provider "${provider}". Valid options: anthropic, chrome`);
-    process.exit(1);
-  }
-
-  if (options['dryRun'] && provider === 'chrome') {
-    console.error(
-      'Error: --dry-run is not applicable in browser mode (--provider chrome)'
-    );
-    process.exit(1);
-  }
-
-  if (options['stats'] && provider === 'chrome') {
-    console.error(
-      'Error: --stats is not applicable in browser mode (--provider chrome)'
-    );
-    process.exit(1);
-  }
-
-  const raw = options['deck'];
-  const deckPaths: string[] = raw
-    ? Array.isArray(raw)
-      ? raw
-      : [raw]
-    : [];
-
-  if (deckPaths.length === 0 && provider !== 'chrome') {
-    console.error('Error: --deck is required for --provider anthropic');
-    process.exit(1);
-  }
-
-  const rawSpotlight = options['spotlight'];
-  const spotlightIds: string[] = rawSpotlight
-    ? Array.isArray(rawSpotlight)
-      ? rawSpotlight
-      : [rawSpotlight]
-    : [];
-
-  const mcpServerPath =
-    (options['mcpServer'] as string | undefined) ?? resolveDefaultMcpPath();
-
-  return {
-    deckPaths,
-    dryRun: Boolean(options['dryRun']),
-    mcpServerPath,
-    provider: provider as LlmProvider,
-    stats: Boolean(options['stats']),
-    spotlightIds,
-  };
-}
-
-function resolveDefaultMcpPath(): string {
+export function resolveDefaultMcpPath(): string {
   const fromEnv = process.env['JOHTO_MCP_SERVER_PATH'];
   if (fromEnv) return fromEnv;
 
@@ -105,4 +13,81 @@ function resolveDefaultMcpPath(): string {
     'JOHTO_MCP_SERVER_PATH is not set and no monorepo-relative fallback is available. ' +
     'This is unexpected — run `johto doctor` to diagnose.'
   );
+}
+
+export function buildCli() {
+  const cli = cac('johto');
+
+  cli.command('run', 'Start a deck refinement session')
+    .option('-d, --deck <path>', 'Deck file (.toml or .json). Repeatable.')
+    .option('--provider <name>', 'anthropic (default) or chrome', { default: 'anthropic' })
+    .option('--dry-run', 'Print system prompt and exit')
+    .option('--stats', 'Print probability table before REPL')
+    .option('--spotlight <id>', 'Highlight card in stats. Repeatable.')
+    .option('--mcp-server <path>', 'Path to pokemon-mcp-server binary')
+    .option('--browser-port <port>', 'Port for browser mode (default: random)')
+    .action(async (options) => {
+      const { runCommand } = await import('./commands/run');
+      await runCommand(options);
+    });
+
+  cli.command('init', 'Interactive first-run setup wizard')
+    .action(async () => {
+      const { initCommand } = await import('./commands/init');
+      await initCommand();
+    });
+
+  cli.command('sync-data', 'Refresh the card database')
+    .option('--rebuild', 'Rebuild from JSON sources (requires Bun on PATH)')
+    .option('--source <dir>', 'Path to tcg-data JSON tree (with --rebuild)')
+    .action(async (options) => {
+      const { syncDataCommand } = await import('./commands/sync-data');
+      await syncDataCommand(options);
+    });
+
+  cli.command('doctor', 'Diagnose install — binaries, DB, API key, network')
+    .action(async () => {
+      const { doctorCommand } = await import('./commands/doctor');
+      await doctorCommand();
+    });
+
+  cli.command('auth <action> [...args]', 'Auth management: set <provider> <key> | show')
+    .action(async (action: string, args: string[]) => {
+      const { authCommand } = await import('./commands/auth');
+      if (action === 'set') {
+        const provider = args[0];
+        const key = args[1];
+        if (!provider || !key) {
+          console.error('Usage: johto auth set <provider> <key>');
+          process.exit(1);
+        }
+        await authCommand.set(provider, key);
+      } else if (action === 'show') {
+        await authCommand.show();
+      } else {
+        console.error(`Unknown auth action: "${action}". Use "set" or "show".`);
+        process.exit(1);
+      }
+    });
+
+  cli.command('', 'Default: run')
+    .option('-d, --deck <path>', '')
+    .option('--provider <name>', '', { default: 'anthropic' })
+    .option('--dry-run', '')
+    .option('--stats', '')
+    .option('--spotlight <id>', '')
+    .option('--mcp-server <path>', '')
+    .option('--browser-port <port>', '')
+    .action(async (options) => {
+      if (!options.deck) {
+        cli.outputHelp();
+        return;
+      }
+      const { runCommand } = await import('./commands/run');
+      await runCommand(options);
+    });
+
+  cli.help();
+  cli.version('0.1.0');
+  return cli;
 }

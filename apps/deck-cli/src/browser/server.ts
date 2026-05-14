@@ -14,12 +14,13 @@ interface McpToolResult {
 
 export function startBrowserServer(
   deck: EnrichedDeck | null,
-  mcp: McpClient
+  mcp: McpClient,
+  port = 0
 ): BrowserServer {
   const html = generatePage(deck);
 
   const server = Bun.serve({
-    port: 0,
+    port,
     async fetch(req) {
       const url = new URL(req.url);
 
@@ -46,8 +47,8 @@ export function startBrowserServer(
     },
   });
 
-  const port = server.port ?? 0;
-  return { port, close: () => server.stop() };
+  const serverPort = server.port ?? 0;
+  return { port: serverPort, close: () => server.stop() };
 }
 
 async function handleSearch(
