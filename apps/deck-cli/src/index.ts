@@ -6,6 +6,9 @@ import { loadAndEnrichDeck } from './deck/loader';
 import { McpClient } from './mcp/client';
 import { buildSystemPrompt } from './agent/prompt';
 import { runAgentTurn } from './agent/loop';
+import { formatProbabilityReport } from './probability/format';
+import type { ProbabilityReport } from './probability/types';
+import type { McpToolResult } from './mcp/types';
 
 async function main(): Promise<void> {
   const args = parseArgs();
@@ -34,6 +37,27 @@ async function main(): Promise<void> {
   );
   if (decks.length > 0) {
     console.log(`Loaded ${decks.length} deck(s): ${decks.map((d) => d.name).join(', ')}`);
+  }
+
+  if (args.stats) {
+    for (const deckPath of args.deckPaths) {
+      const rawResult = (await mcp.callTool('analyze_deck_probability', {
+        path: deckPath,
+        spotlight: args.spotlightIds.length > 0 ? args.spotlightIds : undefined,
+      })) as McpToolResult;
+
+      const text = rawResult.content.find((c) => c.type === 'text')?.text;
+      if (text) {
+        const report = JSON.parse(text) as ProbabilityReport;
+        const deckName = decks.find((_, i) => args.deckPaths[i] === deckPath)?.name ?? deckPath;
+        console.log('\n' + formatProbabilityReport(deckName, report));
+      }
+    }
+
+    if (args.dryRun) {
+      mcp.destroy();
+      process.exit(0);
+    }
   }
 
   if (args.provider === 'chrome') {

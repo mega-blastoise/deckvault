@@ -7,6 +7,8 @@ export interface CliArgs {
   readonly dryRun: boolean;
   readonly mcpServerPath: string;
   readonly provider: LlmProvider;
+  readonly stats: boolean;
+  readonly spotlightIds: readonly string[];
 }
 
 export function parseArgs(): CliArgs {
@@ -29,7 +31,9 @@ export function parseArgs(): CliArgs {
     .option(
       '--dry-run',
       'Print assembled system prompt then exit without opening a session (REPL mode only)'
-    );
+    )
+    .option('--stats', 'Print probability table after deck load, before REPL')
+    .option('--spotlight <id>', 'Pin card ID to ★ in --stats output. Repeatable.');
 
   cli.help();
   cli.version('0.1.0');
@@ -49,6 +53,13 @@ export function parseArgs(): CliArgs {
     process.exit(1);
   }
 
+  if (options['stats'] && provider === 'chrome') {
+    console.error(
+      'Error: --stats is not applicable in browser mode (--provider chrome)'
+    );
+    process.exit(1);
+  }
+
   const raw = options['deck'];
   const deckPaths: string[] = raw
     ? Array.isArray(raw)
@@ -61,6 +72,13 @@ export function parseArgs(): CliArgs {
     process.exit(1);
   }
 
+  const rawSpotlight = options['spotlight'];
+  const spotlightIds: string[] = rawSpotlight
+    ? Array.isArray(rawSpotlight)
+      ? rawSpotlight
+      : [rawSpotlight]
+    : [];
+
   const mcpServerPath =
     (options['mcpServer'] as string | undefined) ?? resolveDefaultMcpPath();
 
@@ -69,6 +87,8 @@ export function parseArgs(): CliArgs {
     dryRun: Boolean(options['dryRun']),
     mcpServerPath,
     provider: provider as LlmProvider,
+    stats: Boolean(options['stats']),
+    spotlightIds,
   };
 }
 

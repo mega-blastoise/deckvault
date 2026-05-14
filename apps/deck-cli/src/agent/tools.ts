@@ -28,6 +28,7 @@ export const AGENT_TOOLS: readonly AnthropicTool[] = [
         hp_max: { type: 'integer', description: 'Maximum HP' },
         limit: { type: 'integer', description: 'Max results (default 10, max 50)' },
         standard_only: { type: 'boolean', description: 'Restrict to Standard-legal cards (H/I/J marks). Default false.' },
+        format: { type: 'string', description: 'Response format: "text" (default, markdown) or "json" (card objects).' },
       },
     },
   },
@@ -51,6 +52,28 @@ export const AGENT_TOOLS: readonly AnthropicTool[] = [
       properties: {
         card_id_1: { type: 'string' },
         card_id_2: { type: 'string' },
+      },
+    },
+  },
+  {
+    name: 'analyze_deck_probability',
+    description:
+      'Compute hypergeometric opening-hand probabilities and prize risk for every card ' +
+      'in a deck. Returns p(at least 1 in opening 7), p(prized), and a turn 1–4 draw curve ' +
+      'per card. Use this when asked about consistency, copy counts, or singleton risk.',
+    input_schema: {
+      type: 'object' as const,
+      required: ['path'],
+      properties: {
+        path: {
+          type: 'string',
+          description: 'Absolute or relative path to the deck TOML or JSON file',
+        },
+        spotlight: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Card IDs to highlight in output',
+        },
       },
     },
   },
