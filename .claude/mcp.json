@@ -5,13 +5,13 @@
       "args": [
         "run",
         "--manifest-path",
-        "/home/nicks-dgx/dev/.Project-Johto/Pokemon/apps/mcp-server/Cargo.toml",
+        "/home/nicks-dgx/dev/deckvault/apps/mcp-server/Cargo.toml",
         "--",
         "--transport",
         "stdio"
       ],
       "env": {
-        "DATABASE_PATH": "/home/nicks-dgx/dev/.Project-Johto/Pokemon/apps/mcp-server/database/pokemon-data.sqlite3.db"
+        "DATABASE_PATH": "/home/nicks-dgx/dev/deckvault/apps/mcp-server/database/pokemon-data.sqlite3.db"
       }
     }
   }
