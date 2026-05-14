@@ -5,7 +5,8 @@
     "apps/*",
     "packages/*",
     "docsites/*",
-    "dist-packages/*"
+    "dist-packages/cli",
+    "dist-packages/card-data"
   ],
   "scripts": {
     "build": "turbo build",

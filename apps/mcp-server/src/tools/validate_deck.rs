@@ -61,7 +61,7 @@ impl Tool for ValidateDeckTool {
 
         Ok(CallToolResult {
             content: vec![Content::Text { text: json_text }],
-            is_error: Some(!report.valid),
+            is_error: Some(false),
         })
     }
 }

@@ -12,6 +12,8 @@ interface McpToolResult {
   readonly isError: boolean | null;
 }
 
+const CARD_ID_RE = /^[a-z0-9]+-[a-z0-9]+$/i;
+
 export function startBrowserServer(
   deck: EnrichedDeck | null,
   mcp: McpClient,
@@ -21,6 +23,7 @@ export function startBrowserServer(
 
   const server = Bun.serve({
     port,
+    hostname: process.env['JOHTO_BROWSER_HOST'] ?? '127.0.0.1',
     async fetch(req) {
       const url = new URL(req.url);
 
@@ -40,6 +43,12 @@ export function startBrowserServer(
 
       if (url.pathname.startsWith('/api/card/')) {
         const id = decodeURIComponent(url.pathname.slice('/api/card/'.length));
+        if (!CARD_ID_RE.test(id)) {
+          return new Response(JSON.stringify({ error: 'invalid card id' }), {
+            status: 400,
+            headers: { 'Content-Type': 'application/json' },
+          });
+        }
         return handleGetCard(id, mcp);
       }
 

@@ -431,16 +431,183 @@ In `src/main.rs` (or wherever tools are registered into the registry):
 ```rust
 use crate::tools::load_deck::LoadDeckTool;
 use crate::tools::validate_deck::ValidateDeckTool;
+use crate::tools::analyze_probability::AnalyzeProbabilityTool;
 
 // Alongside existing tool registrations:
 registry.register(Box::new(LoadDeckTool::new(Arc::clone(&db))));
 registry.register(Box::new(ValidateDeckTool::new(Arc::clone(&db))));
+registry.register(Box::new(AnalyzeProbabilityTool::new(Arc::clone(&db))));
 ```
 
 Add module declarations in `src/tools/mod.rs`:
 ```rust
 pub mod load_deck;
 pub mod validate_deck;
+pub mod analyze_probability;
+```
+
+### 7. `analyze_deck_probability` Tool (`src/tools/analyze_probability.rs`)
+
+Computes hypergeometric draw probabilities for every card in a deck, returning
+opening-hand odds, exact-count probabilities, prize-card risk for low-copy cards,
+and a turn-by-turn draw curve (turns 1--4).
+
+See **SPEC_07** for the full mathematical model (hypergeometric distribution,
+combination function in log-space, rounding rules).
+
+#### Input Schema
+
+```json
+{
+  "type": "object",
+  "required": ["path"],
+  "properties": {
+    "path": {
+      "type": "string",
+      "description": "Absolute or relative path to the deck TOML or JSON file"
+    },
+    "spotlight": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Optional list of card IDs to highlight at the top of the report"
+    }
+  }
+}
+```
+
+| Parameter   | Type       | Required | Description |
+|-------------|------------|----------|-------------|
+| `path`      | `string`   | yes      | Path to the deck `.toml` or `.json` file |
+| `spotlight` | `string[]` | no       | Card IDs to pin to the top of the `openingHand` array |
+
+#### Output Shape
+
+The tool returns a single `Content::Text` block containing a JSON-serialized
+`ProbabilityReport`. All `f64` probability values are rounded to 4 decimal places.
+
+```json
+{
+  "deckSize": 60,
+  "complete": true,
+  "openingHand": [
+    {
+      "cardId": "sv5-144",
+      "name": "Buddy-Buddy Poffin",
+      "copies": 4,
+      "pOpen": 0.3950,
+      "pExactlyOne": 0.3168,
+      "pExactlyTwo": 0.1213,
+      "pPrized": null,
+      "turnCurve": [
+        { "turn": 1, "pAtLeastOne": 0.4580 },
+        { "turn": 2, "pAtLeastOne": 0.5166 },
+        { "turn": 3, "pAtLeastOne": 0.5703 },
+        { "turn": 4, "pAtLeastOne": 0.6192 }
+      ],
+      "spotlight": false
+    }
+  ],
+  "prizedRisk": [
+    {
+      "cardId": "sv8pt5-117",
+      "name": "Maximum Belt",
+      "copies": 1,
+      "pPrized": 0.1000
+    }
+  ]
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `deckSize` | `u32` | Total cards in deck (sum of all quantities) |
+| `complete` | `bool` | `true` when `deckSize == 60`; `false` for work-in-progress decks |
+| `openingHand` | `CardProbability[]` | Per-card probability data, sorted: spotlight first, then descending `pOpen` |
+| `prizedRisk` | `PrizedEntry[]` | Cards with `copies <= 2`, sorted descending by `pPrized` |
+
+`CardProbability` fields:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `cardId` | `string` | Card ID from the deck file |
+| `name` | `string` | Resolved card name from DB (falls back to card ID if not found) |
+| `copies` | `u32` | Number of copies in the deck |
+| `pOpen` | `f64` | P(at least 1 in opening hand of 7) |
+| `pExactlyOne` | `f64` | P(exactly 1 in opening hand of 7) |
+| `pExactlyTwo` | `f64` | P(exactly 2 in opening hand of 7); `0.0` when `copies < 2` |
+| `pPrized` | `f64 \| null` | P(at least 1 copy prized); `null` when `copies > 2` |
+| `turnCurve` | `TurnCurveEntry[]` | Draw probability at turns 1--4 (hand of 7 + T draws) |
+| `spotlight` | `bool` | `true` if this card ID appeared in the `spotlight` input |
+
+`PrizedEntry` fields:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `cardId` | `string` | Card ID |
+| `name` | `string` | Resolved card name |
+| `copies` | `u32` | Copy count |
+| `pPrized` | `f64` | P(at least 1 copy in prize zone of 6) |
+
+#### Rust Types
+
+Defined in `src/tools/analyze_probability.rs`:
+
+```rust
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProbabilityReport {
+    pub deck_size: u32,
+    pub complete: bool,
+    pub opening_hand: Vec<CardProbability>,
+    pub prized_risk: Vec<PrizedEntry>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CardProbability {
+    pub card_id: String,
+    pub name: String,
+    pub copies: u32,
+    pub p_open: f64,
+    pub p_exactly_one: f64,
+    pub p_exactly_two: f64,
+    pub p_prized: Option<f64>,
+    pub turn_curve: Vec<TurnCurveEntry>,
+    pub spotlight: bool,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TurnCurveEntry {
+    pub turn: u8,
+    pub p_at_least_one: f64,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PrizedEntry {
+    pub card_id: String,
+    pub name: String,
+    pub copies: u32,
+    pub p_prized: f64,
+}
+```
+
+#### Example Call
+
+```bash
+DECK_PATH="$(pwd)/apps/deck-cli/decks/example.toml"
+echo "{\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"params\":{\"name\":\"analyze_deck_probability\",\"arguments\":{\"path\":\"$DECK_PATH\",\"spotlight\":[\"sv8pt5-117\"]}},\"id\":4}" \
+  | cargo run --manifest-path apps/mcp-server/Cargo.toml 2>/dev/null \
+  | python3 -c "
+import sys, json
+d = json.load(sys.stdin)
+report = json.loads(d['result']['content'][0]['text'])
+assert report['deckSize'] == 60, f'Expected 60, got {report[\"deckSize\"]}'
+assert report['complete'] == True
+assert report['openingHand'][0]['spotlight'] == True, 'Spotlight card should sort first'
+print('PASS — deckSize:', report['deckSize'], '| cards:', len(report['openingHand']))
+"
 ```
 
 ---
@@ -450,14 +617,15 @@ pub mod validate_deck;
 ```
 apps/mcp-server/src/
 ├── domains/
-│   ├── mod.rs           # MODIFIED — add pub mod deck;
-│   ├── card.rs          # MODIFIED — add regulation_mark field if missing
-│   └── deck.rs          # NEW — DeckFile, EnrichedDeck, validation logic
+│   ├── mod.rs                # MODIFIED — add pub mod deck;
+│   ├── card.rs               # MODIFIED — add regulation_mark field if missing
+│   └── deck.rs               # NEW — DeckFile, EnrichedDeck, validation logic
 ├── tools/
-│   ├── mod.rs           # MODIFIED — add pub mod load_deck; pub mod validate_deck;
-│   ├── load_deck.rs     # NEW
-│   └── validate_deck.rs # NEW
-└── main.rs              # MODIFIED — register two new tools
+│   ├── mod.rs                # MODIFIED — add pub mod load_deck; pub mod validate_deck; pub mod analyze_probability;
+│   ├── load_deck.rs          # NEW
+│   ├── validate_deck.rs      # NEW
+│   └── analyze_probability.rs # NEW — hypergeometric probability tool (SPEC_07)
+└── main.rs                   # MODIFIED — register three new tools
 ```
 
 ---
@@ -466,14 +634,20 @@ apps/mcp-server/src/
 
 - [ ] `cargo build` compiles with zero errors after changes
 - [ ] `cargo clippy -- -D warnings` reports zero warnings
-- [ ] `tools/list` response includes `load_deck` and `validate_deck` entries
+- [ ] `tools/list` response includes `load_deck`, `validate_deck`, and `analyze_deck_probability` entries
 - [ ] `load_deck` with a valid TOML deck path returns an `EnrichedDeck` JSON with all
       card IDs resolved to their full card data
 - [ ] `load_deck` with a `.json` deck path returns identical structure
 - [ ] `load_deck` with a non-existent path returns a `ToolError` (not a crash)
 - [ ] `validate_deck` on a 59-card deck returns `valid: false` with one R1 violation
-- [ ] `validate_deck` on a deck with a non–Standard card returns a LEGALITY violation
+- [ ] `validate_deck` on a deck with a non-Standard card returns a LEGALITY violation
 - [ ] `validate_deck` on the canonical example deck from SPEC_01 returns `valid: true`
+- [ ] `analyze_deck_probability` on a 60-card deck returns `deckSize: 60` and `complete: true`
+- [ ] `analyze_deck_probability` with K=4, N=60 returns `pOpen` within 0.0001 of 0.3950
+- [ ] `analyze_deck_probability` with K=1, N=60 returns `pPrized` within 0.0001 of 0.1000
+- [ ] `analyze_deck_probability` on a partial deck (< 60 cards) returns `complete: false`
+- [ ] `analyze_deck_probability` with `spotlight` parameter sorts spotlighted cards first in `openingHand`
+- [ ] `analyze_deck_probability` with a non-existent path returns a `ToolError` (not a crash)
 - [ ] `cargo test` passes with no regressions to existing tools
 
 ---
@@ -481,7 +655,8 @@ apps/mcp-server/src/
 ## Dependencies
 
 - SPEC_01 (deck file format)
-- MCP server Phase 1–3 (tool registry, SQLite domain)
+- MCP server Phase 1-3 (tool registry, SQLite domain)
+- SPEC_07 (probability math model — defines the hypergeometric formulas used by `analyze_deck_probability`)
 
 ---
 
@@ -503,6 +678,7 @@ d = json.load(sys.stdin)
 names = [t['name'] for t in d['result']['tools']]
 assert 'load_deck' in names, 'load_deck missing'
 assert 'validate_deck' in names, 'validate_deck missing'
+assert 'analyze_deck_probability' in names, 'analyze_deck_probability missing'
 print('PASS')
 "
 
@@ -527,5 +703,22 @@ d = json.load(sys.stdin)
 report = json.loads(d['result']['content'][0]['text'])
 assert report['valid'] == True, f'Expected valid deck, got violations: {report[\"violations\"]}'
 print('PASS — deck is valid')
+"
+
+# Test analyze_deck_probability on example file
+echo "{\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"params\":{\"name\":\"analyze_deck_probability\",\"arguments\":{\"path\":\"$DECK_PATH\"}},\"id\":4}" \
+  | cargo run --manifest-path apps/mcp-server/Cargo.toml 2>/dev/null \
+  | python3 -c "
+import sys, json
+d = json.load(sys.stdin)
+report = json.loads(d['result']['content'][0]['text'])
+assert report['deckSize'] == 60, f'Expected 60, got {report[\"deckSize\"]}'
+assert report['complete'] == True, 'Expected complete deck'
+assert len(report['openingHand']) > 0, 'Expected at least one card entry'
+# Verify a 4-copy card has pOpen near 0.3950
+fours = [c for c in report['openingHand'] if c['copies'] == 4]
+if fours:
+    assert abs(fours[0]['pOpen'] - 0.3950) < 0.001, f'pOpen for 4-of is {fours[0][\"pOpen\"]}'
+print('PASS — deckSize:', report['deckSize'], '| cards:', len(report['openingHand']))
 "
 ```

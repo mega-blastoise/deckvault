@@ -33,67 +33,69 @@ export async function initCommand(): Promise<void> {
     output: process.stdout,
   });
 
-  console.log('\nJohto CLI — First-run setup\n');
+  try {
+    console.log('\nJohto CLI — First-run setup\n');
 
-  const existing = await loadConfig();
+    const existing = await loadConfig();
 
-  const keyPrompt = existing.anthropic?.api_key
-    ? 'Anthropic API key (leave blank to keep existing): '
-    : 'Anthropic API key (leave blank to skip): ';
-  const apiKeyInput = (await rl.question(keyPrompt)).trim();
+    const keyPrompt = existing.anthropic?.api_key
+      ? 'Anthropic API key (leave blank to keep existing): '
+      : 'Anthropic API key (leave blank to skip): ';
+    const apiKeyInput = (await rl.question(keyPrompt)).trim();
 
-  let apiKey = existing.anthropic?.api_key;
-  if (apiKeyInput) {
-    process.stdout.write('Validating API key... ');
-    const valid = await validateApiKey(apiKeyInput);
-    if (valid) {
-      console.log('OK');
-      apiKey = apiKeyInput;
-    } else {
-      console.log('FAILED — key will not be saved.');
+    let apiKey = existing.anthropic?.api_key;
+    if (apiKeyInput) {
+      process.stdout.write('Validating API key... ');
+      const valid = await validateApiKey(apiKeyInput);
+      if (valid) {
+        console.log('OK');
+        apiKey = apiKeyInput;
+      } else {
+        console.log('FAILED — key will not be saved.');
+      }
     }
+
+    const defaultDecksDir = join(homedir(), 'johto', 'decks');
+    const currentDecksDir = existing.paths?.decks_dir ?? defaultDecksDir;
+    const decksDirInput = (
+      await rl.question(`Default decks directory [${currentDecksDir}]: `)
+    ).trim();
+    const decksDir = decksDirInput || currentDecksDir;
+    await mkdir(decksDir, { recursive: true });
+
+    const currentProvider = existing.defaults?.provider ?? 'anthropic';
+    const providerInput = (
+      await rl.question(`Default provider (anthropic | chrome) [${currentProvider}]: `)
+    ).trim();
+    const provider =
+      providerInput === 'anthropic' || providerInput === 'chrome'
+        ? providerInput
+        : currentProvider;
+
+    const config: JohtoConfig = {
+      anthropic: {
+        api_key: apiKey,
+        model: existing.anthropic?.model,
+      },
+      paths: {
+        decks_dir: decksDir,
+        card_data: existing.paths?.card_data,
+        mcp_server: existing.paths?.mcp_server,
+      },
+      defaults: {
+        provider,
+      },
+    };
+
+    await saveConfig(config);
+
+    const configPath = getConfigPath();
+    console.log(`\nConfig written to: ${configPath}`);
+    console.log('\nNext steps:');
+    console.log(`  1. Place .toml or .json deck files in ${decksDir}`);
+    console.log('  2. Run: johto run --deck <path>');
+    console.log('  3. Run: johto doctor      to verify your install\n');
+  } finally {
+    rl.close();
   }
-
-  const defaultDecksDir = join(homedir(), 'johto', 'decks');
-  const currentDecksDir = existing.paths?.decks_dir ?? defaultDecksDir;
-  const decksDirInput = (
-    await rl.question(`Default decks directory [${currentDecksDir}]: `)
-  ).trim();
-  const decksDir = decksDirInput || currentDecksDir;
-  await mkdir(decksDir, { recursive: true });
-
-  const currentProvider = existing.defaults?.provider ?? 'anthropic';
-  const providerInput = (
-    await rl.question(`Default provider (anthropic | chrome) [${currentProvider}]: `)
-  ).trim();
-  const provider =
-    providerInput === 'anthropic' || providerInput === 'chrome'
-      ? providerInput
-      : currentProvider;
-
-  rl.close();
-
-  const config: JohtoConfig = {
-    anthropic: {
-      api_key: apiKey,
-      model: existing.anthropic?.model,
-    },
-    paths: {
-      decks_dir: decksDir,
-      card_data: existing.paths?.card_data,
-      mcp_server: existing.paths?.mcp_server,
-    },
-    defaults: {
-      provider,
-    },
-  };
-
-  await saveConfig(config);
-
-  const configPath = getConfigPath();
-  console.log(`\nConfig written to: ${configPath}`);
-  console.log('\nNext steps:');
-  console.log(`  1. Place .toml or .json deck files in ${decksDir}`);
-  console.log('  2. Run: johto run --deck <path>');
-  console.log('  3. Run: johto doctor      to verify your install\n');
 }

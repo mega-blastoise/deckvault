@@ -59,6 +59,14 @@ export async function runAgentTurn(
     for (const block of final.content) {
       if (block.type !== 'tool_use') continue;
       process.stdout.write(`\n[tool: ${block.name}]\n`);
+      if (typeof block.input !== 'object' || block.input === null) {
+        toolResults.push({
+          type: 'tool_result',
+          tool_use_id: block.id,
+          content: `Tool error: invalid input shape from model (expected object, got ${block.input === null ? 'null' : typeof block.input})`,
+        });
+        continue;
+      }
       const output = await dispatchTool(
         block.name,
         block.input as Record<string, unknown>,
