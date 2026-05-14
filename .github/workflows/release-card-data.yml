@@ -1,0 +1,61 @@
+name: Release @johto-ai/card-data
+
+on:
+  push:
+    tags:
+      - 'card-data-v*.*.*'
+
+permissions:
+  contents: write
+  packages: write
+  id-token: write
+
+jobs:
+  build-card-data:
+    name: Build @johto-ai/card-data
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: bun dist-packages/card-data/scripts/rebuild.ts --source packages/@pokemon-data/data --out dist-packages/card-data/data/pokemon-data.sqlite3.db
+      - uses: actions/upload-artifact@v4
+        with:
+          name: card-data
+          path: dist-packages/card-data/
+
+  publish-card-data:
+    name: Publish @johto-ai/card-data
+    needs: [build-card-data]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: https://registry.npmjs.org
+      - uses: actions/download-artifact@v4
+        with:
+          name: card-data
+          path: dist-packages-artifacts/card-data
+      - name: Assemble card-data from artifact
+        run: cp -r dist-packages-artifacts/card-data/* dist-packages/card-data/
+      - name: Stamp version
+        env:
+          VERSION: ${{ github.ref_name }}
+        run: |
+          VERSION="${VERSION#card-data-v}"
+          export VERSION
+          node -e "
+            const fs = require('fs');
+            const p = JSON.parse(fs.readFileSync('dist-packages/card-data/package.json','utf8'));
+            p.version = process.env.VERSION;
+            fs.writeFileSync('dist-packages/card-data/package.json', JSON.stringify(p, null, 2) + '\n');
+          "
+      - name: Publish npm package
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --access public --provenance dist-packages/card-data
