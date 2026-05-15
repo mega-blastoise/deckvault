@@ -12,14 +12,18 @@ interface McpToolResult {
   readonly isError: boolean | null;
 }
 
+const CARD_ID_RE = /^[a-z0-9]+-[a-z0-9]+$/i;
+
 export function startBrowserServer(
   deck: EnrichedDeck | null,
-  mcp: McpClient
+  mcp: McpClient,
+  port = 0
 ): BrowserServer {
   const html = generatePage(deck);
 
   const server = Bun.serve({
-    port: 0,
+    port,
+    hostname: process.env['JOHTO_BROWSER_HOST'] ?? '127.0.0.1',
     async fetch(req) {
       const url = new URL(req.url);
 
@@ -39,6 +43,12 @@ export function startBrowserServer(
 
       if (url.pathname.startsWith('/api/card/')) {
         const id = decodeURIComponent(url.pathname.slice('/api/card/'.length));
+        if (!CARD_ID_RE.test(id)) {
+          return new Response(JSON.stringify({ error: 'invalid card id' }), {
+            status: 400,
+            headers: { 'Content-Type': 'application/json' },
+          });
+        }
         return handleGetCard(id, mcp);
       }
 
@@ -46,8 +56,8 @@ export function startBrowserServer(
     },
   });
 
-  const port = server.port ?? 0;
-  return { port, close: () => server.stop() };
+  const serverPort = server.port ?? 0;
+  return { port: serverPort, close: () => server.stop() };
 }
 
 async function handleSearch(
@@ -70,48 +80,19 @@ async function handleSearch(
   if (hpMin) args['hp_min'] = parseInt(hpMin, 10);
   if (hpMax) args['hp_max'] = parseInt(hpMax, 10);
   args['limit'] = limit ? Math.min(parseInt(limit, 10), 50) : 15;
-  args['standard_only'] = true; // browser builder only works with in-rotation cards
+  args['standard_only'] = true;
+  args['format'] = 'json';
 
   try {
     const result = (await mcp.callTool('search_cards', args)) as McpToolResult;
-    const text = result.content.find((c) => c.type === 'text')?.text ?? '';
+    const text = result.content.find((c) => c.type === 'text')?.text ?? '[]';
 
-    // The search_cards MCP tool returns formatted markdown text, not JSON.
-    // Parse each result line to extract (name, id, types, hp) for the browser.
-    // Line format: "- **Card Name** (card-id) | types | HP: N | rarity | Set: sid"
-    const cards: Array<Record<string, unknown>> = [];
-    for (const line of text.split('\n')) {
-      // Format: "- **Card Name** (card-id) | types | HP: N | rarity | Set: set-id"
-      const m = line.match(/^- \*\*(.+?)\*\* \(([^)]+)\) \| ([^|]*) \| HP: ([^|]*) \| [^|]* \| Set: (\S+)/);
-      if (m) {
-        const id = m[2]!.trim();
-        const hpStr = m[4]!.trim();
-        const cardSetId = m[5]!.trim();
-        const isNoHp = hpStr === 'N/A';
-        const dash = id.indexOf('-');
-        const num = dash >= 0 ? id.slice(dash + 1) : id;
-        cards.push({
-          id,
-          name: m[1]!.trim(),
-          supertype: isNoHp ? '' : 'Pokémon',
-          subtypes: [],
-          hp: isNoHp ? null : parseInt(hpStr, 10),
-          types: m[3]!.trim() ? m[3]!.trim().split(', ') : [],
-          attacks: [],
-          abilities: [],
-          regulationMark: null,
-          setId: cardSetId,
-          number: num,
-          rarity: null,
-          images: {
-            small: 'https://images.pokemontcg.io/' + cardSetId + '/' + num + '.png',
-            large: 'https://images.pokemontcg.io/' + cardSetId + '/' + num + '_hires.png',
-          },
-        });
-      }
-    }
+    // Old MCP binary (pre-format:json) returns markdown text starting with "Found".
+    // Serve an empty array so the browser doesn't crash on JSON.parse failure.
+    const isJsonArray = text.trimStart().startsWith('[');
+    const body = isJsonArray ? text : '[]';
 
-    return new Response(JSON.stringify(cards), {
+    return new Response(body, {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (err) {

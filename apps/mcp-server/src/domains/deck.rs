@@ -191,7 +191,8 @@ pub fn validate_deck(deck: &DeckFile, db: &Database) -> DeckValidationReport {
             Ok(None) => {
                 unknown_ids.push(entry.id.clone());
             }
-            Err(_) => {
+            Err(e) => {
+                tracing::warn!(card_id = %entry.id, error = %e, "DB error during card lookup; treating as unknown");
                 unknown_ids.push(entry.id.clone());
             }
         }

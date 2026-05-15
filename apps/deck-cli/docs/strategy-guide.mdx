@@ -1,0 +1,95 @@
+---
+title: Strategy Guide
+description: How to use johto's agent session for deck improvement, matchup analysis, and hand sequencing.
+---
+
+# Strategy Guide
+
+## Starting with context
+
+When you open a session, the agent receives your full enriched decklist before your first message — card names, HP, attacks, abilities, regulation marks — so you never need to describe your deck. The system prompt is assembled at startup and includes every card in your TOML file, grouped by Pokemon, Trainers, and Energy. See [Agent Session](/agent-session) for the full startup sequence.
+
+```bash
+ANTHROPIC_API_KEY=sk-ant-... johto --deck ./decks/my-deck.toml
+```
+
+<Callout variant="tip">
+  Run `--dry-run` first to confirm all card IDs resolved correctly before opening a live session.
+</Callout>
+
+## Improving the deck
+
+The agent has `search_cards`, `get_card_by_id`, and `compare_cards` available as live tools. When you ask about cuts or additions, it will search the card database in real time to find alternatives that fit your strategy, energy curve, and regulation marks.
+
+```
+The deck feels slow on T1. What's dragging it down and what would you cut or add?
+
+I keep running out of Dark Energy mid-game — is the fix more energy, better recovery,
+or a different accelerator?
+
+I have 2 open slots. Given the spread strategy, what 2 cards would you add and why?
+
+Should I run 3 or 4 copies of Salvatore?
+```
+
+When the agent proposes a swap, it automatically calls `compare_cards` to show you the exact stat differences and `validate_deck` to confirm the revised list is still legal.
+
+## Understanding strategies
+
+The system prompt includes a full archetype framework — Aggro, Mega ex Beatdown, Midrange ex, Lost Zone Engine, Control — and the agent reasons against your specific 60 cards. Deck-specific questions yield deck-specific answers because the exact card text is in context.
+
+```
+Walk me through the primary and secondary win conditions of this deck.
+
+What does this deck do when the main attacker gets KO'd before I've set up the bench?
+
+Explain the Night Joker priority order — when do I copy Zekrom vs Sigilyph vs Reshiram?
+```
+
+## Matchup guidance
+
+The agent can search for meta deck cards using `search_cards` and reason about how your list performs into specific matchups. It knows your exact attack numbers, weakness types, and prize trade math.
+
+```
+How does this deck match up against Dragapult ex spread decks?
+
+What's my worst matchup given this list? What in the deck helps survive it?
+
+My local meta has a lot of Lugia VSTAR and Charizard ex. How do I pilot this against both?
+```
+
+## Hand setup and sequencing
+
+This is the highest-value use case. The agent knows every card in the deck, every attack cost, and every Supporter effect. It can walk you through exact turn sequences given a specific opening hand.
+
+```
+What does my perfect T1 hand look like, and what do I mulligan toward?
+
+Walk me through the Secret Box → Academy at Night → Grimsley's Move combo
+step by step, including what I need in hand before I start it.
+
+If I open Carvanha active with Toxel + Buddy-Buddy Poffin + Salvatore
++ Lillie's Determination + 2 Dark Energy, what's my T1 play?
+```
+
+## Comparing two decks
+
+Load two decks in the same session with multiple `--deck` flags:
+
+```bash
+johto \
+  --deck ./decks/mega-sharpedo-ex.toml \
+  --deck ./decks/mega-sharpedo-ex-2.toml
+```
+
+Both lists are rendered in the system prompt. The agent references each by name and can compare card choices, energy curves, and matchup profiles side by side.
+
+```
+What does Deck 2 do that Deck 1 can't, and which would you run at a tournament?
+```
+
+## What the agent can't do
+
+- Cannot simulate games or calculate probability distributions mid-session on its own — use `--stats` for that (see [Probability Analysis](/probability))
+- Cannot watch replays or pull tournament results
+- Cannot push proposed changes back to the TOML automatically — write-back is planned; current workflow is manual editing

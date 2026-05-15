@@ -78,6 +78,7 @@ The agent calls these during a session to verify card details and validate propo
 | `get_card_by_id` | Verifying a specific card's exact attack cost, damage, or ability text |
 | `compare_cards` | Side-by-side comparison when evaluating two tech options |
 | `validate_deck` | After proposing a swap, to confirm the revised list is legal |
+| `analyze_deck_probability` | Computing exact open rates and prize risk when asked about consistency or copy counts |
 
 Tool calls appear inline in the session:
 
@@ -146,3 +147,21 @@ The swap makes sense — here's the updated count:
 
 The modified list is valid (60 cards, all H/I marks, no violations).
 ```
+
+## Probability analysis
+
+```
+You: should I run 3 or 4 copies of Salvatore?
+
+[tool: analyze_deck_probability]
+
+With 3 copies, you open at least 1 Salvatore in 31.5% of games. Bumping to 4 copies
+raises that to 39.9% — a meaningful 8-point improvement on a card that enables same-turn
+Sharpedo evolution. Given your 8-energy count and Carvanha's Reckless Charge pre-loading
+damage, I'd run 4.
+```
+
+<Callout variant="tip">
+  Use `--stats` to see probabilities for every card in your deck before the session opens.
+  See [Probability Analysis](/probability).
+</Callout>

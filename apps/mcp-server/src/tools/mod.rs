@@ -1,3 +1,4 @@
+pub mod analyze_probability;
 pub mod compare_cards;
 pub mod echo;
 pub mod get_card_by_id;

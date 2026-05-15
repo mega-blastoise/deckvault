@@ -1,0 +1,51 @@
+# -- Stage 1: Build Rust MCP server --
+FROM rust:1.83-bookworm AS rust-builder
+WORKDIR /build
+COPY apps/mcp-server/ ./
+RUN cargo build --release && strip target/release/pokemon-mcp-server
+
+# -- Stage 2: Build Bun CLI --
+FROM oven/bun:1.3-debian AS bun-builder
+ARG TARGETARCH
+WORKDIR /build
+COPY bun.lock ./
+COPY apps/deck-cli/package.json ./
+RUN bun install --frozen-lockfile
+COPY apps/deck-cli/src ./src
+COPY apps/deck-cli/build ./build
+COPY apps/deck-cli/tsconfig.json ./
+RUN case "$TARGETARCH" in \
+      arm64) BUN_TARGET=bun-linux-arm64 ;; \
+      amd64) BUN_TARGET=bun-linux-x64 ;; \
+      *) echo "Unsupported TARGETARCH: $TARGETARCH" && exit 1 ;; \
+    esac && \
+    bun build src/index.ts --compile --target=$BUN_TARGET --outfile=/build/johto
+
+# -- Stage 3: Build card-data --
+FROM oven/bun:1.3-debian AS data-builder
+WORKDIR /build
+COPY dist-packages/card-data ./card-data
+COPY packages/@pokemon-data/data ./tcg-data
+RUN bun card-data/scripts/rebuild.ts --source ./tcg-data --out /build/pokemon-data.sqlite3.db
+
+# -- Stage 4: Runtime --
+FROM debian:bookworm-slim
+LABEL org.opencontainers.image.source="https://github.com/nicholasgalante1997/deckvault"
+LABEL org.opencontainers.image.description="Competitive Pokemon TCG deck refinement CLI"
+LABEL org.opencontainers.image.licenses="MIT"
+
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends ca-certificates \
+ && rm -rf /var/lib/apt/lists/*
+
+COPY --from=bun-builder  /build/johto                              /usr/local/bin/johto
+COPY --from=rust-builder /build/target/release/pokemon-mcp-server  /usr/local/bin/pokemon-mcp-server
+COPY --from=data-builder /build/pokemon-data.sqlite3.db            /var/lib/johto/pokemon-data.sqlite3.db
+
+ENV JOHTO_MCP_SERVER_PATH=/usr/local/bin/pokemon-mcp-server
+ENV JOHTO_DB_PATH=/var/lib/johto/pokemon-data.sqlite3.db
+ENV XDG_CONFIG_HOME=/root/.config
+ENV JOHTO_BROWSER_HOST=0.0.0.0
+
+ENTRYPOINT ["/usr/local/bin/johto"]
+CMD ["--help"]

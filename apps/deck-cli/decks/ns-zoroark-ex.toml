@@ -1,0 +1,151 @@
+name = "N's Zoroark ex"
+format = "standard"
+regulation_marks = ["H", "I", "J"]
+
+# ─── Pokémon — 22 ──────────────────────────────────────────────────────────────
+
+# N's Zoroark ex line (sv9 / Journey Together — reg I)
+[[cards]]
+id = "sv9-97"         # N's Zorua
+quantity = 4
+
+[[cards]]
+id = "sv9-98"         # N's Zoroark ex (Trade: discard 1 → draw 2 / Night Joker: copy any benched N's attack for 2 Dark)
+quantity = 4
+
+# N's bench attackers — all copyable via Night Joker
+[[cards]]
+id = "me2pt5-155"     # N's Zekrom (Rampaging Thunder: 250 dmg — reg I, fully legal)
+quantity = 2
+
+[[cards]]
+id = "sv9-116"        # N's Reshiram (Powerful Rage: 20× damage counters on self — scales with Toxtricity counters)
+quantity = 1
+
+[[cards]]
+id = "sv9-64"         # N's Sigilyph (Victory Symbol: instant win at exactly 1 Prize remaining)
+quantity = 1
+
+# Energy acceleration line (me2 / Phantasmal Flames — reg I)
+[[cards]]
+id = "me2-67"         # Toxel
+quantity = 3
+
+[[cards]]
+id = "me2-68"         # Toxtricity (Sinister Surge: attach Basic Dark from deck to benched Dark Pokémon + 2 damage counters)
+quantity = 2
+
+# Support Pokémon
+[[cards]]
+id = "sv6pt5-39"      # Pecharunt ex (Subjugating Chains: pivot benched Dark Pokémon to Active + Poison on entry)
+quantity = 1
+
+[[cards]]
+id = "sv6-95"         # Munkidori (Adrena-Brain: redirect 3 damage counters to opponent — requires Dark Energy)
+quantity = 1
+
+[[cards]]
+id = "sv8pt5-4"       # Budew (Itchy Pollen: 10 dmg, opponent can't play Items next turn)
+quantity = 1
+
+[[cards]]
+id = "sv6pt5-38"      # Fezandipiti ex (Flip the Script: draw 3 if a Pokémon was KO'd last turn)
+quantity = 1
+
+[[cards]]
+id = "me3-62"         # Meowth ex (Last-Ditch Catch: search Supporter from deck on bench entry — ⚠️ me3 Not Legal in API)
+quantity = 1
+
+# ─── Trainers — 30 ─────────────────────────────────────────────────────────────
+
+# Supporters — 10
+[[cards]]
+id = "me1-119"        # Lillie's Determination
+quantity = 4
+
+[[cards]]
+id = "me1-114"        # Boss's Orders
+quantity = 2
+
+[[cards]]
+id = "sv8-170"        # Cyrano (search up to 3 Pokémon ex — grabs Zoroark ex + Fezandipiti ex + Pecharunt ex)
+quantity = 2
+
+[[cards]]
+id = "sv9-143"        # Black Belt's Training (attacks do +40 to opponent's Pokémon ex this turn)
+quantity = 1
+
+[[cards]]
+id = "zsv10pt5-83"    # N's Plan (move up to 2 Energy from Bench to Active)
+quantity = 1
+
+# ACE SPEC — 1
+[[cards]]
+id = "sv6-165"        # Unfair Stamp (after a KO: both shuffle hands, you draw 5, opponent draws 2)
+quantity = 1
+
+# Items — 17
+[[cards]]
+id = "sv5-144"        # Buddy-Buddy Poffin
+quantity = 4
+
+[[cards]]
+id = "me1-131"        # Ultra Ball
+quantity = 3
+
+[[cards]]
+id = "me2pt5-198"     # Poké Pad (⚠️ me2pt5 / Ascended Heroes shows Not Legal in API — verify before tournament play)
+quantity = 3
+
+[[cards]]
+id = "sv9-153"        # N's PP Up (attach Basic Energy from discard to benched N's Pokémon)
+quantity = 3
+
+[[cards]]
+id = "sv6pt5-61"      # Night Stretcher
+quantity = 2
+
+[[cards]]
+id = "sv6pt5-55"      # Binding Mochi (Poisoned Pokémon deals +40 damage — combo with Pecharunt ex pivot)
+quantity = 2
+
+# Stadiums — 2
+[[cards]]
+id = "sv9-152"        # N's Castle (all N's Pokémon have free Retreat Cost)
+quantity = 2
+
+# ─── Energy — 8 ────────────────────────────────────────────────────────────────
+
+[[cards]]
+id = "sve-7"          # Basic Darkness Energy
+quantity = 8
+
+# ─── Meta ──────────────────────────────────────────────────────────────────────
+
+[meta]
+archetype = "ns-zoroark-ex"
+version = "1.0"
+total_cards = "60"
+notes = """
+N's Zoroark ex (Night Joker) copies any benched N's Pokémon's attack for 2 Dark Energy:
+  - N's Zekrom (Rampaging Thunder): 250 damage — primary KO attack
+  - N's Sigilyph (Victory Symbol): instant win at exactly 1 Prize remaining
+  - N's Reshiram (Powerful Rage): 20× damage counters — scales off Toxtricity counter placement
+
+Key combos:
+  - Binding Mochi + Pecharunt ex pivot = Zoroark ex Poisoned on entry → Night Joker copies
+    Rampaging Thunder for 290 instead of 250
+  - Toxtricity (Sinister Surge): attaches Dark Energy from deck to benched Dark Pokémon;
+    2 damage counters placed feed Reshiram's Powerful Rage scaling
+  - N's PP Up: recovers Dark Energy from discard back to benched N's Pokémon
+  - N's Plan: shifts up to 2 Bench Energy → Active (loads Zoroark ex in one turn)
+  - Unfair Stamp (ACE SPEC): fires after a KO — both players reset hands, you draw 5 / opponent 2
+  - N's Castle: free retreat for all N's Pokémon — full board mobility
+  - Meowth ex (Last-Ditch Catch): on bench entry, tutors any Supporter immediately
+  - Budew (Itchy Pollen): one-turn Item lock on opponent — disrupts Item-heavy setups
+  - Cyrano: grabs up to 3 Pokémon ex in one search
+
+Legality flags:
+  - me3-62  (Meowth ex): Perfect Order shows Not Legal in API — verify before tournament play.
+  - me2pt5-198 (Poké Pad): Ascended Heroes shows Not Legal in API — verify before tournament play.
+"""

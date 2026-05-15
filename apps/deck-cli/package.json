@@ -19,6 +19,7 @@
     "dev": "bun run src/index.ts",
     "prebuild": "rm -rf dist",
     "build": "bun build/index.ts",
+    "compile": "bun build/compile.ts",
     "start": "bun run dist/johto.mjs",
     "typecheck": "tsc --noEmit",
     "test": "bun test",
@@ -27,13 +28,16 @@
     "clean": "rm -rf dist site"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.36.0",
+    "@anthropic-ai/sdk": "^0.36.3",
     "cac": "^6.7.14",
+    "sanitize-html": "^2.17.4",
+    "serialize-javascript": "^7.0.5",
     "smol-toml": "^1.3.0"
   },
   "devDependencies": {
     "@bundt/dxdocs": "^0.4.0",
     "@types/bun": "latest",
+    "@types/sanitize-html": "^2.16.1",
     "typescript": "^5.5.0"
   }
 }

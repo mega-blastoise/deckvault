@@ -20,6 +20,7 @@ Both operate on local filesystem paths — no network calls.
 | `list_sets` | existing | All sets in the database |
 | `load_deck` | **new** | Parse and enrich a deck file |
 | `validate_deck` | **new** | Check Standard format legality |
+| `analyze_deck_probability` | **new** (SPEC_07) | Hypergeometric probability analysis for every card in a deck |
 
 ---
 
@@ -161,6 +162,82 @@ Unknown card IDs (not found in the database) are treated as potential legality i
 
 The MCP `CallToolResult` sets `is_error: true` when the deck is invalid (`valid: false`).
 The violation report JSON is always returned in the content text regardless.
+
+---
+
+## `analyze_deck_probability`
+
+Reads a deck file, computes hypergeometric opening-hand probabilities for every card, and
+returns prize risk and a T1-T4 draw curve. No database query is performed beyond what
+`load_deck` already does — this is pure arithmetic on copy counts and deck size.
+
+### Input
+
+```json
+{
+  "path": "/absolute/or/relative/path/to/deck.toml",
+  "spotlight": ["sv8pt5-117", "sv8pt5-37"]
+}
+```
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `path` | string | ✅ | Absolute or relative path to the deck file |
+| `spotlight` | string[] | — | Card IDs to mark with ★ in `--stats` output |
+
+### Output — `ProbabilityReport`
+
+```json
+{
+  "deckSize": 60,
+  "complete": true,
+  "openingHand": [
+    {
+      "cardId": "sv5-144",
+      "name": "Buddy-Buddy Poffin",
+      "copies": 4,
+      "pOpen": 0.3995,
+      "pExactlyOne": 0.3168,
+      "pExactlyTwo": 0.1213,
+      "pPrized": null,
+      "turnCurve": [
+        { "turn": 1, "pAtLeastOne": 0.4580 },
+        { "turn": 2, "pAtLeastOne": 0.5166 },
+        { "turn": 3, "pAtLeastOne": 0.5703 },
+        { "turn": 4, "pAtLeastOne": 0.6192 }
+      ],
+      "spotlight": false
+    }
+  ],
+  "prizedRisk": [
+    { "cardId": "sv8pt5-117", "name": "Maximum Belt", "copies": 1, "pPrized": 0.1000 }
+  ]
+}
+```
+
+`complete: true` when `deckSize == 60`. Incomplete decks still return valid probabilities
+computed on the actual deck size — the agent notes this in its response.
+
+All probability values are `f64` rounded to 4 decimal places.
+
+### Field reference
+
+| Field | Type | Description |
+|---|---|---|
+| `deckSize` | integer | Total card count (sum of all quantities) |
+| `complete` | boolean | `true` when `deckSize == 60` |
+| `openingHand` | CardProbability[] | All cards, sorted descending by `pOpen` |
+| `prizedRisk` | PrizedEntry[] | Cards with `copies <= 2`, sorted descending by `pPrized` |
+| `pOpen` | float | P(at least 1 in opening hand of 7) |
+| `pExactlyOne` | float | P(exactly 1 in opening hand of 7) |
+| `pExactlyTwo` | float | P(exactly 2 in opening hand of 7); `0.0` when `copies < 2` |
+| `pPrized` | float \| null | P(at least 1 copy prized); `null` when `copies >= 3` |
+| `turnCurve` | TurnCurveEntry[] | `turn` 1-4: P(at least 1 seen by that turn, going second) |
+
+<Callout variant="info">
+  Probability values use the hypergeometric distribution computed in log-space to avoid
+  floating-point overflow on the combination function.
+</Callout>
 
 ---
 

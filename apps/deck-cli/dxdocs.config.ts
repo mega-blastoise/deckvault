@@ -8,6 +8,7 @@ export default {
       type: 'group',
       title: 'Getting Started',
       items: [
+        { type: 'page', path: '/install', title: 'Install' },
         { type: 'page', path: '/quickstart', title: 'Quickstart' },
         { type: 'page', path: '/deck-format', title: 'Deck File Format' },
       ]
@@ -22,10 +23,25 @@ export default {
     },
     {
       type: 'group',
+      title: 'Guides',
+      items: [
+        { type: 'page', path: '/strategy-guide', title: 'Strategy Guide' },
+        { type: 'page', path: '/probability', title: 'Probability Analysis' },
+      ]
+    },
+    {
+      type: 'group',
       title: 'Reference',
       items: [
         { type: 'page', path: '/cli-reference', title: 'CLI Reference' },
         { type: 'page', path: '/mcp-tools', title: 'MCP Tools' },
+      ]
+    },
+    {
+      type: 'group',
+      title: 'Contributing',
+      items: [
+        { type: 'page', path: '/development', title: 'Developing Locally' },
       ]
     }
   ],

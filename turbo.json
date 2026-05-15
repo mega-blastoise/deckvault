@@ -49,6 +49,25 @@
     "docs:dev": {
       "cache": false,
       "persistent": true
+    },
+    "pack:cli-shim": {
+      "outputs": ["dist-packages/cli/**", "!dist-packages/cli/node_modules/**"]
+    },
+    "compile": {
+      "dependsOn": ["^build"],
+      "inputs": ["src/**", "build/**", "tsconfig.json"],
+      "outputs": ["../../dist-packages/cli-platforms/*/bin/**"]
+    },
+    "pack:cli-platform": {
+      "dependsOn": ["@pokemon/deck-cli#compile"],
+      "outputs": ["dist-packages/cli-platforms/**"]
+    },
+    "pack:mcp-platform": {
+      "dependsOn": [],
+      "outputs": ["dist-packages/mcp-server-platforms/**"]
+    },
+    "pack:card-data": {
+      "outputs": ["dist-packages/card-data/data/*.db"]
     }
   }
 }

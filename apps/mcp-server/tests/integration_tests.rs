@@ -91,7 +91,7 @@ fn tools_list_returns_all_pokemon_tools() {
     let response = proc.send(r#"{"jsonrpc":"2.0","method":"tools/list","id":3}"#);
     let json: serde_json::Value = serde_json::from_str(&response).unwrap();
     let tools = json["result"]["tools"].as_array().unwrap();
-    assert_eq!(tools.len(), 8, "expected exactly 8 tools, got {}", tools.len());
+    assert_eq!(tools.len(), 9, "expected exactly 9 tools, got {}", tools.len());
 
     let names: Vec<&str> = tools
         .iter()
@@ -105,6 +105,10 @@ fn tools_list_returns_all_pokemon_tools() {
     assert!(names.contains(&"get_price_info"), "missing get_price_info");
     assert!(names.contains(&"load_deck"), "missing load_deck");
     assert!(names.contains(&"validate_deck"), "missing validate_deck");
+    assert!(
+        names.contains(&"analyze_deck_probability"),
+        "missing analyze_deck_probability"
+    );
 }
 
 // ── tools/call search_cards ──────────────────────────────────────────────────

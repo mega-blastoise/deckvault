@@ -57,7 +57,13 @@ impl Tool for LoadDeckTool {
 
         let mut enriched_cards = Vec::new();
         for entry in &deck_file.cards {
-            let card = self.db.get_card_by_id(&entry.id).ok().flatten();
+            let card = match self.db.get_card_by_id(&entry.id) {
+                Ok(card) => card,
+                Err(e) => {
+                    tracing::warn!(card_id = %entry.id, error = %e, "DB error during card lookup; card will be unenriched");
+                    None
+                }
+            };
             enriched_cards.push(EnrichedDeckCard {
                 id: entry.id.clone(),
                 quantity: entry.quantity,

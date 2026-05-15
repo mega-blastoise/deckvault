@@ -26,6 +26,11 @@ export const CLI_BIN = join(
 export const MCP_AVAILABLE = await Bun.file(MCP_BIN).exists();
 export const CLI_AVAILABLE = await Bun.file(CLI_BIN).exists();
 export const DB_AVAILABLE  = await Bun.file(DB_PATH).exists();
+export const SOURCE_AVAILABLE = true;
+
+// Named env-var values for packaged-binary-compatible path injection
+export const JOHTO_MCP_BIN = MCP_BIN;
+export const JOHTO_DB = DB_PATH;
 
 // ── MCP JSON-RPC helper ───────────────────────────────────────────────────────
 //
@@ -79,7 +84,13 @@ export function runCli(
   env: Record<string, string> = {}
 ): CliResult {
   const proc = Bun.spawnSync([CLI_BIN, ...args], {
-    env: { ...process.env, DATABASE_PATH: DB_PATH, ...env },
+    env: {
+      ...process.env,
+      DATABASE_PATH: DB_PATH,
+      JOHTO_MCP_SERVER_PATH: MCP_BIN,
+      JOHTO_DB_PATH: DB_PATH,
+      ...env,
+    },
     stdin: 'ignore',
     stdout: 'pipe',
     stderr: 'pipe',
@@ -88,6 +99,32 @@ export function runCli(
     stdout: proc.stdout.toString(),
     stderr: proc.stderr.toString(),
     exitCode: proc.exitCode,
+  };
+}
+
+export function runCliFromSource(
+  args: string[],
+  env: Record<string, string> = {}
+): CliResult {
+  const proc = Bun.spawnSync(
+    ['bun', 'run', join(MONOREPO_ROOT, 'apps/deck-cli/src/index.ts'), ...args],
+    {
+      env: {
+        ...process.env,
+        DATABASE_PATH: DB_PATH,
+        JOHTO_MCP_SERVER_PATH: MCP_BIN,
+        JOHTO_DB_PATH: DB_PATH,
+        ...env,
+      },
+      stdin: 'ignore',
+      stdout: 'pipe',
+      stderr: 'pipe',
+    }
+  );
+  return {
+    stdout: proc.stdout.toString(),
+    stderr: proc.stderr.toString(),
+    exitCode: proc.exitCode ?? 1,
   };
 }
 

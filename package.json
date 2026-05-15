@@ -4,7 +4,9 @@
   "workspaces": [
     "apps/*",
     "packages/*",
-    "docsites/*"
+    "docsites/*",
+    "dist-packages/cli",
+    "dist-packages/card-data"
   ],
   "scripts": {
     "build": "turbo build",
@@ -33,7 +35,11 @@
     "deploy:build": "run-p deploy:build:*",
     "deploy:build:web": "docker build -f apps/web/Dockerfile -t ghcr.io/mega-blastoise/deckvault-web:latest .",
     "deploy:build:api": "docker build -f apps/rest-api/Dockerfile -t ghcr.io/mega-blastoise/deckvault-rest-api:latest .",
-    "deploy:build:graphql": "docker build -f apps/graphql-api/Dockerfile -t ghcr.io/mega-blastoise/deckvault-graphql-api:latest ."
+    "deploy:build:graphql": "docker build -f apps/graphql-api/Dockerfile -t ghcr.io/mega-blastoise/deckvault-graphql-api:latest .",
+    "changes:add": "bun scripts/changes.ts add",
+    "changes:list": "bun scripts/changes.ts list",
+    "changes:release": "bun scripts/changes.ts release",
+    "pack:all": "turbo run pack:cli-shim pack:cli-platform pack:mcp-platform pack:card-data"
   },
   "engines": {
     "bun": "1.3.5"
