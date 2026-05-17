@@ -8,9 +8,8 @@ RUN cargo build --release && strip target/release/pokemon-mcp-server
 FROM oven/bun:1.3-debian AS bun-builder
 ARG TARGETARCH
 WORKDIR /build
-COPY bun.lock ./
 COPY apps/deck-cli/package.json ./
-RUN bun install --frozen-lockfile
+RUN bun install
 COPY apps/deck-cli/src ./src
 COPY apps/deck-cli/build ./build
 COPY apps/deck-cli/tsconfig.json ./

@@ -6,7 +6,8 @@
     "packages/*",
     "docsites/*",
     "dist-packages/cli",
-    "dist-packages/card-data"
+    "dist-packages/card-data",
+    "__tests__/deck-cli/smoke"
   ],
   "scripts": {
     "build": "turbo build",

@@ -44,13 +44,18 @@ CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/johto"
 CONFIG_FILE="$CONFIG_DIR/config.toml"
 MCP_PATH="$INSTALL_DIR/bin/pokemon-mcp-server"
 DB_PATH="$INSTALL_DIR/card-data/data/pokemon-data.sqlite3.db"
+DECKS_DIR="$HOME/johto/decks"
 
-mkdir -p "$CONFIG_DIR"
+mkdir -p "$CONFIG_DIR" "$DECKS_DIR"
 if [ ! -f "$CONFIG_FILE" ]; then
   cat > "$CONFIG_FILE" <<TOML
 [paths]
 mcp_server = "$MCP_PATH"
 card_data = "$DB_PATH"
+decks_dir = "$DECKS_DIR"
+
+[defaults]
+provider = "anthropic"
 TOML
   echo "Config written to $CONFIG_FILE"
 else

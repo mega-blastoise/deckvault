@@ -1,13 +1,13 @@
-import { readFileSync } from 'node:fs';
-
 import sanitizeHtml from 'sanitize-html';
 import serialize from 'serialize-javascript';
 
 import { buildSystemPrompt } from '../agent/prompt';
 import type { EnrichedDeck } from '../deck/types';
-
-const PAGE_CSS = readFileSync(new URL('./page.css', import.meta.url), 'utf-8');
-const PAGE_JS  = readFileSync(new URL('./page.js',  import.meta.url), 'utf-8');
+// Text-loader imports inline the file contents at build time, so the compiled
+// binary doesn't need page.css / page.client.js.txt on disk at runtime.
+// page.js is renamed to .txt so the bundler's JS loader doesn't try to parse it.
+import PAGE_CSS from './page.css'           with { type: 'text' };
+import PAGE_JS  from './page.client.js.txt' with { type: 'text' };
 
 const stripTags = (s: string): string =>
   sanitizeHtml(s, { allowedTags: [], allowedAttributes: {} });

@@ -13,8 +13,6 @@ function validateConfig(raw: unknown): JohtoConfig {
   if (config.success) {
     return config.data;
   }
-
-  console.error(config.error);
   throw new MalformedJohtoConfig(config.error);
 }
 
@@ -24,13 +22,16 @@ export function getConfigPath(): string {
   return join(base, 'johto', 'config.toml');
 }
 
-export async function loadConfig(): Promise<JohtoConfig | null> {
+export async function loadConfig(): Promise<JohtoConfig> {
   const path = getConfigPath();
   try {
     const raw = await readFile(path, 'utf-8');
     return validateConfig(parse(raw));
-  } catch {
-    return null;
+  } catch (err) {
+    if (err instanceof MalformedJohtoConfig) {
+      console.error(err.message);
+    }
+    return {};
   }
 }
 
@@ -46,7 +47,7 @@ export async function resolveApiKey(): Promise<string | undefined> {
   if (envKey) return envKey;
 
   const config = await loadConfig();
-  return config?.anthropic?.api_key;
+  return config.anthropic?.api_key;
 }
 
 export async function resolveDbPath(): Promise<string | undefined> {
@@ -54,7 +55,7 @@ export async function resolveDbPath(): Promise<string | undefined> {
   if (envPath) return envPath;
 
   const config = await loadConfig();
-  return config?.paths?.card_data;
+  return config.paths?.card_data;
 }
 
 export async function resolveMcpServerPath(): Promise<string | undefined> {
@@ -62,5 +63,5 @@ export async function resolveMcpServerPath(): Promise<string | undefined> {
   if (envPath) return envPath;
 
   const config = await loadConfig();
-  return config?.paths?.mcp_server;
+  return config.paths?.mcp_server;
 }

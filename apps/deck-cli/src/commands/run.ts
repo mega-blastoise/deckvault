@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
+import { existsSync } from 'node:fs';
 import * as readline from 'node:readline/promises';
 
 import { resolveDefaultMcpPath } from '../args';
@@ -10,6 +11,26 @@ import { formatProbabilityReport } from '../probability/format';
 import { resolveApiKey, resolveDbPath } from '../config/loader';
 import type { ProbabilityReport } from '../probability/types';
 import type { McpToolResult } from '../mcp/types';
+
+function preflightCardData(dbPath: string | undefined): void {
+  // Only fail loudly when the user has *configured* a DB path that doesn't
+  // exist. If no path is configured at all, let the MCP server use its own
+  // default (or fail with its own message) — `johto doctor` is the right tool
+  // for first-run diagnostics.
+  if (!dbPath || existsSync(dbPath)) return;
+
+  const lines = [
+    `Error: card database not found at ${dbPath}`,
+    '',
+    'To install the bundled database:',
+    '  npm install -g @johto-ai/card-data@latest',
+    '',
+    'Or set JOHTO_DB_PATH to the path of your pokemon-data.sqlite3.db.',
+    'Run `johto doctor` to diagnose further.',
+  ];
+  console.error(lines.join('\n'));
+  process.exit(1);
+}
 
 export interface RunOptions {
   readonly deck?: string | string[];
@@ -67,6 +88,7 @@ export async function runCommand(options: RunOptions): Promise<void> {
 
   const mcpServerPath = options.mcpServer ?? await resolveDefaultMcpPath();
   const dbPath = await resolveDbPath();
+  preflightCardData(dbPath);
 
   console.log('Starting MCP server...');
   const mcp = new McpClient(mcpServerPath, dbPath);

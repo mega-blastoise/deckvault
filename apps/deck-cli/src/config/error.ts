@@ -1,12 +1,14 @@
+import * as z from 'zod/mini';
+
 export class MalformedJohtoConfig extends Error {
-  z: unknown;
   constructor(error: unknown) {
-    super();
+    const issues = error instanceof z.core.$ZodError
+      ? error.issues.map((i) => `  • ${i.path.join('.') || '(root)'}: ${i.message}`).join('\n')
+      : String(error);
+    super(`Malformed Johto config:\n${issues}\n(Run \`johto init\` to regenerate)`);
+    this.name = 'MalformedJohtoConfig';
     if (error instanceof Error) {
-      this.cause = error.cause;
-      this.message = `Malformed Johto configuration: ${error.message}`;
-      this.stack = error.stack;
-      this.z = error;
+      this.cause = error;
     }
   }
 }

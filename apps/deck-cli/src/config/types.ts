@@ -2,8 +2,8 @@ import * as z from 'zod/mini';
 
 export const AnthropicConfigurationSchema = z.readonly(
   z.object({
-    api_key: z.string(),
-    model: z.string()
+    api_key: z.optional(z.string()),
+    model: z.optional(z.string())
   })
 );
 
@@ -13,9 +13,9 @@ export type AnthropicConfiguration = z.infer<
 
 export const PathsConfigurationSchema = z.readonly(
   z.object({
-    decks_dir: z.string(),
-    card_data: z.string(),
-    mcp_server: z.string()
+    decks_dir: z.optional(z.string()),
+    card_data: z.optional(z.string()),
+    mcp_server: z.optional(z.string())
   })
 );
 
@@ -23,19 +23,19 @@ export type PathsConfiguration = z.infer<typeof PathsConfigurationSchema>;
 
 export const ProviderDefaultsConfigurationSchema = z.readonly(
   z.object({
-    provider: z.enum(['anthropic', 'chrome'])
+    provider: z.optional(z.enum(['anthropic', 'chrome']))
   })
 );
 
 export type ProviderDefaultsConfiguration = z.infer<
-  typeof PathsConfigurationSchema
+  typeof ProviderDefaultsConfigurationSchema
 >;
 
 export const JohtoConfigurationSchema = z.readonly(
   z.object({
-    anthropic: AnthropicConfigurationSchema,
-    paths: PathsConfigurationSchema,
-    defaults: PathsConfigurationSchema
+    anthropic: z.optional(AnthropicConfigurationSchema),
+    paths: z.optional(PathsConfigurationSchema),
+    defaults: z.optional(ProviderDefaultsConfigurationSchema)
   })
 );
 

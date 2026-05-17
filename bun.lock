@@ -28,6 +28,16 @@
         "typescript": "5.5.4",
       },
     },
+    "__tests__/deck-cli/smoke": {
+      "name": "@pokemon/deck-cli-smoke",
+      "version": "0.0.1",
+      "dependencies": {
+        "smol-toml": "^1.3.0",
+      },
+      "devDependencies": {
+        "@types/bun": "latest",
+      },
+    },
     "apps/cron": {
       "name": "@pokemon/cron",
       "version": "0.0.1",
@@ -903,6 +913,8 @@
     "@pokemon/database": ["@pokemon/database@workspace:packages/@database"],
 
     "@pokemon/deck-cli": ["@pokemon/deck-cli@workspace:apps/deck-cli"],
+
+    "@pokemon/deck-cli-smoke": ["@pokemon/deck-cli-smoke@workspace:__tests__/deck-cli/smoke"],
 
     "@pokemon/docs": ["@pokemon/docs@workspace:apps/docs"],
 
@@ -2896,6 +2908,8 @@
 
     "@pokemon/deck-cli/typescript": ["typescript@5.9.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw=="],
 
+    "@pokemon/deck-cli-smoke/@types/bun": ["@types/bun@1.3.14", "", { "dependencies": { "bun-types": "1.3.14" } }, "sha512-h1hFqFVcvAvD9j9K7ZW7vd82aSA+rTdznZa+5bwvCwqSB1jmmfLcbIWhOLx1/+boy/xmjgCs/OMUL8hRJSmnPw=="],
+
     "@pokemon/docs/@bundt/dxdocs": ["@bundt/dxdocs@0.2.1", "", { "dependencies": { "@inquirer/prompts": "^8.2.0", "cac": "^6.7.0", "chokidar": "^4.0.0", "picocolors": "^1.1.0" }, "peerDependencies": { "@mdx-js/mdx": "^3.1.0", "gray-matter": "^4.0.3", "lucide-react": "^0.575.0", "react": "^19.1.0", "react-dom": "^19.1.0", "remark-gfm": "^4.0.1", "shiki": "^3.0.0", "unist-util-visit": "^5.0.0", "zod": "^4.0.0" }, "bin": { "dxdocs": "dist/dxdocs.mjs", "bun-dxdocs": "bin/dxdocs.ts" } }, "sha512-pl2Iu9FmO6Tz2ndX7LuTHR2NoiEHTVzR8V37Ym4vbJC/RT+GMynWjV6cBpJudHaEWLrxsxXtDPph7NW+C6VvFA=="],
 
     "@pokemon/docs/zod": ["zod@4.3.6", "", {}, "sha512-rftlrkhHZOcjDwkGlnUtZZkvaPHCsDATp4pGpuOOMDaTdDDXF91wuVDJoWoPsKX/3YPQ5fHuF3STjcYyKr+Qhg=="],
@@ -3150,6 +3164,8 @@
 
     "@pokemon/clients/@types/node/undici-types": ["undici-types@6.21.0", "", {}, "sha512-iwDZqg0QAGrg9Rav5H4n0M64c3mkR59cJ6wQp+7C4nI0gsmExaedaYLNO44eT4AtBBwjbTiGPMlt2Md0T9H9JQ=="],
 
+    "@pokemon/deck-cli-smoke/@types/bun/bun-types": ["bun-types@1.3.14", "", { "dependencies": { "@types/node": "*" } }, "sha512-4N0ig0fEomHt5R0KCFWjovxow98rIoRwKolrYdCcknNwMekCXRnWEUvgu5soYV8QXtVsrUD8B95MBOZGPvr6KQ=="],
+
     "@pokemon/deck-cli/@types/bun/bun-types": ["bun-types@1.3.14", "", { "dependencies": { "@types/node": "*" } }, "sha512-4N0ig0fEomHt5R0KCFWjovxow98rIoRwKolrYdCcknNwMekCXRnWEUvgu5soYV8QXtVsrUD8B95MBOZGPvr6KQ=="],
 
     "@pokemon/scripts/@types/bun/bun-types": ["bun-types@1.3.5", "", { "dependencies": { "@types/node": "*" } }, "sha512-inmAYe2PFLs0SUbFOWSVD24sg1jFlMPxOjOSSCYqUgn4Hsc3rDc7dFvfVYjFPNHtov6kgUeulV4SxbuIV/stPw=="],
@@ -3303,6 +3319,8 @@
     "wrap-ansi/strip-ansi/ansi-regex": ["ansi-regex@5.0.1", "", {}, "sha512-quJQXlTSUGL2LH9SUXo8VwsY4soanhgo6LNSm84E1LBcE8s3O0wpdiRzyR9z/ZZJMlMWv37qOOb9pdJlMUEKFQ=="],
 
     "@pokemon/clients/@types/bun/bun-types/@types/node": ["@types/node@25.5.0", "", { "dependencies": { "undici-types": "~7.18.0" } }, "sha512-jp2P3tQMSxWugkCUKLRPVUpGaL5MVFwF8RDuSRztfwgN1wmqJeMSbKlnEtQqU8UrhTmzEmZdu2I6v2dpp7XIxw=="],
+
+    "@pokemon/deck-cli-smoke/@types/bun/bun-types/@types/node": ["@types/node@25.5.2", "", { "dependencies": { "undici-types": "~7.18.0" } }, "sha512-tO4ZIRKNC+MDWV4qKVZe3Ql/woTnmHDr5JD8UI5hn2pwBrHEwOEMZK7WlNb5RKB6EoJ02gwmQS9OrjuFnZYdpg=="],
 
     "@pokemon/deck-cli/@types/bun/bun-types/@types/node": ["@types/node@25.5.2", "", { "dependencies": { "undici-types": "~7.18.0" } }, "sha512-tO4ZIRKNC+MDWV4qKVZe3Ql/woTnmHDr5JD8UI5hn2pwBrHEwOEMZK7WlNb5RKB6EoJ02gwmQS9OrjuFnZYdpg=="],
 

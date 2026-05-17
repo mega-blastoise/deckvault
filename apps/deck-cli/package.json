@@ -21,8 +21,8 @@
     "build": "bun build/index.ts",
     "compile": "bun build/compile.ts",
     "start": "bun run dist/johto.mjs",
-    "typecheck": "tsc --noEmit",
-    "test": "bun test",
+    "check-types": "tsc --noEmit",
+    "test": "echo 'deck-cli has no unit tests; see __tests__/deck-cli/smoke' && exit 0",
     "docs:dev": "dxdocs dev",
     "docs:build": "dxdocs build",
     "clean": "rm -rf dist site"
