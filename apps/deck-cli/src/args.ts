@@ -17,7 +17,7 @@ export async function resolveDefaultMcpPath(): Promise<string> {
   );
 }
 
-export function buildCli() {
+export function cli() {
   const cli = cac('johto');
 
   cli.command('run', 'Start a deck refinement session')

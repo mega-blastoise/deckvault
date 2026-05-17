@@ -70,24 +70,9 @@ jobs:
           name: cli-${{ matrix.suffix }}
           path: dist-packages/cli-platforms/${{ matrix.suffix }}/
 
-  build-card-data:
-    name: Build @johto-ai/card-data
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: recursive
-      - uses: oven-sh/setup-bun@v2
-      - run: bun install --frozen-lockfile
-      - run: bun dist-packages/card-data/scripts/rebuild.ts --source packages/@pokemon-data/data --out dist-packages/card-data/data/pokemon-data.sqlite3.db
-      - uses: actions/upload-artifact@v4
-        with:
-          name: card-data
-          path: dist-packages/card-data/
-
   publish:
     name: Publish npm + GHCR + Release
-    needs: [build-rust, build-bun, build-card-data]
+    needs: [build-rust, build-bun]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -113,7 +98,6 @@ jobs:
             cp -r dist-packages-artifacts/cli-${suffix} dist-packages/cli-platforms/${suffix}
             cp -r dist-packages-artifacts/mcp-server-${suffix} dist-packages/mcp-server-platforms/${suffix}
           done
-          cp -r dist-packages-artifacts/card-data/* dist-packages/card-data/
 
       - name: Stamp versions
         run: bun scripts/stamp-release-versions.ts ${{ github.ref_name }}
@@ -125,8 +109,11 @@ jobs:
           cp -r dist-packages/cli                            "$SMOKE/cli"
           cp -r dist-packages/cli-platforms/linux-x64        "$SMOKE/node_modules/@johto-ai/cli-linux-x64"
           cp -r dist-packages/mcp-server-platforms/linux-x64 "$SMOKE/node_modules/@johto-ai/mcp-server-linux-x64"
-          cp -r dist-packages/card-data                      "$SMOKE/node_modules/@johto-ai/card-data"
           ln -sf "../cli" "$SMOKE/node_modules/@johto-ai/cli"
+
+          # Pull card-data from npm (published independently via release-card-data.yml).
+          # Must have a card-data-vX.Y.Z release on npm BEFORE this workflow runs.
+          (cd "$SMOKE" && npm install --no-save --prefix . @johto-ai/card-data@latest)
 
           chmod +x "$SMOKE/node_modules/@johto-ai/cli-linux-x64/bin/johto"
           chmod +x "$SMOKE/node_modules/@johto-ai/mcp-server-linux-x64/bin/pokemon-mcp-server"
@@ -146,7 +133,6 @@ jobs:
             npm publish --access public --provenance "dist-packages/cli-platforms/${suffix}"
             npm publish --access public --provenance "dist-packages/mcp-server-platforms/${suffix}"
           done
-          npm publish --access public --provenance dist-packages/card-data
           npm publish --access public --provenance dist-packages/cli
 
       - name: Build and push multi-arch Docker image

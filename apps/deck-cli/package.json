@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Competitive Pokemon TCG deck refinement CLI with Anthropic agent loop and browser mode.",
+  "description": "A command line tool for Pokemon Trading Card Game deck refinement.",
   "bin": {
     "johto": "./dist/johto.mjs",
     "bun-johto": "./src/index.ts"
@@ -32,7 +32,8 @@
     "cac": "^6.7.14",
     "sanitize-html": "^2.17.4",
     "serialize-javascript": "^7.0.5",
-    "smol-toml": "^1.3.0"
+    "smol-toml": "^1.3.0",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@bundt/dxdocs": "^0.4.0",

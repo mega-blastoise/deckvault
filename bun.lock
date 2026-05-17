@@ -15,10 +15,12 @@
         "@types/bun": "latest",
         "@types/debug": "^4.1.12",
         "@types/node": "^25.0.3",
+        "@types/semver": "^7.5.8",
         "bun-types": "^1.3.5",
         "eslint": "^9.15.0",
         "npm-run-all": "^4.1.5",
         "prettier": "^3.2.5",
+        "semver": "^7.6.3",
         "turbo": "^2.3.0",
         "typescript-eslint": "^8.15.0",
       },
@@ -58,6 +60,7 @@
         "sanitize-html": "^2.17.4",
         "serialize-javascript": "^7.0.5",
         "smol-toml": "^1.3.0",
+        "zod": "^4.4.3",
       },
       "devDependencies": {
         "@bundt/dxdocs": "^0.4.0",
@@ -231,9 +234,6 @@
       "bin": {
         "johto": "./bin/johto.js",
       },
-      "dependencies": {
-        "@johto-ai/card-data": "workspace:*",
-      },
       "optionalDependencies": {
         "@johto-ai/cli-darwin-arm64": "workspace:*",
         "@johto-ai/cli-darwin-x64": "workspace:*",
@@ -243,6 +243,9 @@
         "@johto-ai/mcp-server-darwin-x64": "workspace:*",
         "@johto-ai/mcp-server-linux-arm64": "workspace:*",
         "@johto-ai/mcp-server-linux-x64": "workspace:*",
+      },
+      "peerDependencies": {
+        "@johto-ai/card-data": "workspace:*",
       },
     },
     "docsites/api": {
@@ -2843,7 +2846,7 @@
 
     "yocto-queue": ["yocto-queue@0.1.0", "", {}, "sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q=="],
 
-    "zod": ["zod@4.3.6", "", {}, "sha512-rftlrkhHZOcjDwkGlnUtZZkvaPHCsDATp4pGpuOOMDaTdDDXF91wuVDJoWoPsKX/3YPQ5fHuF3STjcYyKr+Qhg=="],
+    "zod": ["zod@4.4.3", "", {}, "sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ=="],
 
     "zod-validation-error": ["zod-validation-error@3.5.4", "", { "peerDependencies": { "zod": "^3.24.4" } }, "sha512-+hEiRIiPobgyuFlEojnqjJnhFvg4r/i3cqgcm67eehZf/WBaK3g6cD02YU9mtdVxZjv8CzCA9n/Rhrs3yAAvAw=="],
 
@@ -2895,15 +2898,27 @@
 
     "@pokemon/docs/@bundt/dxdocs": ["@bundt/dxdocs@0.2.1", "", { "dependencies": { "@inquirer/prompts": "^8.2.0", "cac": "^6.7.0", "chokidar": "^4.0.0", "picocolors": "^1.1.0" }, "peerDependencies": { "@mdx-js/mdx": "^3.1.0", "gray-matter": "^4.0.3", "lucide-react": "^0.575.0", "react": "^19.1.0", "react-dom": "^19.1.0", "remark-gfm": "^4.0.1", "shiki": "^3.0.0", "unist-util-visit": "^5.0.0", "zod": "^4.0.0" }, "bin": { "dxdocs": "dist/dxdocs.mjs", "bun-dxdocs": "bin/dxdocs.ts" } }, "sha512-pl2Iu9FmO6Tz2ndX7LuTHR2NoiEHTVzR8V37Ym4vbJC/RT+GMynWjV6cBpJudHaEWLrxsxXtDPph7NW+C6VvFA=="],
 
+    "@pokemon/docs/zod": ["zod@4.3.6", "", {}, "sha512-rftlrkhHZOcjDwkGlnUtZZkvaPHCsDATp4pGpuOOMDaTdDDXF91wuVDJoWoPsKX/3YPQ5fHuF3STjcYyKr+Qhg=="],
+
     "@pokemon/docs-api/@bundt/dxdocs": ["@bundt/dxdocs@0.2.1", "", { "dependencies": { "@inquirer/prompts": "^8.2.0", "cac": "^6.7.0", "chokidar": "^4.0.0", "picocolors": "^1.1.0" }, "peerDependencies": { "@mdx-js/mdx": "^3.1.0", "gray-matter": "^4.0.3", "lucide-react": "^0.575.0", "react": "^19.1.0", "react-dom": "^19.1.0", "remark-gfm": "^4.0.1", "shiki": "^3.0.0", "unist-util-visit": "^5.0.0", "zod": "^4.0.0" }, "bin": { "dxdocs": "dist/dxdocs.mjs", "bun-dxdocs": "bin/dxdocs.ts" } }, "sha512-pl2Iu9FmO6Tz2ndX7LuTHR2NoiEHTVzR8V37Ym4vbJC/RT+GMynWjV6cBpJudHaEWLrxsxXtDPph7NW+C6VvFA=="],
+
+    "@pokemon/docs-api/zod": ["zod@4.3.6", "", {}, "sha512-rftlrkhHZOcjDwkGlnUtZZkvaPHCsDATp4pGpuOOMDaTdDDXF91wuVDJoWoPsKX/3YPQ5fHuF3STjcYyKr+Qhg=="],
 
     "@pokemon/docs-architecture/@bundt/dxdocs": ["@bundt/dxdocs@0.2.1", "", { "dependencies": { "@inquirer/prompts": "^8.2.0", "cac": "^6.7.0", "chokidar": "^4.0.0", "picocolors": "^1.1.0" }, "peerDependencies": { "@mdx-js/mdx": "^3.1.0", "gray-matter": "^4.0.3", "lucide-react": "^0.575.0", "react": "^19.1.0", "react-dom": "^19.1.0", "remark-gfm": "^4.0.1", "shiki": "^3.0.0", "unist-util-visit": "^5.0.0", "zod": "^4.0.0" }, "bin": { "dxdocs": "dist/dxdocs.mjs", "bun-dxdocs": "bin/dxdocs.ts" } }, "sha512-pl2Iu9FmO6Tz2ndX7LuTHR2NoiEHTVzR8V37Ym4vbJC/RT+GMynWjV6cBpJudHaEWLrxsxXtDPph7NW+C6VvFA=="],
 
+    "@pokemon/docs-architecture/zod": ["zod@4.3.6", "", {}, "sha512-rftlrkhHZOcjDwkGlnUtZZkvaPHCsDATp4pGpuOOMDaTdDDXF91wuVDJoWoPsKX/3YPQ5fHuF3STjcYyKr+Qhg=="],
+
     "@pokemon/docs-database/@bundt/dxdocs": ["@bundt/dxdocs@0.2.1", "", { "dependencies": { "@inquirer/prompts": "^8.2.0", "cac": "^6.7.0", "chokidar": "^4.0.0", "picocolors": "^1.1.0" }, "peerDependencies": { "@mdx-js/mdx": "^3.1.0", "gray-matter": "^4.0.3", "lucide-react": "^0.575.0", "react": "^19.1.0", "react-dom": "^19.1.0", "remark-gfm": "^4.0.1", "shiki": "^3.0.0", "unist-util-visit": "^5.0.0", "zod": "^4.0.0" }, "bin": { "dxdocs": "dist/dxdocs.mjs", "bun-dxdocs": "bin/dxdocs.ts" } }, "sha512-pl2Iu9FmO6Tz2ndX7LuTHR2NoiEHTVzR8V37Ym4vbJC/RT+GMynWjV6cBpJudHaEWLrxsxXtDPph7NW+C6VvFA=="],
+
+    "@pokemon/docs-database/zod": ["zod@4.3.6", "", {}, "sha512-rftlrkhHZOcjDwkGlnUtZZkvaPHCsDATp4pGpuOOMDaTdDDXF91wuVDJoWoPsKX/3YPQ5fHuF3STjcYyKr+Qhg=="],
 
     "@pokemon/docs-deployment/@bundt/dxdocs": ["@bundt/dxdocs@0.2.1", "", { "dependencies": { "@inquirer/prompts": "^8.2.0", "cac": "^6.7.0", "chokidar": "^4.0.0", "picocolors": "^1.1.0" }, "peerDependencies": { "@mdx-js/mdx": "^3.1.0", "gray-matter": "^4.0.3", "lucide-react": "^0.575.0", "react": "^19.1.0", "react-dom": "^19.1.0", "remark-gfm": "^4.0.1", "shiki": "^3.0.0", "unist-util-visit": "^5.0.0", "zod": "^4.0.0" }, "bin": { "dxdocs": "dist/dxdocs.mjs", "bun-dxdocs": "bin/dxdocs.ts" } }, "sha512-pl2Iu9FmO6Tz2ndX7LuTHR2NoiEHTVzR8V37Ym4vbJC/RT+GMynWjV6cBpJudHaEWLrxsxXtDPph7NW+C6VvFA=="],
 
+    "@pokemon/docs-deployment/zod": ["zod@4.3.6", "", {}, "sha512-rftlrkhHZOcjDwkGlnUtZZkvaPHCsDATp4pGpuOOMDaTdDDXF91wuVDJoWoPsKX/3YPQ5fHuF3STjcYyKr+Qhg=="],
+
     "@pokemon/docs-development/@bundt/dxdocs": ["@bundt/dxdocs@0.2.1", "", { "dependencies": { "@inquirer/prompts": "^8.2.0", "cac": "^6.7.0", "chokidar": "^4.0.0", "picocolors": "^1.1.0" }, "peerDependencies": { "@mdx-js/mdx": "^3.1.0", "gray-matter": "^4.0.3", "lucide-react": "^0.575.0", "react": "^19.1.0", "react-dom": "^19.1.0", "remark-gfm": "^4.0.1", "shiki": "^3.0.0", "unist-util-visit": "^5.0.0", "zod": "^4.0.0" }, "bin": { "dxdocs": "dist/dxdocs.mjs", "bun-dxdocs": "bin/dxdocs.ts" } }, "sha512-pl2Iu9FmO6Tz2ndX7LuTHR2NoiEHTVzR8V37Ym4vbJC/RT+GMynWjV6cBpJudHaEWLrxsxXtDPph7NW+C6VvFA=="],
+
+    "@pokemon/docs-development/zod": ["zod@4.3.6", "", {}, "sha512-rftlrkhHZOcjDwkGlnUtZZkvaPHCsDATp4pGpuOOMDaTdDDXF91wuVDJoWoPsKX/3YPQ5fHuF3STjcYyKr+Qhg=="],
 
     "@pokemon/engine/@types/node": ["@types/node@25.5.2", "", { "dependencies": { "undici-types": "~7.18.0" } }, "sha512-tO4ZIRKNC+MDWV4qKVZe3Ql/woTnmHDr5JD8UI5hn2pwBrHEwOEMZK7WlNb5RKB6EoJ02gwmQS9OrjuFnZYdpg=="],
 
@@ -2922,6 +2937,8 @@
     "@pokemon/utils/@types/node": ["@types/node@25.5.2", "", { "dependencies": { "undici-types": "~7.18.0" } }, "sha512-tO4ZIRKNC+MDWV4qKVZe3Ql/woTnmHDr5JD8UI5hn2pwBrHEwOEMZK7WlNb5RKB6EoJ02gwmQS9OrjuFnZYdpg=="],
 
     "@pokemon/utils/typescript": ["typescript@5.9.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw=="],
+
+    "@pokemon/utils/zod": ["zod@4.3.6", "", {}, "sha512-rftlrkhHZOcjDwkGlnUtZZkvaPHCsDATp4pGpuOOMDaTdDDXF91wuVDJoWoPsKX/3YPQ5fHuF3STjcYyKr+Qhg=="],
 
     "@pokemon/web/@apollo/server": ["@apollo/server@5.5.0", "", { "dependencies": { "@apollo/cache-control-types": "^1.0.3", "@apollo/server-gateway-interface": "^2.0.0", "@apollo/usage-reporting-protobuf": "^4.1.1", "@apollo/utils.createhash": "^3.0.0", "@apollo/utils.fetcher": "^3.0.0", "@apollo/utils.isnodelike": "^3.0.0", "@apollo/utils.keyvaluecache": "^4.0.0", "@apollo/utils.logger": "^3.0.0", "@apollo/utils.usagereporting": "^2.1.0", "@apollo/utils.withrequired": "^3.0.0", "@graphql-tools/schema": "^10.0.0", "async-retry": "^1.2.1", "body-parser": "^2.2.2", "content-type": "^1.0.5", "cors": "^2.8.5", "finalhandler": "^2.1.0", "loglevel": "^1.6.8", "lru-cache": "^11.1.0", "negotiator": "^1.0.0", "uuid": "^11.1.0", "whatwg-mimetype": "^4.0.0" }, "peerDependencies": { "graphql": "^16.11.0" } }, "sha512-vWtodBOK/SZwBTJzItECOmLfL8E8pn/IdvP7pnxN5g2tny9iW4+9sxdajE798wV1H2+PYp/rRcl/soSHIBKMPw=="],
 

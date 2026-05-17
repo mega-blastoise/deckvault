@@ -2,7 +2,7 @@
 
 import { join } from 'node:path';
 
-const ROOT = import.meta.dir + '/..';
+const ROOT = join(import.meta.dir, '../');
 const start = performance.now();
 
 const result = await Bun.build({

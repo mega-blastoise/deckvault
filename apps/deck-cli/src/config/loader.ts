@@ -2,49 +2,20 @@ import { homedir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { parse, stringify } from 'smol-toml';
+import * as z from 'zod/mini';
 
+import { JohtoConfigurationSchema } from './types';
 import type { JohtoConfig } from './types';
+import { MalformedJohtoConfig } from './error';
 
 function validateConfig(raw: unknown): JohtoConfig {
-  if (typeof raw !== 'object' || raw === null) return {};
-  const c = raw as Record<string, unknown>;
+  const config = z.safeParse(JohtoConfigurationSchema, raw);
+  if (config.success) {
+    return config.data;
+  }
 
-  const anthropic =
-    typeof c['anthropic'] === 'object' && c['anthropic'] !== null
-      ? (() => {
-          const a = c['anthropic'] as Record<string, unknown>;
-          return {
-            api_key: typeof a['api_key'] === 'string' ? a['api_key'] : undefined,
-            model: typeof a['model'] === 'string' ? a['model'] : undefined,
-          };
-        })()
-      : undefined;
-
-  const paths =
-    typeof c['paths'] === 'object' && c['paths'] !== null
-      ? (() => {
-          const p = c['paths'] as Record<string, unknown>;
-          return {
-            decks_dir: typeof p['decks_dir'] === 'string' ? p['decks_dir'] : undefined,
-            card_data: typeof p['card_data'] === 'string' ? p['card_data'] : undefined,
-            mcp_server: typeof p['mcp_server'] === 'string' ? p['mcp_server'] : undefined,
-          };
-        })()
-      : undefined;
-
-  const defaults =
-    typeof c['defaults'] === 'object' && c['defaults'] !== null
-      ? (() => {
-          const d = c['defaults'] as Record<string, unknown>;
-          const provider =
-            d['provider'] === 'anthropic' || d['provider'] === 'chrome'
-              ? (d['provider'] as 'anthropic' | 'chrome')
-              : undefined;
-          return { provider };
-        })()
-      : undefined;
-
-  return { anthropic, paths, defaults };
+  console.error(config.error);
+  throw new MalformedJohtoConfig(config.error);
 }
 
 export function getConfigPath(): string {
@@ -53,13 +24,13 @@ export function getConfigPath(): string {
   return join(base, 'johto', 'config.toml');
 }
 
-export async function loadConfig(): Promise<JohtoConfig> {
+export async function loadConfig(): Promise<JohtoConfig | null> {
   const path = getConfigPath();
   try {
     const raw = await readFile(path, 'utf-8');
     return validateConfig(parse(raw));
   } catch {
-    return {};
+    return null;
   }
 }
 
@@ -75,7 +46,7 @@ export async function resolveApiKey(): Promise<string | undefined> {
   if (envKey) return envKey;
 
   const config = await loadConfig();
-  return config.anthropic?.api_key;
+  return config?.anthropic?.api_key;
 }
 
 export async function resolveDbPath(): Promise<string | undefined> {
@@ -83,7 +54,7 @@ export async function resolveDbPath(): Promise<string | undefined> {
   if (envPath) return envPath;
 
   const config = await loadConfig();
-  return config.paths?.card_data;
+  return config?.paths?.card_data;
 }
 
 export async function resolveMcpServerPath(): Promise<string | undefined> {
@@ -91,5 +62,5 @@ export async function resolveMcpServerPath(): Promise<string | undefined> {
   if (envPath) return envPath;
 
   const config = await loadConfig();
-  return config.paths?.mcp_server;
+  return config?.paths?.mcp_server;
 }

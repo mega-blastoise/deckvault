@@ -6,7 +6,7 @@
   "bin": { "johto": "./bin/johto.js" },
   "files": ["bin/", "lib/", "README.md"],
   "engines": { "node": ">=20" },
-  "dependencies": {
+  "peerDependencies": {
     "@johto-ai/card-data": "workspace:*"
   },
   "optionalDependencies": {
