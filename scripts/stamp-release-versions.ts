@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import semver from 'semver';
 
 const raw = process.argv[2] ?? '';
-const version = semver.valid(raw.replace(/^v/, ''));
+const version = semver.valid(raw.replace(/^(?:johto\/)?v/, ''));
 if (!version) {
   console.error(`Expected tag of form vX.Y.Z(-prerelease), got: "${raw}"`);
   process.exit(1);

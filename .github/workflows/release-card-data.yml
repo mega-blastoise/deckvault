@@ -3,7 +3,7 @@ name: Release @johto-ai/card-data
 on:
   push:
     tags:
-      - 'card-data-v*.*.*'
+      - 'johto/card-data-v*.*.*'
 
 permissions:
   contents: write
@@ -47,7 +47,7 @@ jobs:
         env:
           VERSION: ${{ github.ref_name }}
         run: |
-          VERSION="${VERSION#card-data-v}"
+          VERSION="${VERSION#johto/card-data-v}"
           export VERSION
           node -e "
             const fs = require('fs');

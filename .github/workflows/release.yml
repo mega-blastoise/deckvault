@@ -3,7 +3,7 @@ name: Release
 on:
   push:
     tags:
-      - 'v*.*.*'
+      - 'johto/v*.*.*'
 
 permissions:
   contents: write
@@ -92,6 +92,13 @@ jobs:
         with:
           path: dist-packages-artifacts
 
+      - name: Extract version
+        id: version
+        run: |
+          RAW="${{ github.ref_name }}"
+          VERSION="${RAW#johto/v}"
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+
       - name: Assemble dist-packages from artifacts
         run: |
           for suffix in linux-x64 linux-arm64 darwin-x64 darwin-arm64; do
@@ -142,7 +149,7 @@ jobs:
           file: docker/Dockerfile.johto
           platforms: linux/amd64,linux/arm64
           tags: |
-            ghcr.io/${{ github.repository_owner }}/johto:${{ github.ref_name }}
+            ghcr.io/${{ github.repository_owner }}/johto:${{ steps.version.outputs.version }}
             ghcr.io/${{ github.repository_owner }}/johto:latest
           push: true
           cache-from: type=gha
@@ -150,14 +157,15 @@ jobs:
 
       - name: Create GitHub Release with binary tarballs
         run: |
+          VERSION="${{ steps.version.outputs.version }}"
           for suffix in linux-x64 linux-arm64 darwin-x64 darwin-arm64; do
-            tar -czf "johto-${{ github.ref_name }}-${suffix}.tar.gz" \
+            tar -czf "johto-${VERSION}-${suffix}.tar.gz" \
                 -C dist-packages-artifacts/cli-${suffix} bin \
                 -C dist-packages-artifacts/mcp-server-${suffix} bin
           done
           gh release create ${{ github.ref_name }} \
-            --title "${{ github.ref_name }}" \
+            --title "johto v${VERSION}" \
             --generate-notes \
-            johto-${{ github.ref_name }}-*.tar.gz
+            johto-${VERSION}-*.tar.gz
         env:
           GH_TOKEN: ${{ secrets.DECKVAULT_GHCR_GITHUB_TOKEN }}

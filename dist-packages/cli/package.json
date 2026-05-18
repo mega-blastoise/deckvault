@@ -3,9 +3,17 @@
   "version": "0.0.0",
   "description": "Competitive Pokémon TCG deck refinement CLI with Anthropic agent loop and browser mode.",
   "license": "MIT",
-  "bin": { "johto": "./bin/johto.js" },
-  "files": ["bin/", "lib/", "README.md"],
-  "engines": { "node": ">=20" },
+  "bin": {
+    "johto": "./bin/johto.js"
+  },
+  "files": [
+    "bin/",
+    "lib/",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
   "peerDependencies": {
     "@johto-ai/card-data": "workspace:*"
   },
