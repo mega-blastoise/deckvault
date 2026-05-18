@@ -1,0 +1,15 @@
+{
+  "name": "@johto-ai/card-data",
+  "version": "0.0.0",
+  "description": "Pokemon TCG card database for @johto-ai/cli — prebuilt SQLite plus the deterministic JSON-to-SQLite rebuild pipeline.",
+  "license": "MIT",
+  "main": "./scripts/rebuild.ts",
+  "bin": { "johto-card-data-rebuild": "./scripts/rebuild.ts" },
+  "files": [
+    "data/pokemon-data.sqlite3.db",
+    "scripts/",
+    "README.md"
+  ],
+  "engines": { "bun": ">=1.3" },
+  "repository": "https://github.com/nicholasgalante1997/deckvault"
+}

@@ -1,0 +1,162 @@
+name = "Mega Sharpedo ex"
+format = "standard"
+regulation_marks = ["H", "I", "J"]
+
+# ─── Pokémon — 20 ──────────────────────────────────────────────────────────────
+
+# Mega Sharpedo ex line (me2 / Phantasmal Flames — reg I)
+[[cards]]
+id = "me2-60"         # Carvanha (Reckless Charge: 30 dmg, 10 to self — self-damages to activate Hungry Jaws)
+quantity = 3
+
+[[cards]]
+id = "me2-61"         # Mega Sharpedo ex (Hungry Jaws: 120+150 if damaged = 270 for 2 Dark — 3 prize target)
+quantity = 3
+
+# Mega Gengar ex (me2pt5 / Ascended Heroes — reg I, fully legal)
+# Benched via Secret Box combo — no Haunter line needed (see notes)
+[[cards]]
+id = "me2pt5-125"     # Mega Gengar ex (Shadowy Concealment: -1 prize when any Dark Pokémon KO'd by Pokémon ex)
+quantity = 2
+
+# Energy acceleration line (me2 / Phantasmal Flames — reg I)
+[[cards]]
+id = "me2-67"         # Toxel
+quantity = 3
+
+[[cards]]
+id = "me2-68"         # Toxtricity (Sinister Surge: attach Basic Dark to benched Dark Pokémon + 2 damage counters)
+quantity = 2
+
+# Support Pokémon
+[[cards]]
+id = "sv6-95"         # Munkidori (Adrena-Brain: redirect 3 damage counters to opponent — requires Dark Energy)
+quantity = 3
+
+[[cards]]
+id = "sv6pt5-39"      # Pecharunt ex (Subjugating Chains: pivot benched Dark Pokémon to Active + Poison)
+quantity = 1
+
+[[cards]]
+id = "sv6pt5-38"      # Fezandipiti ex (Flip the Script: draw 3 if a Pokémon was KO'd last turn)
+quantity = 1
+
+[[cards]]
+id = "me3-62"         # Meowth ex (Last-Ditch Catch: search Supporter on bench entry — ⚠️ me3 Not Legal in API)
+quantity = 1
+
+[[cards]]
+id = "me2pt5-39"      # Psyduck (Ascended Heroes — ⚠️ J-mark shows Not Legal in API, verify in PTCGL)
+quantity = 1
+
+# ─── Trainers — 30 ─────────────────────────────────────────────────────────────
+
+# ACE SPEC — 1
+[[cards]]
+id = "sv6-163"        # Secret Box (discard 3 → search Item + Tool + Supporter + Stadium simultaneously)
+quantity = 1
+
+# Supporters — 13
+[[cards]]
+id = "me1-119"        # Lillie's Determination
+quantity = 4
+
+[[cards]]
+id = "sv5-160"        # Salvatore (evolve a Pokémon immediately, even T1 / same turn it was played — no Abilities)
+quantity = 3
+
+[[cards]]
+id = "me1-114"        # Boss's Orders
+quantity = 2
+
+[[cards]]
+id = "sv10-176"       # Team Rocket's Petrel (search any Trainer card)
+quantity = 1
+
+[[cards]]
+id = "me1-132"        # Wally's Compassion (full heal on any Mega ex + return all attached Energy to hand)
+quantity = 1
+
+[[cards]]
+id = "me2-90"         # Grimsley's Move (look at top 7, bench any Darkness Pokémon found — enables Gengar bypass)
+quantity = 1
+
+[[cards]]
+id = "sv6pt5-59"      # Janine's Secret Art (attach Basic Dark from deck to 2 Dark Pokémon; Poisons Active)
+quantity = 1
+
+# Items — 14
+[[cards]]
+id = "sv5-144"        # Buddy-Buddy Poffin
+quantity = 4
+
+[[cards]]
+id = "me2pt5-198"     # Poké Pad (⚠️ me2pt5 / Ascended Heroes shows Not Legal in API — verify before tournament play)
+quantity = 3
+
+[[cards]]
+id = "me1-131"        # Ultra Ball
+quantity = 3
+
+[[cards]]
+id = "sv6pt5-61"      # Night Stretcher
+quantity = 2
+
+[[cards]]
+id = "sv10-164"       # Energy Recycler (shuffle up to 5 Basic Energy from discard back into deck)
+quantity = 1
+
+[[cards]]
+id = "sv6pt5-55"      # Binding Mochi (Poisoned Pokémon deals +40 damage — combo with Janine's / Pecharunt ex)
+quantity = 1
+
+# Stadiums — 2
+[[cards]]
+id = "sv6pt5-54"      # Academy at Night (each player may put 1 card from hand on top of deck — loads Gengar for Grimsley)
+quantity = 1
+
+[[cards]]
+id = "me1-127"        # Risky Ruins (places 2 damage counters on any Basic non-Darkness Pokémon benched)
+quantity = 1
+
+# ─── Energy — 8 ────────────────────────────────────────────────────────────────
+
+[[cards]]
+id = "sve-7"          # Basic Darkness Energy
+quantity = 8
+
+# ─── Meta ──────────────────────────────────────────────────────────────────────
+
+[meta]
+archetype = "mega-sharpedo-ex"
+version = "1.0"
+total_cards = "58"
+notes = """
+⚠️  DECK IS 58/60 — 2 cards missing. Add before finalizing.
+
+Mega Gengar ex bypass (no Haunter line needed):
+  Secret Box (discard 3) → get Ultra Ball + Binding Mochi + Grimsley's Move + Academy at Night
+  → Play Academy at Night (Stadium)
+  → Ultra Ball → search Mega Gengar ex into hand
+  → Academy at Night effect: put Mega Gengar ex on top of deck
+  → Grimsley's Move: look at top 7, bench any Darkness Pokémon found → Mega Gengar ex lands on bench!
+
+Core damage loop:
+  - Salvatore: evolves Carvanha → Sharpedo same turn played (even T1)
+  - Toxtricity (Sinister Surge): attaches Dark Energy to Sharpedo + places 2 damage counters
+    → immediately activates Hungry Jaws for 270 (120 + 150 bonus)
+  - Carvanha (Reckless Charge): 10 self-damage also activates Hungry Jaws
+  - Janine's Secret Art: attaches Dark Energy to 2 Dark Pokémon + Poisons Active
+    → Binding Mochi on Active Sharpedo = +40 damage on top
+
+Prize math:
+  - Mega Sharpedo ex: 3-prize target (Mega Evolution ex Rule)
+  - Mega Gengar ex (Shadowy Concealment): opponent takes 1 fewer prize if
+    a Dark Pokémon is KO'd by Pokémon ex → Sharpedo worth only 2 prizes
+  - Wally's Compassion: full heal + energy retrieval on any Mega ex (reset escape hatch)
+
+Legality flags:
+  - me3-62   (Meowth ex): Perfect Order shows Not Legal in API — verify before tournament play.
+  - me2pt5-39 (Psyduck): J-mark in me2pt5 shows Not Legal in API — verify before tournament play.
+  - me2pt5-198 (Poké Pad): same set — verify before tournament play.
+"""

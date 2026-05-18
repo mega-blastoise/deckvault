@@ -1,0 +1,168 @@
+---
+title: CLI Reference
+description: Subcommands, options, exit codes, and environment variables for the johto CLI.
+---
+
+# CLI Reference
+
+```
+johto <command> [options]
+```
+
+## Subcommands
+
+### `johto run`
+
+Start a deck refinement session.
+
+```bash
+johto run --deck ./decks/my-deck.toml
+johto run --deck ./decks/deck-a.toml --deck ./decks/deck-b.toml
+johto run --provider chrome
+```
+
+**Options:**
+
+| Flag | Description | Default |
+|---|---|---|
+| `-d, --deck <path>` | Deck file (`.toml` or `.json`). Repeatable. | — |
+| `--provider <name>` | `anthropic` or `chrome` | `anthropic` |
+| `--dry-run` | Print system prompt and exit. No API call. | — |
+| `--stats` | Print probability table before the REPL. | — |
+| `--spotlight <id>` | Pin a card to the stats spotlight. Repeatable. | — |
+| `--mcp-server <path>` | Override MCP server binary path. | env / auto-resolve |
+| `--browser-port <port>` | Port for browser mode (required for Docker). | random |
+
+`--deck` is required for `--provider anthropic`. Optional for `--provider chrome`.
+
+`--dry-run` and `--stats` are incompatible with `--provider chrome`.
+
+**Backward compatibility:** `johto --deck <path>` (no subcommand) is an alias for `johto run --deck <path>`.
+
+---
+
+### `johto init`
+
+Interactive first-run setup wizard.
+
+```bash
+johto init
+```
+
+Prompts for:
+1. Anthropic API key (validated live with a 1-token test request)
+2. Default decks directory (created if absent)
+3. Default provider (`anthropic` or `chrome`)
+
+Writes to `~/.config/johto/config.toml` (XDG-compliant).
+
+---
+
+### `johto doctor`
+
+Diagnose your install.
+
+```bash
+johto doctor
+```
+
+Checks and prints a status row for each of:
+
+- CLI binary (path + size)
+- MCP server binary (path)
+- Card database (path, card count, set count)
+- Config file (path, last modified)
+- Anthropic API key (source: env or config)
+- Network reachability to `api.anthropic.com`
+
+Exits non-zero if any required check fails. Use this after install or when debugging unexpected errors.
+
+---
+
+### `johto auth set <provider> <key>`
+
+Persist an API key to the config file.
+
+```bash
+johto auth set anthropic sk-ant-...
+```
+
+Writes to `~/.config/johto/config.toml`. The key takes effect for all subsequent `johto run` invocations.
+
+---
+
+### `johto auth show`
+
+Print config contents with the key redacted.
+
+```bash
+johto auth show
+```
+
+---
+
+### `johto sync-data`
+
+Refresh the card database.
+
+```bash
+# Show current DB path (no-op for npm installs)
+johto sync-data
+
+# Rebuild from JSON sources (requires Bun on PATH)
+johto sync-data --rebuild --source ~/src/pokemon-tcg-data
+```
+
+The default path is a no-op for npm installs — the prebuilt database ships with `@johto-ai/card-data`.
+
+`--rebuild` execs `johto-card-data-rebuild` from the `@johto-ai/card-data` package using Bun. Only needed when you want to refresh the database from raw JSON (advanced workflow).
+
+---
+
+## Global flags
+
+| Flag | Description |
+|---|---|
+| `--help` | Print usage and exit |
+| `--version` | Print version and exit |
+
+---
+
+## Environment variables
+
+| Variable | Description |
+|---|---|
+| `ANTHROPIC_API_KEY` | API key for `--provider anthropic`. Takes precedence over config file. |
+| `JOHTO_MCP_SERVER_PATH` | Override MCP server binary path (set by the JS shim for npm installs). |
+| `JOHTO_DB_PATH` | Override card database path (set by the JS shim for npm installs). |
+| `XDG_CONFIG_HOME` | Override config directory. Default: `~/.config`. |
+
+---
+
+## Exit codes
+
+| Code | Meaning |
+|---|---|
+| `0` | Success |
+| `1` | Error (missing argument, unknown provider, API key absent, MCP failure) |
+
+---
+
+## Config file
+
+`~/.config/johto/config.toml`:
+
+```toml
+[anthropic]
+api_key = "sk-ant-..."
+model   = "claude-sonnet-4-6"
+
+[paths]
+decks_dir = "~/johto/decks"
+card_data = ""              # empty = use bundled @johto-ai/card-data
+
+[defaults]
+provider = "anthropic"      # "anthropic" or "chrome"
+```
+
+Key precedence: `ANTHROPIC_API_KEY` env > `config.toml` > unset (error).

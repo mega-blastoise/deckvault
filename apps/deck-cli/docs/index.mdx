@@ -1,0 +1,74 @@
+---
+title: Overview
+description: Competitive Pokémon TCG deck refinement CLI with Anthropic agent loop and browser mode.
+---
+
+# johto
+
+Competitive Pokémon TCG deck refinement CLI. Load a `.toml` deck file and open an AI agent session
+pre-loaded with your 60 cards — connected to the project's local card database for live lookups.
+
+**Zero service dependencies at runtime.** No Postgres, no Docker, no network required for card data.
+The only runtime dependencies are the `pokemon-mcp-server` binary (SQLite-backed) and an Anthropic
+API key for REPL mode (or Chrome Canary for browser mode).
+
+<CardGrid>
+  <Card title="Install" href="/install">
+    npm, Docker, or curl — get johto running in under two minutes.
+  </Card>
+  <Card title="Quickstart" href="/quickstart">
+    Build the binary and run your first session in under five minutes.
+  </Card>
+  <Card title="Deck File Format" href="/deck-format">
+    60-card TOML files. Human-writable, version-controllable, fully portable.
+  </Card>
+  <Card title="Agent Session" href="/agent-session">
+    Interactive REPL backed by Claude with full deck context and live card lookup tools.
+  </Card>
+  <Card title="Browser Mode" href="/browser-mode">
+    Deck builder and on-device Gemini Nano chat. No API key required.
+  </Card>
+  <Card title="Strategy Guide" href="/strategy-guide">
+    Prompt patterns for deck improvement, matchup analysis, and hand sequencing.
+  </Card>
+  <Card title="Probability Analysis" href="/probability">
+    Opening hand odds, prize risk, and turn curves from the hypergeometric model.
+  </Card>
+</CardGrid>
+
+## How it works
+
+```
+johto --deck ./decks/charizard-ex.toml
+        │
+        ├─ Spawns pokemon-mcp-server (SQLite, stdio transport)
+        ├─ Loads and enriches all 60 card IDs from the database
+        ├─ Builds system prompt: rulebook mechanics + your decklist
+        └─ Opens streaming REPL → claude-sonnet-4-5
+```
+
+The agent receives your full decklist — card names, HP, attacks, regulation marks — as its system
+prompt before your first message. It can search the card database, look up specific cards, and
+validate proposed deck changes mid-session without leaving the terminal.
+
+## Current Standard format
+
+Legal regulation marks: **H · I · J**
+
+Mark G rotated out on **2026-04-10**. The agent flags illegal cards automatically.
+
+## System prompt layers
+
+The agent's system prompt has two layers assembled at startup:
+
+**Static layer** (always present): official turn structure, damage calculation order, Special
+Conditions table, Mega Evolution ex 3-prize rule, ACE SPEC limit, Lost Zone permanence,
+Standard deck skeleton reference counts, prize trade math, and archetype frameworks.
+
+**Session layer** (from your deck): full enriched decklist grouped by Pokémon / Trainers /
+Energy, regulation mark per card, meta notes from the `[meta]` table.
+
+<Callout variant="tip">
+  Run `johto --deck ./decks/example.toml --dry-run` to print the assembled prompt and inspect
+  exactly what the agent sees before you open a live session.
+</Callout>

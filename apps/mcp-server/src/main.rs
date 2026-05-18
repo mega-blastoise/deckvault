@@ -5,12 +5,15 @@ use pokemon_mcp_server::domains::db::Database;
 use pokemon_mcp_server::domains::pricing::PricingClient;
 use pokemon_mcp_server::registry::ToolRegistry;
 use pokemon_mcp_server::tools::{
-    search_cards::SearchCardsTool,
-    get_card_by_id::GetCardByIdTool,
-    list_sets::ListSetsTool,
-    get_set_cards::GetSetCardsTool,
+    analyze_probability::AnalyzeProbabilityTool,
     compare_cards::CompareCardsTool,
+    get_card_by_id::GetCardByIdTool,
     get_price_info::GetPriceInfoTool,
+    get_set_cards::GetSetCardsTool,
+    list_sets::ListSetsTool,
+    load_deck::LoadDeckTool,
+    search_cards::SearchCardsTool,
+    validate_deck::ValidateDeckTool,
 };
 use pokemon_mcp_server::transport;
 
@@ -26,7 +29,14 @@ async fn main() -> anyhow::Result<()> {
     let db_path = std::env::var("DATABASE_PATH")
         .unwrap_or_else(|_| "database/pokemon-data.sqlite3.db".to_string());
 
-    let db = Arc::new(Database::open(db_path.as_ref())?);
+    let db = Arc::new(
+        Database::open(db_path.as_ref())
+            .map_err(|e| anyhow::anyhow!(
+                "Failed to open card database at {db_path:?}: {e}. \
+                 Set DATABASE_PATH to the location of pokemon-data.sqlite3.db \
+                 or install @johto/card-data via the CLI."
+            ))?
+    );
 
     tracing::info!(
         "Database opened: {} cards, {} sets",
@@ -45,6 +55,9 @@ async fn main() -> anyhow::Result<()> {
     registry.register(GetSetCardsTool::new(Arc::clone(&db)));
     registry.register(CompareCardsTool::new(Arc::clone(&db)));
     registry.register(GetPriceInfoTool::new(Arc::clone(&db), Arc::clone(&pricing)));
+    registry.register(LoadDeckTool::new(Arc::clone(&db)));
+    registry.register(ValidateDeckTool::new(Arc::clone(&db)));
+    registry.register(AnalyzeProbabilityTool::new(Arc::clone(&db)));
 
     tracing::info!("Registered {} tools", registry.tool_count());
 

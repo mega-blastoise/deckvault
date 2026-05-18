@@ -1,0 +1,146 @@
+name = "Mega Sharpedo ex / Dusknoir"
+format = "standard"
+regulation_marks = ["H", "I"]
+
+# ─── Pokémon — 18 ──────────────────────────────────────────────────────────────
+
+# Mega Sharpedo ex line (me2 / Phantasmal Flames — reg I)
+[[cards]]
+id = "me2-60"         # Carvanha (Reckless Charge: 30 dmg, 10 to self — pre-loads counters for Hungry Jaws)
+quantity = 3
+
+[[cards]]
+id = "me2-61"         # Mega Sharpedo ex (Hungry Jaws: 270 for 2 Dark if damaged; +Maximum Belt = 320 vs ex — 3 prize)
+quantity = 3
+
+# Dusknoir snipe line (sv8pt5 / Prismatic Evolutions — reg H)
+[[cards]]
+id = "sv8pt5-35"      # Duskull (Come and Get You: pull up to 3 Duskull from discard to bench — recycles snipe line)
+quantity = 2
+
+[[cards]]
+id = "sv8pt5-36"      # Dusclops (Cursed Blast: 5 damage counters on any Pokémon, then self-KO)
+quantity = 2
+
+[[cards]]
+id = "sv8pt5-37"      # Dusknoir (Cursed Blast: 13 damage counters = 130 dmg on any Pokémon, then self-KO)
+quantity = 1
+
+# Energy acceleration line (me2 / Phantasmal Flames — reg I)
+[[cards]]
+id = "me2-67"         # Toxel
+quantity = 3
+
+[[cards]]
+id = "me2-68"         # Toxtricity (Sinister Surge: attach Basic Dark to benched Dark Pokémon + 2 damage counters)
+quantity = 2
+
+# Utility Pokémon (sv8pt5 / Prismatic Evolutions — reg H)
+[[cards]]
+id = "sv8pt5-4"       # Budew (Itchy Pollen: 10 dmg, opponent can't play Items next turn)
+quantity = 1
+
+[[cards]]
+id = "sv8pt5-87"      # Shaymin (Reflect Energy: 60 dmg + move Energy from self to bench after attacking)
+quantity = 1
+
+# ─── Trainers — 33 ─────────────────────────────────────────────────────────────
+
+# ACE SPEC — 1
+[[cards]]
+id = "sv8pt5-117"     # Maximum Belt (Tool ACE SPEC: +50 vs Pokémon ex — Sharpedo Hungry Jaws hits 320)
+quantity = 1
+
+# Supporters — 13
+[[cards]]
+id = "me1-119"        # Lillie's Determination
+quantity = 4
+
+[[cards]]
+id = "me1-114"        # Boss's Orders
+quantity = 3
+
+[[cards]]
+id = "sv5-160"        # Salvatore (evolve Carvanha → Sharpedo same turn played, even T1 — no Abilities clause)
+quantity = 3
+
+[[cards]]
+id = "sv6pt5-59"      # Janine's Secret Art (attach Basic Dark from deck to 2 Dark Pokémon; Poisons Active)
+quantity = 2
+
+[[cards]]
+id = "me2-87"         # Dawn (search Basic + Stage 1 + Stage 2 — grabs full Duskull/Dusclops/Dusknoir line at once)
+quantity = 1
+
+# Items — 19
+[[cards]]
+id = "sv5-144"        # Buddy-Buddy Poffin
+quantity = 4
+
+[[cards]]
+id = "me2pt5-198"     # Poké Pad (⚠️ me2pt5 / Ascended Heroes shows Not Legal in API — verify before tournament play)
+quantity = 4
+
+[[cards]]
+id = "me1-131"        # Ultra Ball
+quantity = 4
+
+[[cards]]
+id = "sv6pt5-61"      # Night Stretcher
+quantity = 2
+
+[[cards]]
+id = "sv6pt5-55"      # Binding Mochi (Poisoned Pokémon deals +40 damage — syncs with Janine's Secret Art)
+quantity = 1
+
+[[cards]]
+id = "me1-121"        # Mega Signal (search any Mega Evolution ex — direct tutor for Mega Sharpedo ex)
+quantity = 1
+
+[[cards]]
+id = "me1-130"        # Switch
+quantity = 1
+
+[[cards]]
+id = "me1-125"        # Rare Candy
+quantity = 1
+
+[[cards]]
+id = "sv10-164"       # Energy Recycler (shuffle up to 5 Basic Energy from discard into deck)
+quantity = 1
+
+# Stadiums — 0 (none specified — 2 open slots, see notes)
+
+# ─── Energy — 7 ────────────────────────────────────────────────────────────────
+
+[[cards]]
+id = "sve-7"          # Basic Darkness Energy
+quantity = 7
+
+# ─── Meta ──────────────────────────────────────────────────────────────────────
+
+[meta]
+archetype = "mega-sharpedo-ex-dusknoir"
+version = "1.0"
+total_cards = "58"
+notes = """
+⚠️  DECK IS 58/60 — 2 cards missing, no stadiums included. Consider adding 2x stadium.
+
+Sharpedo sweep engine:
+  - Toxtricity (Sinister Surge): attaches Dark Energy to benched Sharpedo + 2 damage counters
+    → activates Hungry Jaws for 270 (120 + 150 bonus); with Maximum Belt = 320 vs Pokémon ex
+  - Carvanha (Reckless Charge): 10 self-damage triggers Hungry Jaws on T1
+  - Salvatore: same-turn evolution Carvanha → Sharpedo (even T1, no abilities restriction ✓)
+  - Mega Signal: direct Item tutor for any Mega Evolution ex
+  - Janine's Secret Art: attach Dark Energy to 2 Dark Pokémon from deck; Poisons Active
+    → Binding Mochi on Active Sharpedo = further +40 damage
+
+Dusknoir snipe engine (kamikaze support):
+  - Dusclops (Cursed Blast): 5 counters on any target, self-KO (1 prize to opponent)
+  - Dusknoir (Cursed Blast): 13 counters (130 damage) on any target, self-KO (1 prize)
+  - Duskull (Come and Get You): recycles up to 3 Duskull from discard → rebuilds snipe line
+  - Dawn: grabs Duskull + Dusclops + Dusknoir all in one search
+
+Legality flags:
+  - me2pt5-198 (Poké Pad): Ascended Heroes shows Not Legal in API — verify before tournament play.
+"""

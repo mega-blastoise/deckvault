@@ -1,0 +1,277 @@
+---
+title: MCP Tools
+description: Reference for the load_deck and validate_deck tools added to the pokemon-mcp-server.
+---
+
+# MCP Tools
+
+Two tools were added to the `pokemon-mcp-server` (Rust, SQLite-backed) to support the CLI.
+Both operate on local filesystem paths — no network calls.
+
+## All available tools
+
+| Tool | Added by | Description |
+|---|---|---|
+| `search_cards` | existing | Search by name, type, supertype, set, HP range |
+| `get_card_by_id` | existing | Full card details by ID |
+| `compare_cards` | existing | Side-by-side comparison of two cards |
+| `get_price_info` | existing | TCGPlayer / Cardmarket price data |
+| `get_set_cards` | existing | All cards in a set |
+| `list_sets` | existing | All sets in the database |
+| `load_deck` | **new** | Parse and enrich a deck file |
+| `validate_deck` | **new** | Check Standard format legality |
+| `analyze_deck_probability` | **new** (SPEC_07) | Hypergeometric probability analysis for every card in a deck |
+
+---
+
+## `load_deck`
+
+Reads a `.toml` or `.json` deck file, resolves every card ID against the SQLite database,
+and returns an enriched deck object.
+
+### Input
+
+```json
+{
+  "path": "/absolute/or/relative/path/to/deck.toml"
+}
+```
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `path` | string | ✅ | Absolute or relative path to the deck file |
+
+### Output — `EnrichedDeck`
+
+```json
+{
+  "name": "Mega Gardevoir ex — Psychic Control",
+  "format": "standard",
+  "regulationMarks": ["H", "I"],
+  "totalCards": 60,
+  "meta": {
+    "archetype": "mega-gardevoir-ex",
+    "version": "1.0"
+  },
+  "cards": [
+    {
+      "id": "me1-60",
+      "quantity": 3,
+      "card": {
+        "id": "me1-60",
+        "name": "Mega Gardevoir ex",
+        "supertype": "Pokémon",
+        "subtypes": ["Stage 2", "MEGA", "ex"],
+        "hp": 360,
+        "types": ["Psychic"],
+        "regulationMark": "I",
+        "setId": "me1",
+        "attacks": [...],
+        "abilities": [...],
+        "rarity": "Special Illustration Rare"
+      }
+    }
+  ]
+}
+```
+
+All field names are **camelCase** (`totalCards`, `regulationMarks`, `regulationMark`, `setId`).
+
+If a card ID is not found in the database, its `card` field is `null` and the ID is still
+returned as `id`. The CLI renders these as `[UNKNOWN CARD: <id>]` in the system prompt.
+
+### Errors
+
+| Condition | Behaviour |
+|---|---|
+| File not found | `ToolError::ExecutionFailed` — returned as `is_error: true` in the MCP response |
+| Unsupported extension | Same — only `.toml` and `.json` are accepted |
+| Malformed TOML/JSON | Same — parse error message included in the response text |
+
+---
+
+## `validate_deck`
+
+Parses a deck file and runs all validation rules (R1–R6, LEGALITY). Returns a structured
+violation report.
+
+### Input
+
+```json
+{
+  "path": "/absolute/or/relative/path/to/deck.toml"
+}
+```
+
+### Output — `DeckValidationReport`
+
+**Valid deck:**
+
+```json
+{
+  "valid": true,
+  "violations": [],
+  "totalCards": 60,
+  "unknownCardIds": []
+}
+```
+
+**Invalid deck with violations:**
+
+```json
+{
+  "valid": false,
+  "violations": [
+    {
+      "rule": "R1",
+      "message": "Deck contains 59 cards; exactly 60 required",
+      "cardId": null
+    },
+    {
+      "rule": "LEGALITY",
+      "message": "\"Iono\" (sv2-185) has regulation mark G; not legal in current Standard (H/I/J)",
+      "cardId": "sv2-185"
+    }
+  ],
+  "totalCards": 59,
+  "unknownCardIds": []
+}
+```
+
+### Violation rules
+
+| Rule | Check |
+|---|---|
+| `R1` | Total quantity ≠ 60 |
+| `R2` | Duplicate card ID in the `cards` array |
+| `R3` | `quantity` < 1 or > 60 |
+| `R4` | Non-Basic Energy card with `quantity` > 4 |
+| `R5` | `format` ≠ `"standard"` |
+| `R6` | `regulation_marks` is empty |
+| `LEGALITY` | Card's `regulation_mark` is not in `["H", "I", "J"]` |
+
+<Callout variant="info">
+  Basic Energy detection for R4 requires a database lookup. Cards where
+  `supertype == "Energy"` and `subtypes` contains `"Basic"` are exempt from the 4-copy limit.
+</Callout>
+
+The `valid` field is `true` only when `violations` is empty **and** `unknownCardIds` is empty.
+Unknown card IDs (not found in the database) are treated as potential legality issues.
+
+### `is_error` in MCP response
+
+The MCP `CallToolResult` sets `is_error: true` when the deck is invalid (`valid: false`).
+The violation report JSON is always returned in the content text regardless.
+
+---
+
+## `analyze_deck_probability`
+
+Reads a deck file, computes hypergeometric opening-hand probabilities for every card, and
+returns prize risk and a T1-T4 draw curve. No database query is performed beyond what
+`load_deck` already does — this is pure arithmetic on copy counts and deck size.
+
+### Input
+
+```json
+{
+  "path": "/absolute/or/relative/path/to/deck.toml",
+  "spotlight": ["sv8pt5-117", "sv8pt5-37"]
+}
+```
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `path` | string | ✅ | Absolute or relative path to the deck file |
+| `spotlight` | string[] | — | Card IDs to mark with ★ in `--stats` output |
+
+### Output — `ProbabilityReport`
+
+```json
+{
+  "deckSize": 60,
+  "complete": true,
+  "openingHand": [
+    {
+      "cardId": "sv5-144",
+      "name": "Buddy-Buddy Poffin",
+      "copies": 4,
+      "pOpen": 0.3995,
+      "pExactlyOne": 0.3168,
+      "pExactlyTwo": 0.1213,
+      "pPrized": null,
+      "turnCurve": [
+        { "turn": 1, "pAtLeastOne": 0.4580 },
+        { "turn": 2, "pAtLeastOne": 0.5166 },
+        { "turn": 3, "pAtLeastOne": 0.5703 },
+        { "turn": 4, "pAtLeastOne": 0.6192 }
+      ],
+      "spotlight": false
+    }
+  ],
+  "prizedRisk": [
+    { "cardId": "sv8pt5-117", "name": "Maximum Belt", "copies": 1, "pPrized": 0.1000 }
+  ]
+}
+```
+
+`complete: true` when `deckSize == 60`. Incomplete decks still return valid probabilities
+computed on the actual deck size — the agent notes this in its response.
+
+All probability values are `f64` rounded to 4 decimal places.
+
+### Field reference
+
+| Field | Type | Description |
+|---|---|---|
+| `deckSize` | integer | Total card count (sum of all quantities) |
+| `complete` | boolean | `true` when `deckSize == 60` |
+| `openingHand` | CardProbability[] | All cards, sorted descending by `pOpen` |
+| `prizedRisk` | PrizedEntry[] | Cards with `copies <= 2`, sorted descending by `pPrized` |
+| `pOpen` | float | P(at least 1 in opening hand of 7) |
+| `pExactlyOne` | float | P(exactly 1 in opening hand of 7) |
+| `pExactlyTwo` | float | P(exactly 2 in opening hand of 7); `0.0` when `copies < 2` |
+| `pPrized` | float \| null | P(at least 1 copy prized); `null` when `copies >= 3` |
+| `turnCurve` | TurnCurveEntry[] | `turn` 1-4: P(at least 1 seen by that turn, going second) |
+
+<Callout variant="info">
+  Probability values use the hypergeometric distribution computed in log-space to avoid
+  floating-point overflow on the combination function.
+</Callout>
+
+---
+
+## Calling tools directly
+
+You can call either tool directly against the running server via JSON-RPC:
+
+```bash
+echo '{
+  "jsonrpc": "2.0",
+  "method": "tools/call",
+  "params": {
+    "name": "validate_deck",
+    "arguments": {
+      "path": "/path/to/deck.toml"
+    }
+  },
+  "id": 1
+}' | DATABASE_PATH=/path/to/pokemon-data.sqlite3.db \
+     ./apps/mcp-server/target/release/pokemon-mcp-server
+```
+
+---
+
+## Serialization
+
+All JSON output from the MCP server uses **camelCase** field names. This applies to
+`PokemonCard`, `EnrichedDeck`, `EnrichedDeckCard`, and `DeckValidationReport`.
+
+| Rust field | JSON key |
+|---|---|
+| `regulation_mark` | `regulationMark` |
+| `set_id` | `setId` |
+| `total_cards` | `totalCards` |
+| `regulation_marks` | `regulationMarks` |
+| `unknown_card_ids` | `unknownCardIds` |
+| `card_id` | `cardId` (in violations) |

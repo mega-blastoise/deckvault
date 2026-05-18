@@ -1,0 +1,148 @@
+name = "Ethan's Typhlosion / Dragapult ex"
+format = "standard"
+regulation_marks = ["H", "I", "J"]
+
+# ─── Pokémon — 22 ──────────────────────────────────────────────────────────────
+
+# Dragapult ex line (sv6 / Twilight Masquerade — reg H)
+[[cards]]
+id = "sv6-128"        # Dreepy
+quantity = 3
+
+[[cards]]
+id = "sv6-129"        # Drakloak
+quantity = 3
+
+[[cards]]
+id = "sv6-130"        # Dragapult ex (Tera — bench-safe setup, Phantom Dive 200 + 6 bench dmg counters)
+quantity = 2
+
+# Ethan's line (sv10 — reg I)
+[[cards]]
+id = "sv10-32"        # Ethan's Cyndaquil
+quantity = 4
+
+[[cards]]
+id = "sv10-33"        # Ethan's Quilava (ability: tutor 1 Ethan's Adventure per turn)
+quantity = 4
+
+[[cards]]
+id = "sv10-34"        # Ethan's Typhlosion (Buddy Blast: 40 + 60 per Adventure in discard)
+quantity = 3
+
+# Support Pokémon
+[[cards]]
+id = "sv8pt5-87"      # Shaymin (Reflect Energy — moves Energy to Bench after attacking)
+quantity = 1
+
+[[cards]]
+id = "sv6pt5-38"      # Fezandipiti ex (Flip the Script: draw 3 if a Pokémon was KO'd last turn)
+quantity = 1
+
+[[cards]]
+id = "me2pt5-39"      # Psyduck (Ascended Heroes)
+quantity = 1
+
+# ─── Trainers — 31 ─────────────────────────────────────────────────────────────
+
+# Supporters — 14
+[[cards]]
+id = "sv10-165"       # Ethan's Adventure (search up to 3 Ethan's Pokémon + Fire Energy)
+quantity = 4
+
+[[cards]]
+id = "me1-119"        # Lillie's Determination
+quantity = 3
+
+[[cards]]
+id = "me1-114"        # Boss's Orders
+quantity = 2
+
+[[cards]]
+id = "sv7-133"        # Crispin
+quantity = 1
+
+[[cards]]
+id = "rsv10pt5-84"    # Hilda (search Evolution Pokémon + Energy)
+quantity = 1
+
+[[cards]]
+id = "sv6-155"        # Lana's Aid
+quantity = 1
+
+[[cards]]
+id = "sv6pt5-57"      # Colress's Tenacity (search Stadium + Energy)
+quantity = 1
+
+[[cards]]
+id = "me3-84"         # Rosa's Encouragement (⚠️ me3 shows Not Legal in API — verify before tournament play)
+quantity = 1
+
+# Items — 14
+[[cards]]
+id = "sv5-144"        # Buddy-Buddy Poffin
+quantity = 4
+
+[[cards]]
+id = "me1-131"        # Ultra Ball
+quantity = 3
+
+[[cards]]
+id = "me1-125"        # Rare Candy
+quantity = 3
+
+[[cards]]
+id = "me2pt5-198"     # Poké Pad (⚠️ me2pt5 shows Not Legal in API — verify before tournament play)
+quantity = 3
+
+[[cards]]
+id = "sv6pt5-61"      # Night Stretcher
+quantity = 1
+
+# ACE SPEC — 1
+[[cards]]
+id = "sv7-136"        # Grand Tree
+quantity = 1
+
+# Tools — 1
+[[cards]]
+id = "rsv10pt5-80"    # Brave Bangle (+30 dmg to ex if attached to non-Rule Box Pokémon)
+quantity = 1
+
+# ─── Energy — 8 ────────────────────────────────────────────────────────────────
+
+[[cards]]
+id = "sve-2"          # Basic Fire Energy
+quantity = 5
+
+[[cards]]
+id = "sve-5"          # Basic Psychic Energy
+quantity = 3
+
+# ─── Meta ──────────────────────────────────────────────────────────────────────
+
+[meta]
+archetype = "typhlosion-dragapult-ex"
+version = "1.0"
+total_cards = "60"
+notes = """
+Win conditions:
+  - Ethan's Typhlosion (Buddy Blast): 40 + 60 per Adventure in discard.
+    With 4 Adventures burned = 280 for 1 Fire Energy.
+  - Dragapult ex (Phantom Dive): 200 + 6 bench damage counters for Fire+Psychic.
+    Tera typing = safe bench setup.
+
+Engine loop: Ethan's Quilava tutors 1 Adventure per turn →
+  Adventures pile in discard → Typhlosion Buddy Blast scales up.
+  Ethan's Adventure also fetches Ethan's Pokémon + Fire Energy.
+
+Support roles:
+  - Psyduck: utility bench Pokémon (Ascended Heroes / me2pt5)
+  - Shaymin: reroutes Energy after attacking (ideal for cycling off a spent attacker)
+  - Fezandipiti ex: reactive draw engine when opponent takes a KO
+
+Legality flags:
+  - me3-84  (Rosa's Encouragement): Perfect Order set shows Not Legal in API — verify before tournament play.
+  - me2pt5-198 (Poké Pad): Ascended Heroes shows Not Legal in API — verify before tournament play.
+  - me2pt5-39 (Psyduck): same set as above — verify before tournament play.
+"""

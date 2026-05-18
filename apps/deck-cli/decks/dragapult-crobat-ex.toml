@@ -1,0 +1,155 @@
+name = "Dragapult ex / Team Rocket's Crobat ex"
+format = "standard"
+regulation_marks = ["H", "I", "J"]
+
+# ─── Pokémon — 21 ──────────────────────────────────────────────────────────────
+
+# Dragapult ex line (sv6 / Twilight Masquerade — reg H)
+[[cards]]
+id = "sv6-128"        # Dreepy
+quantity = 4
+
+[[cards]]
+id = "sv6-129"        # Drakloak
+quantity = 4
+
+[[cards]]
+id = "sv6-130"        # Dragapult ex (Tera — Phantom Dive: 200 + spread 6 bench counters)
+quantity = 3
+
+# Team Rocket's Crobat ex line (sv10 / Destined Rivals — reg I)
+[[cards]]
+id = "sv10-120"       # Team Rocket's Zubat
+quantity = 2
+
+[[cards]]
+id = "sv10-121"       # Team Rocket's Golbat (Sneaky Bite: place 2 counters on any Pokémon on evolve)
+quantity = 2
+
+[[cards]]
+id = "sv10-122"       # Team Rocket's Crobat ex (Biting Spree: place 2 counters on each of 2 Pokémon on evolve)
+quantity = 2
+
+# Support Pokémon
+[[cards]]
+id = "sv6-95"         # Munkidori (Adrena-Brain: move 3 counters from your Pokémon to opponent's — requires Dark Energy)
+quantity = 2
+
+[[cards]]
+id = "sv6pt5-38"      # Fezandipiti ex (Flip the Script: draw 3 if a Pokémon was KO'd last turn)
+quantity = 1
+
+[[cards]]
+id = "me2pt5-39"      # Psyduck (Ascended Heroes — ⚠️ me2pt5 shows Not Legal in API, verify in PTCGL)
+quantity = 1
+
+# ─── Trainers — 30 ─────────────────────────────────────────────────────────────
+
+# Supporters — 13
+[[cards]]
+id = "me1-119"        # Lillie's Determination
+quantity = 4
+
+[[cards]]
+id = "me1-114"        # Boss's Orders
+quantity = 2
+
+[[cards]]
+id = "sv7-133"        # Crispin
+quantity = 2
+
+[[cards]]
+id = "rsv10pt5-84"    # Hilda (search Evolution Pokémon + Energy)
+quantity = 2
+
+[[cards]]
+id = "sv10-176"       # Team Rocket's Petrel (search any Trainer card)
+quantity = 1
+
+[[cards]]
+id = "me2-87"         # Dawn (search Basic + Stage 1 + Stage 2 Pokémon)
+quantity = 1
+
+[[cards]]
+id = "me3-84"         # Rosa's Encouragement (⚠️ me3 / Perfect Order shows Not Legal in API — verify before tournament play)
+quantity = 1
+
+# Items — 15
+[[cards]]
+id = "sv5-144"        # Buddy-Buddy Poffin
+quantity = 4
+
+[[cards]]
+id = "me2pt5-198"     # Poké Pad (⚠️ me2pt5 / Ascended Heroes shows Not Legal in API — verify before tournament play)
+quantity = 4
+
+[[cards]]
+id = "me1-131"        # Ultra Ball
+quantity = 3
+
+[[cards]]
+id = "me1-125"        # Rare Candy
+quantity = 2
+
+[[cards]]
+id = "sv8-189"        # Tera Orb (search any Tera Pokémon — tutors Dragapult ex)
+quantity = 1
+
+[[cards]]
+id = "sv6pt5-61"      # Night Stretcher
+quantity = 1
+
+# Stadiums — 2
+[[cards]]
+id = "sv6-153"        # Jamming Tower (nullifies all Pokémon Tools for both players)
+quantity = 1
+
+[[cards]]
+id = "me1-127"        # Risky Ruins (places 2 damage counters on any Basic non-Darkness Pokémon benched)
+quantity = 1
+
+# ─── Energy — 9 ────────────────────────────────────────────────────────────────
+
+# ACE SPEC
+[[cards]]
+id = "sv5-162"        # Neo Upper Energy (ACE SPEC — provides all types on Stage 2, 2 at a time)
+quantity = 1
+
+[[cards]]
+id = "sve-5"          # Basic Psychic Energy
+quantity = 3
+
+[[cards]]
+id = "sve-2"          # Basic Fire Energy
+quantity = 3
+
+[[cards]]
+id = "sve-7"          # Basic Darkness Energy
+quantity = 2
+
+# ─── Meta ──────────────────────────────────────────────────────────────────────
+
+[meta]
+archetype = "dragapult-crobat-ex"
+version = "1.0"
+total_cards = "60"
+notes = """
+Spread/snipe combo deck. Counter stacking loop:
+  - Risky Ruins:           +2 counters on any Basic non-Darkness Pokémon either player benches
+                           (Darkness Zubat is immune; use Munkidori to redirect counters from your own bench)
+  - Golbat (Sneaky Bite):  +2 counters on any Pokémon on evolve
+  - Crobat ex (Biting Spree): +4 counters spread across 2 Pokémon on evolve
+  - Dragapult ex (Phantom Dive): 200 + spread 6 counters across bench
+  - Munkidori (Adrena-Brain): redirect 3 counters from your Pokémon to opponent's
+    (requires Darkness Energy — covered by 2x Dark)
+
+  Crobat ex bounces to hand via Assassin's Return (120 dmg, 2 Dark), retriggering
+  Biting Spree on replay. Dawn tutors the full Dreepy→Drakloak→Dragapult ex line
+  in a single search. Petrel fetches any Trainer on demand. Tera Orb tutors
+  Dragapult ex directly. Neo Upper Energy provides Fire+Psychic on any Stage 2.
+
+Legality flags:
+  - me2pt5-198 (Poké Pad): Ascended Heroes shows Not Legal in API — verify before tournament play.
+  - me2pt5-39  (Psyduck): same set — verify before tournament play.
+  - me3-84     (Rosa's Encouragement): Perfect Order shows Not Legal in API — verify before tournament play.
+"""

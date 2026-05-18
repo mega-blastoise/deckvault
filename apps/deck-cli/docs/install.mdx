@@ -1,0 +1,79 @@
+---
+title: Install
+description: Install johto via npm, Docker, or the curl installer.
+---
+
+# Install
+
+johto is available through three distribution channels.
+
+## npm (recommended)
+
+```bash
+npm install -g @johto-ai/cli
+johto init
+```
+
+Or run without installing:
+
+```bash
+bunx @johto-ai/cli run --deck ./decks/my-deck.toml
+npx @johto-ai/cli run --deck ./decks/my-deck.toml
+```
+
+**Requirements:** Node ≥ 20 or Bun ≥ 1.3. npm ≥ 8.
+
+npm installs only the binary for your current platform. Supported platforms: `linux-x64`, `linux-arm64`, `darwin-x64`, `darwin-arm64`. Windows support is planned for v1.1.
+
+### Troubleshooting optional dependencies
+
+If `johto` reports a missing platform package after install, npm may have skipped the optional dependency. Force-reinstall:
+
+```bash
+npm install -g @johto-ai/cli --force
+```
+
+Run `johto doctor` to verify all components are present.
+
+## Docker / GHCR
+
+```bash
+docker run --rm -it \
+  -v "$PWD/decks:/decks" \
+  -v "$HOME/.config/johto:/root/.config/johto" \
+  -e ANTHROPIC_API_KEY \
+  ghcr.io/nicholasgalante1997/johto:latest \
+  run --deck /decks/my-deck.toml
+```
+
+Multi-arch image: `linux/amd64` and `linux/arm64`.
+
+**Browser mode with Docker** requires port mapping — the server runs inside the container but you open the URL on your host:
+
+```bash
+docker run --rm -it \
+  -p 7777:7777 \
+  -v "$PWD/decks:/decks" \
+  ghcr.io/nicholasgalante1997/johto:latest \
+  run --provider chrome --deck /decks/my-deck.toml --browser-port 7777
+```
+
+Then open `http://localhost:7777` in your browser.
+
+## Curl installer
+
+```bash
+curl -fsSL https://johto.deckvault.gg/install.sh | sh
+```
+
+Installs to `~/.local/share/johto/` and symlinks `johto` into `~/.local/bin/`. Supports `JOHTO_INSTALL_DIR`, `JOHTO_BIN_DIR`, and `JOHTO_VERSION` overrides.
+
+After install, run `johto init` to configure your API key and default paths.
+
+## After installing
+
+```bash
+johto init          # interactive setup wizard (API key, deck dir, provider)
+johto doctor        # verify install — binaries, database, config, network
+johto run --deck ./decks/my-deck.toml --dry-run   # smoke test without API call
+```

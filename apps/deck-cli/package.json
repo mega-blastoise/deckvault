@@ -1,0 +1,44 @@
+{
+  "name": "@pokemon/deck-cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "A command line tool for Pokemon Trading Card Game deck refinement.",
+  "bin": {
+    "johto": "./dist/johto.mjs",
+    "bun-johto": "./src/index.ts"
+  },
+  "files": [
+    "dist",
+    "decks"
+  ],
+  "engines": {
+    "bun": ">=1.3"
+  },
+  "scripts": {
+    "dev": "bun run src/index.ts",
+    "prebuild": "rm -rf dist",
+    "build": "bun build/index.ts",
+    "compile": "bun build/compile.ts",
+    "start": "bun run dist/johto.mjs",
+    "check-types": "tsc --noEmit",
+    "test": "echo 'deck-cli has no unit tests; see __tests__/deck-cli/smoke' && exit 0",
+    "docs:dev": "dxdocs dev",
+    "docs:build": "dxdocs build",
+    "clean": "rm -rf dist site"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.36.3",
+    "cac": "^6.7.14",
+    "sanitize-html": "^2.17.4",
+    "serialize-javascript": "^7.0.5",
+    "smol-toml": "^1.3.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@bundt/dxdocs": "^0.4.0",
+    "@types/bun": "latest",
+    "@types/sanitize-html": "^2.16.1",
+    "typescript": "^5.5.0"
+  }
+}

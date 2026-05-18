@@ -1,0 +1,82 @@
+---
+title: Developing Locally
+description: How to develop johto inside the monorepo vs against the published packages.
+---
+
+# Developing Locally
+
+There are two ways to work with johto depending on your goal.
+
+## In-monorepo development (recommended for contributors)
+
+The canonical source lives in `apps/deck-cli/` (CLI) and `apps/mcp-server/` (Rust MCP server). All development happens here. The `dist-packages/` tree is CI output — do not edit it by hand.
+
+```bash
+# From the monorepo root
+
+# Build the MCP server (one-time, ~30s)
+cargo build --release --manifest-path apps/mcp-server/Cargo.toml
+
+# Install CLI deps
+cd apps/deck-cli && bun install
+
+# Run from source (no compile step)
+bun run dev -- --deck ./decks/example.toml --dry-run
+
+# Type-check
+bun run typecheck
+```
+
+`bun run dev` uses `JOHTO_MCP_SERVER_PATH` and `JOHTO_DB_PATH` if set; otherwise falls back to the monorepo-relative paths for `apps/mcp-server/target/release/pokemon-mcp-server` and `database/pokemon-data.sqlite3.db`.
+
+## Testing the compiled binary locally
+
+To test the exact artifact that npm publishes:
+
+```bash
+# Build the host-platform binary
+bun apps/deck-cli/build/compile.ts linux-x64   # or darwin-arm64, etc.
+
+# The binary lands here:
+dist-packages/cli-platforms/linux-x64/bin/johto
+
+# Run with env-injected paths (what the JS shim does)
+JOHTO_MCP_SERVER_PATH="$(pwd)/dist-packages/mcp-server-platforms/linux-x64/bin/pokemon-mcp-server" \
+JOHTO_DB_PATH="$(pwd)/dist-packages/card-data/data/pokemon-data.sqlite3.db" \
+dist-packages/cli-platforms/linux-x64/bin/johto \
+  --deck apps/deck-cli/decks/example.toml --dry-run
+```
+
+## Release coordination
+
+Changes are tracked in `.changes/`. Add a pending change before opening a PR:
+
+```bash
+bun scripts/changes.ts add
+```
+
+This writes a `.changes/yyyy-mm-dd-slug.md` file. Commit it with your feature branch.
+
+When cutting a release:
+
+```bash
+bun scripts/changes.ts release
+# → bumps package.json versions, appends CHANGELOG.md, removes .changes/*.md
+# Commit the result, PR to main, then tag: git tag v0.2.0 && git push origin v0.2.0
+```
+
+The GitHub Actions release workflow fires on the tag and publishes all packages.
+
+## Adding a new subcommand
+
+1. Create `apps/deck-cli/src/commands/my-command.ts` — export an `async function myCommand(options): Promise<void>`
+2. Register it in `apps/deck-cli/src/args.ts` inside `buildCli()`
+3. Add docs in `apps/deck-cli/docs/`
+4. Run `bun scripts/changes.ts add` to record the change
+
+## Adding a new MCP tool
+
+1. Implement the handler in `apps/mcp-server/src/` (Rust)
+2. Rebuild: `cargo build --release --manifest-path apps/mcp-server/Cargo.toml`
+3. Update `apps/deck-cli/src/agent/tools.ts` to add the tool definition
+4. Update `apps/deck-cli/src/agent/loop.ts` `dispatchTool` if the CLI needs to call it

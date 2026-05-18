@@ -1,0 +1,167 @@
+---
+title: Agent Session (REPL)
+description: Interactive competitive deck analysis with Claude via the Anthropic API.
+---
+
+# Agent Session (REPL)
+
+The default mode. Starts an interactive terminal session backed by `claude-sonnet-4-5`
+with your deck pre-loaded as context.
+
+## Starting a session
+
+```bash
+ANTHROPIC_API_KEY=sk-ant-... \
+  johto --deck ./decks/my-deck.toml
+```
+
+What happens at startup:
+
+1. `pokemon-mcp-server` is spawned as a child process (stdio transport)
+2. The MCP `load_deck` tool is called — all card IDs enriched against the database
+3. The system prompt is assembled: static rulebook layer + your enriched decklist
+4. The REPL opens. Your first question goes to the model immediately.
+
+```
+Starting MCP server...
+MCP server ready.
+Loading deck: ./decks/my-deck.toml
+Loaded 1 deck(s): Mega Gardevoir ex — Psychic Control
+
+Session ready. Type your question or "quit" to exit.
+
+You:
+```
+
+## What the agent knows
+
+Every session starts with the same static knowledge layer:
+
+- **Turn structure** — one energy per turn, one Supporter per turn, T1 no-Supporter rule
+- **Damage calculation** — exact order: base → modifiers → Weakness ×2 → Resistance − value
+- **Special Conditions** — Asleep, Burned, Confused, Paralyzed, Poisoned tables
+- **Card types and prize penalties** — Pokémon ex (2 prizes), Mega Evolution ex (3 prizes), Tera ex (2 prizes with bench immunity)
+- **ACE SPEC limit** — exactly one per deck
+- **Lost Zone** — permanent removal, Mirage Gate threshold
+- **Standard rotation** — marks H/I/J legal; mark G rotated 2026-04-10
+- **Deck skeleton** — Pokémon 12–18, Trainers 30–38, Energy 8–14; Supporter and Item staple counts
+- **Prize trade math** — 1-prize vs 2-prize vs 3-prize scenarios, Mega ex race math
+- **Archetype frameworks** — Aggro, Mega ex Beatdown, Midrange ex, Lost Zone Engine, Control
+
+Plus your deck, rendered as:
+
+```
+### Pokémon (14 cards)
+  4x Ralts (me1) [Mark: I]
+     HP: 70 | Types: Psychic | Basic
+     [Colorless] Collect — —
+     [Psychic] Headbutt — 10
+  3x Mega Gardevoir ex (me1) [Mark: I]
+     HP: 360 | Types: Psychic | Stage 2, MEGA, ex
+     ...
+
+### Trainers (31 cards)
+  4x Lillie's Determination (me1) [Supporter] [Mark: I]
+  ...
+
+### Energy (15 cards)
+  15x Basic Psychic Energy (sve) [Mark: unknown]
+```
+
+## Agent tools
+
+The agent calls these during a session to verify card details and validate proposed changes:
+
+| Tool | When the agent uses it |
+|---|---|
+| `search_cards` | Finding alternatives for a cut — "what are the best Psychic supporters in I mark?" |
+| `get_card_by_id` | Verifying a specific card's exact attack cost, damage, or ability text |
+| `compare_cards` | Side-by-side comparison when evaluating two tech options |
+| `validate_deck` | After proposing a swap, to confirm the revised list is legal |
+| `analyze_deck_probability` | Computing exact open rates and prize risk when asked about consistency or copy counts |
+
+Tool calls appear inline in the session:
+
+```
+You: should I run 3 or 4 Rare Candy?
+
+[tool: get_card_by_id]
+
+Rare Candy lets you evolve a Basic directly to Stage 2, skipping Stage 1. With a
+3-3-3 Gardevoir line and 4 Buddy-Buddy Poffin to find Basics, 4 Rare Candy is correct...
+```
+
+## Multiple decks
+
+Load two decks in one session for comparative analysis:
+
+```bash
+johto \
+  --deck ./decks/mega-gardevoir-ex.toml \
+  --deck ./decks/lost-zone-engine.toml
+```
+
+Both decks are loaded and rendered in the system prompt. The agent references each by name
+when answering questions about specific matchups.
+
+## Dry run
+
+Print the assembled system prompt and exit without making any API calls:
+
+```bash
+johto --deck ./decks/my-deck.toml --dry-run
+```
+
+Useful for:
+- Verifying all card IDs resolved correctly (no "UNKNOWN CARD" lines)
+- Checking regulation marks appear per card
+- Confirming the static layer has the content you expect
+- Estimating token usage before starting a paid session
+
+<Callout variant="info">
+  `--dry-run` does not require `ANTHROPIC_API_KEY` — the MCP server is still spawned
+  to enrich cards, but no API call is made.
+</Callout>
+
+## Session lifecycle
+
+- Messages accumulate in the conversation context for the duration of the session.
+- The MCP server child process is killed when the CLI exits (`quit`, `exit`, or Ctrl+C).
+- The session is not persisted — start a new session to continue with a saved deck version.
+
+## Proposing a deck change
+
+The agent can propose specific swaps. To save a proposed version, currently requires
+manual editing. Deck write-back from session is a planned enhancement.
+
+Example workflow:
+
+```
+You: I want to test dropping 1 Mystery Garden for a 3rd Night Stretcher. Is that correct?
+
+The swap makes sense — here's the updated count:
+  Mystery Garden: 2 → 1
+  Night Stretcher: 1 → 2
+
+[tool: validate_deck]  ← if you pass the modified deck path
+
+The modified list is valid (60 cards, all H/I marks, no violations).
+```
+
+## Probability analysis
+
+```
+You: should I run 3 or 4 copies of Salvatore?
+
+[tool: analyze_deck_probability]
+
+With 3 copies, you open at least 1 Salvatore in 31.5% of games. Bumping to 4 copies
+raises that to 39.9% — a meaningful 8-point improvement on a card that enables same-turn
+Sharpedo evolution. Given your 8-energy count and Carvanha's Reckless Charge pre-loading
+damage, I'd run 4.
+```
+
+<Callout variant="tip">
+  Use `--stats` to see probabilities for every card in your deck before the session opens.
+  See [Probability Analysis](/probability).
+</Callout>

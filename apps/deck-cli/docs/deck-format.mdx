@@ -1,0 +1,212 @@
+---
+title: Deck File Format
+description: TOML and JSON schema for johto deck files, validation rules, and naming conventions.
+---
+
+# Deck File Format
+
+Decks are plain files on the filesystem — portable, version-controllable, human-editable
+with any text editor. TOML is the canonical format; JSON is supported as an alternative for
+programmatic generation.
+
+## Schema
+
+### Top-level fields
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `name` | string | ✅ | Human-readable deck name |
+| `format` | string | ✅ | Must be `"standard"` |
+| `regulation_marks` | string[] | ✅ | Regulation marks present in this deck, e.g. `["H", "I"]` |
+| `cards` | CardEntry[] | ✅ | Exactly 60 total quantity |
+| `meta` | table | — | Arbitrary string key-value pairs |
+
+### CardEntry fields
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `id` | string | ✅ | Card ID in `{set-id}-{collector-number}` format, e.g. `me1-60` |
+| `quantity` | integer | ✅ | Number of copies (1–60) |
+
+### Meta table
+
+All values in `[meta]` must be strings. The table is freeform.
+
+| Key | Example | Meaning |
+|---|---|---|
+| `archetype` | `"mega-gardevoir-ex"` | Archetype slug |
+| `version` | `"1.3"` | Deck version label |
+| `notes` | `"Testing 2-2 Pidgeot"` | Free-form notes |
+| `tournament` | `"locals-2026-04-27"` | Tournament context |
+
+## Complete TOML example
+
+```toml
+name = "Mega Gardevoir ex — Psychic Control"
+format = "standard"
+regulation_marks = ["H", "I"]
+
+# Pokémon — 14
+[[cards]]
+id = "me1-58"        # Ralts (Ascended Heroes)
+quantity = 4
+
+[[cards]]
+id = "me1-59"        # Kirlia
+quantity = 3
+
+[[cards]]
+id = "me1-60"        # Mega Gardevoir ex
+quantity = 3
+
+[[cards]]
+id = "sv7-98"        # Jirachi
+quantity = 2
+
+[[cards]]
+id = "sv7-59"        # Mewtwo
+quantity = 2
+
+# Supporters — 9
+[[cards]]
+id = "me1-119"       # Lillie's Determination
+quantity = 4
+
+[[cards]]
+id = "me1-114"       # Boss's Orders
+quantity = 3
+
+[[cards]]
+id = "me1-132"       # Wally's Compassion
+quantity = 2
+
+# Items — 18
+[[cards]]
+id = "me1-131"       # Ultra Ball
+quantity = 4
+
+[[cards]]
+id = "me1-167"       # Buddy-Buddy Poffin
+quantity = 4
+
+[[cards]]
+id = "me1-125"       # Rare Candy
+quantity = 4
+
+[[cards]]
+id = "me1-130"       # Switch
+quantity = 2
+
+[[cards]]
+id = "me1-121"       # Mega Signal
+quantity = 2
+
+[[cards]]
+id = "me1-173"       # Night Stretcher
+quantity = 1
+
+[[cards]]
+id = "sv5-157"       # Prime Catcher (ACE SPEC)
+quantity = 1
+
+# Stadiums — 4
+[[cards]]
+id = "me1-122"       # Mystery Garden
+quantity = 2
+
+[[cards]]
+id = "me1-117"       # Forest of Vitality
+quantity = 2
+
+# Energy — 15
+[[cards]]
+id = "sve-5"         # Basic Psychic Energy
+quantity = 15
+
+[meta]
+archetype = "mega-gardevoir-ex"
+version = "1.0"
+notes = "Prime Catcher ACE SPEC build with Lillie draw engine"
+```
+
+## Equivalent JSON
+
+```json
+{
+  "name": "Mega Gardevoir ex — Psychic Control",
+  "format": "standard",
+  "regulation_marks": ["H", "I"],
+  "cards": [
+    { "id": "me1-60", "quantity": 3 },
+    { "id": "me1-58", "quantity": 4 }
+  ],
+  "meta": {
+    "archetype": "mega-gardevoir-ex",
+    "version": "1.0"
+  }
+}
+```
+
+Use the `.json` extension — the CLI and MCP server detect format by file extension.
+
+## Validation rules
+
+A deck is **valid** if and only if all of the following hold:
+
+| Rule | Check |
+|---|---|
+| **R1** | Sum of all `quantity` values equals exactly 60 |
+| **R2** | Each `id` appears at most once |
+| **R3** | Every `quantity` is between 1 and 60 inclusive |
+| **R4** | Non-Basic Energy cards have `quantity ≤ 4` |
+| **R5** | `format` is exactly `"standard"` (case-sensitive) |
+| **R6** | `regulation_marks` is non-empty; values are from `["G","H","I","J"]` |
+| **R7** | No blank or whitespace-only `id` values |
+| **LEGALITY** | Cards with regulation marks outside H/I/J are flagged as illegal |
+
+Basic Energy detection (for the R4 exemption) is done by the MCP server at enrichment time.
+The file format itself does not encode supertype — that comes from the SQLite database.
+
+<Callout variant="warning">
+  Regulation mark G rotated out of Standard on **2026-04-10**. Cards from sets with mark G
+  will pass R6 (the mark itself is a valid string) but fail the LEGALITY check during
+  `validate_deck` enrichment.
+</Callout>
+
+## Card IDs
+
+Card IDs use the Pokemon TCG API format: `{set-id}-{collector-number}`.
+
+| Example | Set | Card |
+|---|---|---|
+| `me1-60` | Mega Evolution: Ascended Heroes (me1) | Card #60 — Mega Gardevoir ex |
+| `me1-58` | me1 | Card #58 — Ralts |
+| `sv7-98` | Stellar Crown (sv7) | Card #98 — Jirachi |
+| `sve-5` | Scarlet & Violet Energies (sve) | Basic Psychic Energy |
+
+All IDs are verified against the live SQLite database when you run `johto --deck` or call
+`validate_deck` via MCP.
+
+## File naming convention
+
+```
+decks/
+├── mega-gardevoir-ex.toml          # working copy
+├── mega-gardevoir-ex.v1.toml       # versioned snapshot
+└── mega-gardevoir-ex.exported.json # programmatic export
+```
+
+The CLI never mutates the original file. Proposed changes from an agent session can be
+saved as a new versioned file alongside the original.
+
+## ACE SPEC rules
+
+Your deck may contain **exactly one** ACE SPEC card total — not one of each, one in total.
+ACE SPEC cards have `"ACE SPEC"` in their `subtypes` array in the database.
+
+The `validate_deck` tool does not currently enforce the ACE SPEC limit — the agent flags
+it based on the enriched deck context in the system prompt. To check manually:
+
+```bash
+johto --deck ./decks/my-deck.toml --dry-run | grep "ACE SPEC"
+```

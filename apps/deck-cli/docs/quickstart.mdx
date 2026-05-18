@@ -1,0 +1,106 @@
+---
+title: Quickstart
+description: Install johto and run your first deck session in under five minutes.
+---
+
+# Quickstart
+
+## Install
+
+```bash
+npm install -g @johto-ai/cli
+johto init
+```
+
+`johto init` walks you through API key setup (validated live), default deck directory, and default provider. Takes under 60 seconds.
+
+## Run your first session
+
+Use the `--dry-run` flag to preview the system prompt without making an API call:
+
+```bash
+johto run --deck /path/to/decks/example.toml --dry-run
+```
+
+If you see the decklist followed by card HP and attack data, everything is wired correctly.
+
+Start a live session:
+
+```bash
+johto run --deck ./decks/my-deck.toml
+```
+
+```
+Starting MCP server...
+MCP server ready.
+Loading deck: ./decks/my-deck.toml
+Loaded 1 deck(s): Mega Gardevoir ex — Psychic Control
+
+Session ready. Type your question or "quit" to exit.
+
+You: what's my turn 1 plan?
+```
+
+## Verify your install
+
+```bash
+johto doctor
+```
+
+Prints a status table for all five required components: CLI binary, MCP server binary, card database, config file, and Anthropic API key. Non-zero exit if any check fails.
+
+## Working with your own deck
+
+Create a TOML file:
+
+```toml
+name = "My Deck"
+format = "standard"
+regulation_marks = ["H", "I"]
+
+[[cards]]
+id = "me1-58"   # Ralts
+quantity = 4
+
+# ... 56 more cards ...
+```
+
+Then run:
+
+```bash
+johto run --deck ./decks/my-deck.toml
+```
+
+See the [Deck File Format](/deck-format) guide for the full schema.
+
+## From source
+
+If you are contributing to johto or want to run from the monorepo:
+
+<Steps>
+  <Step title="Build the MCP card server">
+
+```bash
+cargo build --release \
+  --manifest-path apps/mcp-server/Cargo.toml
+```
+
+  </Step>
+  <Step title="Install CLI dependencies">
+
+```bash
+cd apps/deck-cli
+bun install
+```
+
+  </Step>
+  <Step title="Run from source">
+
+```bash
+bun run dev -- --deck ./decks/example.toml --dry-run
+```
+
+  </Step>
+</Steps>
+
+See [Developing Locally](/development) for the full contributor workflow.

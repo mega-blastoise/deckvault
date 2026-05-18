@@ -86,12 +86,12 @@ fn ping_returns_empty_object() {
 // ── tools/list ───────────────────────────────────────────────────────────────
 
 #[test]
-fn tools_list_returns_all_six_pokemon_tools() {
+fn tools_list_returns_all_pokemon_tools() {
     let mut proc = McpProcess::spawn();
     let response = proc.send(r#"{"jsonrpc":"2.0","method":"tools/list","id":3}"#);
     let json: serde_json::Value = serde_json::from_str(&response).unwrap();
     let tools = json["result"]["tools"].as_array().unwrap();
-    assert_eq!(tools.len(), 6, "expected exactly 6 tools, got {}", tools.len());
+    assert_eq!(tools.len(), 9, "expected exactly 9 tools, got {}", tools.len());
 
     let names: Vec<&str> = tools
         .iter()
@@ -103,6 +103,12 @@ fn tools_list_returns_all_six_pokemon_tools() {
     assert!(names.contains(&"get_set_cards"), "missing get_set_cards");
     assert!(names.contains(&"compare_cards"), "missing compare_cards");
     assert!(names.contains(&"get_price_info"), "missing get_price_info");
+    assert!(names.contains(&"load_deck"), "missing load_deck");
+    assert!(names.contains(&"validate_deck"), "missing validate_deck");
+    assert!(
+        names.contains(&"analyze_deck_probability"),
+        "missing analyze_deck_probability"
+    );
 }
 
 // ── tools/call search_cards ──────────────────────────────────────────────────
