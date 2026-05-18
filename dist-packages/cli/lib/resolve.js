@@ -27,7 +27,7 @@ function resolvePackage(pkgName) {
   } catch (err) {
     throw new Error(
       `Missing package ${pkgName}. This usually means npm skipped the platform-specific ` +
-      `optional dependency. Try \`npm install --force\` or report at https://github.com/nicholasgalante1997/deckvault/issues. ` +
+      `optional dependency. Try \`npm install --force\` or report at https://github.com/mega-blastoise/deckvault/issues. ` +
       `Original error: ${err.message}`
     );
   }

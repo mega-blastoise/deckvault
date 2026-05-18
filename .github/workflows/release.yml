@@ -137,10 +137,10 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           for suffix in linux-x64 linux-arm64 darwin-x64 darwin-arm64; do
-            npm publish --access public --provenance "dist-packages/cli-platforms/${suffix}"
-            npm publish --access public --provenance "dist-packages/mcp-server-platforms/${suffix}"
+            (cd "dist-packages/cli-platforms/${suffix}" && npm publish --access public --provenance)
+            (cd "dist-packages/mcp-server-platforms/${suffix}" && npm publish --access public --provenance)
           done
-          npm publish --access public --provenance dist-packages/cli
+          (cd dist-packages/cli && npm publish --access public --provenance)
 
       - name: Build and push multi-arch Docker image
         uses: docker/build-push-action@v5

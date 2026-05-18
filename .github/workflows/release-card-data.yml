@@ -58,4 +58,5 @@ jobs:
       - name: Publish npm package
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: npm publish --access public --provenance dist-packages/card-data
+        working-directory: dist-packages/card-data
+        run: npm publish --access public --provenance

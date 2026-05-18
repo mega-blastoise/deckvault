@@ -35,7 +35,7 @@ Windows is tracked for v1.1.
 docker run --rm -it \
   -v "$PWD/decks:/decks" \
   -e ANTHROPIC_API_KEY \
-  ghcr.io/nicholasgalante1997/johto:latest \
+  ghcr.io/mega-blastoise/johto:latest \
   run --deck /decks/my-deck.toml
 
 # Curl installer (writes to ~/.local/bin)
@@ -227,8 +227,8 @@ Checks every prerequisite — binary presence, database integrity, API key, netw
 ## Links
 
 - **Documentation** — [johto.deckvault.gg](https://johto.deckvault.gg)
-- **Source** — [github.com/nicholasgalante1997/deckvault](https://github.com/nicholasgalante1997/deckvault)
-- **Issues** — [github.com/nicholasgalante1997/deckvault/issues](https://github.com/nicholasgalante1997/deckvault/issues)
+- **Source** — [github.com/mega-blastoise/deckvault](https://github.com/mega-blastoise/deckvault)
+- **Issues** — [github.com/mega-blastoise/deckvault/issues](https://github.com/mega-blastoise/deckvault/issues)
 
 ---
 

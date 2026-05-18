@@ -27,6 +27,6 @@
     "@johto-ai/mcp-server-darwin-x64": "workspace:*",
     "@johto-ai/mcp-server-darwin-arm64": "workspace:*"
   },
-  "repository": "https://github.com/nicholasgalante1997/deckvault",
+  "repository": "https://github.com/mega-blastoise/deckvault",
   "homepage": "https://johto.deckvault.gg"
 }
