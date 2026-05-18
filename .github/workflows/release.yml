@@ -87,7 +87,7 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          password: ${{ secrets.DECKVAULT_GHCR_GITHUB_TOKEN }}
       - uses: actions/download-artifact@v4
         with:
           path: dist-packages-artifacts
@@ -160,4 +160,4 @@ jobs:
             --generate-notes \
             johto-${{ github.ref_name }}-*.tar.gz
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.DECKVAULT_GHCR_GITHUB_TOKEN }}
