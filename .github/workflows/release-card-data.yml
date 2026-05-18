@@ -15,13 +15,13 @@ jobs:
     name: Build @johto-ai/card-data
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           submodules: recursive
       - uses: oven-sh/setup-bun@v2
       - run: bun install --frozen-lockfile
       - run: bun dist-packages/card-data/scripts/rebuild.ts --source packages/@pokemon-data/data --out dist-packages/card-data/data/pokemon-data.sqlite3.db
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: card-data
           path: dist-packages/card-data/
@@ -31,13 +31,13 @@ jobs:
     needs: [build-card-data]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: oven-sh/setup-bun@v2
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
-          node-version: 20
+          node-version: 24
           registry-url: https://registry.npmjs.org
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v5
         with:
           name: card-data
           path: dist-packages-artifacts/card-data
