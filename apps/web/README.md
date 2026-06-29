@@ -1,15 +1,7 @@
-# web
+# Deckvault Web (@deckvault/web)
 
-To install dependencies:
+This is the web application surface for [deckvault.gg](deckvault.gg). It is primarily a Bun/Typescript/React/TanstackQuery stack.  
 
-```bash
-bun install
-```
+> And I gave that man directions, even though I didn't know the way! Just because that's the kind of guy I am this week.
 
-To run:
-
-```bash
-bun run src/index.ts
-```
-
-This project was created using `bun init` in bun v1.1.34. [Bun](https://bun.sh) is a fast all-in-one JavaScript runtime.
+Currently, 

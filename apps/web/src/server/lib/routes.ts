@@ -63,3 +63,17 @@ export function isApiRoute(pathname: string): boolean {
 export function isWebRoute(pathname: string): boolean {
   return WEB_ROUTE_PATTERNS.some((pattern) => pattern.test(pathname));
 }
+
+/**
+ * Check if a pathname should be routed to the REST API
+ */
+export function isRestApiRoute(pathname: string): boolean {
+  return isApiRoute(pathname) || pathname.startsWith('/auth/');
+}
+
+/**
+ * Check if a pathname should be routed to the GRAPHQL Service
+ */
+export function isGraphQLRoute(pathname: string) {
+  return pathname.startsWith('/graphql') || pathname.startsWith('/graphiql');
+}

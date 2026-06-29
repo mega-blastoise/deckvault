@@ -1,5 +1,5 @@
 import { csrfMiddleware } from '../lib/csrf';
-import type { BffRoute, BffHandler, BffContext } from './types';
+import type { BffRoute, BffContext } from './types';
 import {
   getDashboard,
   getBrowse,
@@ -9,33 +9,8 @@ import {
   getSimMetaDecks,
   postSimCardDefinitions
 } from './handlers';
-
-/**
- * Convert route pattern to regex and extract param names
- */
-function createRoutePattern(path: string): {
-  pattern: RegExp;
-  paramNames: string[];
-} {
-  const paramNames: string[] = [];
-  const regexPattern = path.replace(/:([^/]+)/g, (_, paramName) => {
-    paramNames.push(paramName);
-    return '([^/]+)';
-  });
-
-  return {
-    pattern: new RegExp(`^${regexPattern}/?$`),
-    paramNames
-  };
-}
-
-/**
- * Define a BFF route
- */
-function route(path: string, handler: BffHandler, method: 'GET' | 'POST' = 'GET'): BffRoute {
-  const { pattern, paramNames } = createRoutePattern(path);
-  return { pattern, paramNames, handler, method };
-}
+import { route, extractParams } from "./route-utils";
+import { generateBffRequestId, isBffRoute } from "./utils";
 
 /**
  * BFF route definitions
@@ -49,34 +24,6 @@ const routes: BffRoute[] = [
   route('/bff/sim/meta-decks', getSimMetaDecks),
   route('/bff/sim/card-definitions', postSimCardDefinitions, 'POST')
 ];
-
-/**
- * Extract params from a matched route
- */
-function extractParams(
-  matches: RegExpMatchArray,
-  paramNames: string[]
-): Record<string, string> {
-  const params: Record<string, string> = {};
-  paramNames.forEach((name, index) => {
-    params[name] = matches[index + 1];
-  });
-  return params;
-}
-
-/**
- * Generate a request ID
- */
-function generateRequestId(): string {
-  return `bff_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 9)}`;
-}
-
-/**
- * Check if a path is a BFF route
- */
-export function isBffRoute(pathname: string): boolean {
-  return pathname.startsWith('/bff/');
-}
 
 /**
  * Route a BFF request to the appropriate handler
@@ -99,7 +46,7 @@ export async function routeBffRequest(
 
   // Create context
   const context: BffContext = {
-    requestId: request.headers.get('X-Request-ID') || generateRequestId(),
+    requestId: request.headers.get('X-Request-ID') || generateBffRequestId(),
     startTime: Date.now()
   };
 
@@ -153,4 +100,11 @@ export async function routeBffRequest(
 
   // No matching route
   return null;
+}
+
+/**
+ * Backwards compatability with legacy export patterns
+ */
+export {
+  isBffRoute
 }

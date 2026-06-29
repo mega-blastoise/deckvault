@@ -4,6 +4,13 @@ export function generateCsrfToken(): string {
   return Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
 }
 
+/**
+ * Uses `new Response(body, init)` instead of `response.clone()` deliberately:
+ * `.clone()` preserves the source's header guard, so it throws on `.append()`
+ * if the original headers are immutable, and it tees the body stream even
+ * though `response` is discarded here. The constructor form always yields
+ * mutable headers and passes the body through without teeing.
+ */
 export function setCsrfCookie(response: Response, token: string): Response {
   const cloned = new Response(response.body, response);
   cloned.headers.append(
