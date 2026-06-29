@@ -135,10 +135,11 @@ jobs:
       - name: Create GitHub Release with binary tarballs
         run: |
           VERSION="${{ steps.version.outputs.version }}"
+          ROOT="$PWD"
           for suffix in linux-x64 linux-arm64 darwin-x64 darwin-arm64; do
             tar -czf "johto-${VERSION}-${suffix}.tar.gz" \
-                -C dist-packages-artifacts/cli-${suffix} bin \
-                -C dist-packages-artifacts/mcp-server-${suffix} bin
+                -C "${ROOT}/dist-packages-artifacts/cli-${suffix}" bin \
+                -C "${ROOT}/dist-packages-artifacts/mcp-server-${suffix}" bin
           done
           gh release create ${{ github.ref_name }} \
             --title "johto v${VERSION}" \
