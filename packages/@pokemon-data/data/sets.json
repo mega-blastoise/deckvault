@@ -3056,6 +3056,25 @@
         "symbol": "https://images.scrydex.com/pokemon/me4-symbol/symbol",
         "logo": "https://images.scrydex.com/pokemon/me4-logo/logo"
       }
+    },
+    {
+      "id": "me5",
+      "name": "Pitch Black",
+      "series": "Mega Evolution",
+      "printedTotal": 84,
+      "total": 120,
+      "legalities": {
+        "unlimited": "Legal",
+        "standard": "Legal",
+        "expanded": "Legal"
+      },
+      "ptcgoCode": "PBL",
+      "releaseDate": "2026/07/17",
+      "updatedAt": "2026/07/16 15:00:00",
+      "images": {
+        "symbol": "https://images.scrydex.com/pokemon/me5-symbol/symbol",
+        "logo": "https://images.scrydex.com/pokemon/me5-logo/logo"
+      }
     }
   ]
 }
