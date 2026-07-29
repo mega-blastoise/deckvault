@@ -1,0 +1,248 @@
+---
+title: Card Data Pipeline
+description: How Pokemon TCG sets flow from the pokemon-tcg-data fork into the JSON backup layer, SQLite, and the published npm package.
+---
+
+# Card Data Pipeline
+
+Every card and set in DeckVault originates from the `pokemon-tcg-data` fork submodule. This page documents how a new set travels from that fork into the JSON backup layer, into `pokemon-data.sqlite3.db`, out to the four service replicas, and finally into the published `@johto-ai/card-data` npm package.
+
+For deploying a rebuilt database to production, see [Rolling Out a New Card Set](/deployment/rollout-sqlite).
+
+## Flow
+
+```
+forks/pokemon-tcg-data              (git submodule, branch: master, shallow)
+  sets/en.json                       bare array [{...}]
+  cards/en/<setId>.json              bare array [{...}]
+         │
+         │  oak fork:sync
+         ▼
+packages/@pokemon-data/data          JSON backup layer — committed and diffable
+  sets.json                          {data:[...]}
+  cards/<setId>.d/cards.json         {data:[...]} + embedded set + preserved pricing
+         │
+         ├───────────────────────────────────────┐
+         │  oak db:sqlite:init                   │  rebuild.ts  (CI only)
+         │  SQLITE3_SEED_DATABASE=true           │  drops + rebuilds from scratch
+         │  incremental INSERT OR IGNORE         │
+         ▼                                       ▼
+database/pokemon-data.sqlite3.db        dist-packages/card-data/data/*.db
+         │                                       │
+         │  bun run db:replicate                 │  npm publish (tag-triggered)
+         ▼                                       ▼
+apps/rest-api/database/                 @johto-ai/card-data
+apps/graphql-api/database/
+apps/mcp-server/database/
+apps/tcg-api/database/
+```
+
+## Source of Truth
+
+| Layer | Path | Committed | Role |
+|-------|------|-----------|------|
+| Fork | `forks/pokemon-tcg-data` | submodule ref | Upstream card and set data |
+| JSON | `packages/@pokemon-data/data` | yes | Reviewable backup, diffable in PRs |
+| SQLite (canonical) | `database/pokemon-data.sqlite3.db` | yes | Build artifact, source for replication |
+| SQLite (replicas) | `apps/*/database/*.db` | yes | What each service opens at startup |
+| SQLite (npm) | `dist-packages/card-data/data/*.db` | **no** (gitignored) | Rebuilt by CI on tag |
+
+<Callout variant="info">
+  The JSON layer is the practical source of truth for everything downstream. Both SQLite writers read from `packages/@pokemon-data/data` — never from the fork directly.
+</Callout>
+
+## Stages
+
+<Steps>
+  <Step title="Update the fork submodule">
+    Point the submodule at the commit that carries the new set:
+
+    ```bash
+    git submodule update --remote forks/pokemon-tcg-data
+    git -C forks/pokemon-tcg-data log --oneline -1
+    ```
+
+    A set only enters the pipeline if `cards/en/<setId>.json` exists in the fork. `fork:sync` iterates card files, not set entries.
+  </Step>
+
+  <Step title="Sync the fork into the JSON layer">
+    ```bash
+    cd apps/scripts
+    bun run scripts:fork:sync
+    ```
+
+    This rewrites `sets.json` wholesale from the fork and writes one `cards/<setId>.d/cards.json` per set. Two transforms happen here:
+
+    - The full set object is embedded into every card record.
+    - `tcgplayer` and `cardmarket` pricing is carried over from the existing target file, or set to `null` when there is no prior file.
+
+    The fork carries no pricing data, so **a brand-new set always lands with null pricing**.
+
+    Preview without writing:
+
+    ```bash
+    bun run ./bin/index.js fork:sync --dry-run
+    ```
+  </Step>
+
+  <Step title="Bump the integrity constants">
+    `apps/scripts/lib/database/sqlite.js` asserts hardcoded totals after seeding. Compute the new values from the JSON layer:
+
+    ```bash
+    jq '.data | length' packages/@pokemon-data/data/sets.json
+    jq -s 'map(.data | length) | add' packages/@pokemon-data/data/cards/*.d/cards.json
+    ```
+
+    Then edit both constants:
+
+    ```js
+    const STATIC_TOTAL_SETS = 174;
+    const STATIC_TOTAL_CARDS = 20444;
+    ```
+
+    <Callout variant="warning">
+      Bump these *before* seeding. The assert runs at the end of `initDatabase`, so a stale value throws only after the rows have already been written — leaving you with a modified database and a failed command.
+    </Callout>
+  </Step>
+
+  <Step title="Seed SQLite">
+    Seeding is gated behind an environment variable, and the database path is resolved relative to the current working directory. Both matter:
+
+    ```bash
+    cd apps/scripts
+    SQLITE3_SEED_DATABASE=true bun run ./bin/index.js db:sqlite:init
+    ```
+
+    <Callout variant="warning">
+      Run this from `apps/scripts` only. `DATABASE_PATH` is `process.cwd()/../../database/pokemon-data.sqlite3.db`, and the database opens with `create: true` — running from anywhere else silently creates a new empty database instead of failing.
+    </Callout>
+
+    Without `SQLITE3_SEED_DATABASE=true` the command skips seeding entirely and runs only the assert against whatever is already on disk.
+  </Step>
+
+  <Step title="Replicate to the services">
+    ```bash
+    bun run db:replicate
+    ```
+
+    Serializes `database/pokemon-data.sqlite3.db` and writes it to the four service directories: `rest-api`, `graphql-api`, `mcp-server`, `tcg-api`.
+  </Step>
+
+  <Step title="Commit">
+    Commit the submodule ref, the JSON layer, the constants, the canonical database, **and** all four replicas.
+
+    ```bash
+    git add forks/pokemon-tcg-data \
+            packages/@pokemon-data/data \
+            apps/scripts/lib/database/sqlite.js \
+            database/pokemon-data.sqlite3.db \
+            apps/*/database/pokemon-data.sqlite3.db
+    ```
+
+    <Callout variant="warning">
+      The canonical `database/pokemon-data.sqlite3.db` is easy to miss — it lives outside `apps/` and is not matched by an `apps/*` glob. Committing the replicas without it leaves the replication source behind the copies it feeds.
+    </Callout>
+  </Step>
+
+  <Step title="Publish the npm package (optional)">
+    Push a `johto/card-data-v*` tag. `.github/workflows/release-card-data.yml` rebuilds the database from the JSON layer and publishes `@johto-ai/card-data`:
+
+    ```bash
+    bun dist-packages/card-data/scripts/rebuild.ts \
+      --source packages/@pokemon-data/data \
+      --out dist-packages/card-data/data/pokemon-data.sqlite3.db
+    ```
+
+    This path never reads the committed SQLite file — it drops any existing database and rebuilds from JSON.
+  </Step>
+</Steps>
+
+## Two Writers, Two Behaviours
+
+Two independent implementations write the same schema from the same JSON, with different semantics. Know which one produced the file you are looking at.
+
+| | `apps/scripts/lib/database/sqlite.js` | `dist-packages/card-data/scripts/` |
+|---|---|---|
+| Invoked by | `oak db:sqlite:init` | `rebuild.ts`, CI on tag |
+| Strategy | Incremental `INSERT OR IGNORE` onto the existing file | `unlink` then full rebuild |
+| Feeds | Canonical DB + 4 service replicas | `@johto-ai/card-data` |
+| `hp` for Trainer/Energy | `-1` | `NULL` |
+| Row validation | `isPokemonCardSet` / `isPokemonCard` | none |
+| Picks up corrections | **no** | yes |
+
+<Callout variant="warning">
+  Because the seeding path uses `INSERT OR IGNORE`, it is append-only. New card IDs are inserted; **every field change to an existing card or set is silently dropped**. Corrections made in the fork will appear in the JSON layer and in the published npm package, but never in the committed database.
+</Callout>
+
+A live example of this drift: `me3` had a malformed `updatedAt` corrected in JSON, but the committed database still carries the original.
+
+```bash
+jq -r '.data[] | select(.id=="me3") | .updatedAt' packages/@pokemon-data/data/sets.json
+# 2026/03/26 15:00:00
+
+sqlite3 -readonly database/pokemon-data.sqlite3.db \
+  "select updated_at from pokemon_card_sets where id='me3';"
+# 2026/003/26 15:00:00
+```
+
+To flush accumulated drift, delete the canonical database and re-seed from empty, or rebuild it with `rebuild.ts` — noting that the two writers disagree on `hp`.
+
+## Verification
+
+Confirm the JSON layer and the database agree on totals:
+
+```bash
+jq '.data | length' packages/@pokemon-data/data/sets.json
+sqlite3 -readonly database/pokemon-data.sqlite3.db \
+  "select count(*) from pokemon_card_sets;"
+```
+
+Confirm all five databases are in step:
+
+```bash
+for f in database apps/rest-api/database apps/graphql-api/database \
+         apps/mcp-server/database apps/tcg-api/database; do
+  printf "%-32s %s\n" "$f" \
+    "$(sqlite3 -readonly $f/pokemon-data.sqlite3.db \
+       'select count(*) from pokemon_card_sets')"
+done
+```
+
+Confirm the new set arrived with its full card count:
+
+```bash
+sqlite3 -readonly database/pokemon-data.sqlite3.db \
+  "select s.id, s.name, s.total, count(c.id) as loaded
+   from pokemon_card_sets s left join pokemon_cards c on c.set_id = s.id
+   where s.id = 'me5' group by s.id;"
+```
+
+<Callout variant="info">
+  Use `sqlite3 -readonly` when inspecting. The plain `sqlite3` CLI opens read-write and can checkpoint a WAL-mode database, leaving the file dirty in `git status` with no logical change.
+</Callout>
+
+## Known Gaps
+
+These are current behaviours to be aware of, not steps to perform.
+
+| Gap | Detail |
+|-----|--------|
+| Append-only seeding | `INSERT OR IGNORE` never applies corrections to existing rows. |
+| `hp` divergence | 3,131 Trainer and Energy cards hold `-1` in the served databases and `NULL` in the published package. `rest-api` transforms `NULL` to `''` but renders `-1` verbatim. |
+| `pack:card-data` is a no-op | Declared in `turbo.json` and `pack:all`, but no package defines the script. `turbo run pack:card-data --dry` reports `<NONEXISTENT>` for every package. Only the tag workflow builds it. |
+| `db:replicate` skip-guard is dead | `hasExistingDatabase` receives a path relative to the repo root that resolves outside it, so it is always false. Replication always overwrites and `db:replicate:force` is equivalent to `db:replicate`. |
+| Two databases sit outside replication | `packages/@engine/database/*.db` is tracked and frozen since SPEC_07. `dist-packages/card-data/data/*.db` is gitignored and CI-regenerated. |
+| Manual integrity constants | `STATIC_TOTAL_SETS` / `STATIC_TOTAL_CARDS` are hand-edited and verify only counts, not correctness. |
+
+## Legacy Commands
+
+Two CLI commands predate this pipeline and do **not** participate in it. Neither writes SQLite.
+
+| Command | Actual behaviour |
+|---------|-----------------|
+| `oak db:sync` / `bun run docker:scripts:db:sync` | Fetches from the Pokemon TCG API and writes **PostgreSQL and Neo4j**, despite being described as syncing the local datastore. |
+| `oak json:sync` / `bun run json:sync` | Fetches from the Pokemon TCG API and writes `data/pokemon-json/`, a gitignored directory that does not exist in the repo. |
+
+<Callout variant="warning">
+  `docker:scripts:db:sync` does not build `pokemon-data.sqlite3.db`. Use `fork:sync` followed by `db:sqlite:init` as described above.
+</Callout>

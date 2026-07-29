@@ -51,11 +51,11 @@ Both `rest-api` and `graphql-api` open the database with `bun:sqlite` in read-on
 
 The database file is mounted as a volume, not baked into any image. Updating it does not require rebuilding Docker images.
 
-For the full step-by-step process including journal mode reset and production deployment, see the [Rolling Out a New Card Set](/deployment/rollout-sqlite) runbook.
+Card data originates from the `pokemon-tcg-data` fork submodule. For how a new set reaches this file, see the [Card Data Pipeline](/card-data-pipeline). For journal mode reset and production deployment, see the [Rolling Out a New Card Set](/deployment/rollout-sqlite) runbook.
 
 Summary:
 
-1. Run `bun run docker:scripts:db:sync` to produce a new `pokemon-data.sqlite3.db`
+1. Sync the fork and seed the database — see [Card Data Pipeline](/card-data-pipeline)
 2. Reset journal mode to `DELETE` (required — containers open the file read-only from a directory they cannot write to)
 3. Copy to `/opt/deckvault/database/` with `deckvault:deckvault` ownership and `644` permissions
 4. `docker compose restart rest-api graphql-api`

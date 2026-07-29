@@ -9,13 +9,28 @@ When a new Pokemon TCG set is released, the card catalog in `pokemon-data.sqlite
 
 ## Step 1 — Sync new card data
 
-Add the new set's JSON data to `packages/@pokemon-data/data/cards/` and run the sync script:
+New sets arrive via the `pokemon-tcg-data` fork submodule, not by hand-adding JSON. Point the submodule at the commit carrying the set, sync it into the JSON layer, bump the integrity constants, then seed:
 
 ```bash
-bun run docker:scripts:db:sync
+git submodule update --remote forks/pokemon-tcg-data
+
+cd apps/scripts
+bun run scripts:fork:sync
+# bump STATIC_TOTAL_SETS / STATIC_TOTAL_CARDS in lib/database/sqlite.js
+SQLITE3_SEED_DATABASE=true bun run ./bin/index.js db:sqlite:init
 ```
 
-This writes the new set into `database/pokemon-data.sqlite3.db` in the repo.
+This writes the new set into `database/pokemon-data.sqlite3.db` in the repo. Replicate to the service directories before deploying:
+
+```bash
+cd ../.. && bun run db:replicate
+```
+
+For the full pipeline including transforms, the two SQLite writers, and known gaps, see the [Card Data Pipeline](/database/card-data-pipeline).
+
+<Callout variant="warning">
+  `bun run docker:scripts:db:sync` does **not** build this file. It fetches from the Pokemon TCG API and writes PostgreSQL and Neo4j, despite its name.
+</Callout>
 
 ## Step 2 — Verify the data locally
 
