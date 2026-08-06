@@ -14,6 +14,17 @@ export default {
     },
     {
       type: 'group',
+      title: 'Card Data',
+      items: [
+        {
+          type: 'page',
+          path: '/card-data-pipeline',
+          title: 'Card Data Pipeline'
+        }
+      ]
+    },
+    {
+      type: 'group',
       title: 'Migrations',
       items: [
         { type: 'page', path: '/migrations', title: 'Migration System' },
