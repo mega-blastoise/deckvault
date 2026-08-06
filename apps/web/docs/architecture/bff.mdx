@@ -1,0 +1,155 @@
+---
+title: The BFF Layer
+description: The Backend-for-Frontend — aggregation handlers that assemble per-view data for SSR, and a thin proxy for client-side fetches.
+---
+
+# The BFF Layer
+
+The web app never lets the browser talk to the downstream services directly. A
+**Backend-for-Frontend** sits inside the same Bun process and is the single origin for all API
+traffic. It works in two modes depending on the URL prefix. The two downstream services are both
+Bun/TypeScript apps in this monorepo — `@pokemon/rest-api` and `@pokemon/graphql-api`.
+
+## Two modes
+
+<CardGrid>
+  <Card title="Aggregation — /bff/*" icon="layers">
+    Page-level endpoints that fetch from one or more downstream services, reshape the data for
+    exactly what a view needs, cache it, and return a single JSON response. Sub-fetch errors are
+    tolerated.
+  </Card>
+  <Card title="Proxy — /api/v1/*, /graphql" icon="plug">
+    Transparent passthrough for client-side fetching after hydration. The request is forwarded
+    as-is to the right service; the only added behaviour is circuit-breaker bookkeeping.
+  </Card>
+</CardGrid>
+
+Both share the same [circuit breaker](/architecture/circuit-breaker) infrastructure.
+
+## Why BFF?
+
+| Problem | How the BFF solves it |
+| --- | --- |
+| **Origin fragmentation** | The browser only talks to port 3000. Downstream URLs are internal and never exposed. |
+| **Over-fetching on page load** | SSR needs one response to render. The BFF fans out server-side and returns only what the template needs. |
+| **Partial failure** | A failing "related cards" fetch shouldn't blank the card page. Aggregation handlers catch sub-errors and return partial data with warnings. |
+| **Cascading failure** | If a service is down, the BFF stops hammering it immediately. The circuit breaker enforces this. |
+| **Protocol mismatch** | Browse needs paginated REST; card detail needs nested GraphQL. The handler picks the right client — the browser doesn't have to know. |
+
+## Topology
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  Browser / SSR renderer                                          │
+│    GET /bff/card/abc       (page-level fetch during SSR)         │
+│    GET /api/v1/cards?page=2 (client-side paginated fetch)        │
+│    POST /graphql           (client-side GraphQL query)           │
+└───────────────┬─────────────────────┬───────────────────────────┘
+                ▼                     ▼
+┌───────────────────────────────────────────────────────────────────┐
+│  Bun server · port 3000 · src/server                              │
+│  ┌─────────────────┐   ┌──────────────────────────────────────┐  │
+│  │  /bff/* router  │   │  Proxy layer                         │  │
+│  │   └ handlers    │   │   /api/v1/* → proxyToRestApi()       │  │
+│  │                 │   │   /graphql  → proxyToGraphqlApi()    │  │
+│  └────────┬────────┘   └──────────────────┬───────────────────┘  │
+│  ┌────────▼───────────────────────────────▼────────────────────┐ │
+│  │  Typed clients: RestApiClient · GraphQLClient (AbortSignal) │ │
+│  └────────┬───────────────────────────────┬────────────────────┘ │
+│  ┌────────▼───────────────────────────────▼────────────────────┐ │
+│  │  Circuit breakers: restApiCircuit · graphqlApiCircuit       │ │
+│  └────────┬───────────────────────────────┬────────────────────┘ │
+└───────────┼───────────────────────────────┼──────────────────────┘
+            ▼                               ▼
+   ┌────────────────────────┐     ┌────────────────────────┐
+   │ @pokemon/rest-api      │     │ @pokemon/graphql-api   │
+   │ Bun · functional router│     │ Bun · Apollo Server 4  │
+   └────────────────────────┘     └────────────────────────┘
+```
+
+## Aggregation path (`/bff/*`)
+
+This is the SSR path. `src/server/bff/router.ts` matches the pathname against a route table,
+extracts path params, enforces the route's method, and calls the handler:
+
+```typescript
+const routes: BffRoute[] = [
+  route('/bff/health', getBffHealth),
+  route('/bff/dashboard', getDashboard),
+  route('/bff/browse', getBrowse),
+  route('/bff/card/:id', getCardDetail),
+  route('/bff/sim/set-abbreviations', getSimSetAbbreviations),
+  route('/bff/sim/meta-decks', getSimMetaDecks),
+  route('/bff/sim/card-definitions', postSimCardDefinitions, 'POST')
+];
+```
+
+Each handler **owns its response shape** — it strips fields, renames keys, and flattens nested
+structures to match exactly what the view renders. A handler's lifecycle:
+
+```
+router.ts ── pattern match, extract { id }, check method
+      │
+      ▼
+handlers/card.ts ── getCardDetail()
+      ├─ bffCache.get(key)?              → HIT, return cached (X-Cache: HIT)
+      ├─ graphqlClient.getCard(id)        ← primary fetch (fatal on failure → 503/404)
+      ├─ graphqlClient.getCardsByName()   ← secondary fetch (caught → warnings[])
+      ├─ bffCache.set(key, data, ttl)
+      └─ Response { data, warnings? }      (X-Cache: MISS, X-Request-ID)
+```
+
+Properties of this path:
+
+- **Owns the shape** — the response matches the component, not the upstream schema.
+- **Individually guarded** sub-fetches — a thrown secondary fetch becomes `relatedCards: []` plus
+  a warning; the page still renders.
+- **Cached** at the handler level — repeat requests within the TTL skip downstream entirely.
+
+The `/bff/sim/*` routes are gated behind `FEATURE_SIMULATE`. When the flag is off they return a
+`404 FEATURE_DISABLED` rather than reaching a handler.
+
+<Callout variant="info">
+  The BFF router supports per-route HTTP methods — pass a third argument to `route(...)` (e.g.
+  `'POST'`). A request whose method doesn't match the route returns `405` with an `Allow` header.
+</Callout>
+
+## Proxy path (`/api/v1/*`, `/graphql`)
+
+This is the post-hydration path — paginating browse results, running a client GraphQL query. The
+proxy adds no caching and does no transformation. It (a) rewrites the URL to the internal service
+address and (b) maintains circuit-breaker state:
+
+```
+GET /api/v1/cards?page=2
+      ▼
+proxy.ts ── proxyToRestApi()
+      ├─ restApiCircuit.isOpen()? → yes → 503 immediately
+      ├─ fetch(restApiUrl + pathname + search)  (forward method, headers, body)
+      ├─ response.ok      → recordSuccess()
+      │  response >= 500  → recordFailure()
+      └─ Response (proxied body, original status, + X-Proxied-By)
+```
+
+A `404` from upstream is a valid response and does **not** trip the breaker — only 5xx and network
+errors count as failures.
+
+## Typed clients
+
+Aggregation handlers don't call `fetch` directly. They use two clients in `src/server/bff/clients/`:
+
+- **`RestApiClient`** — wraps REST calls with an `AbortController` timeout (`BFF_TIMEOUT_MS`).
+- **`GraphQLClient`** — encapsulates query strings and variables, same timeout behaviour.
+
+Adding a handler that needs a new upstream call means adding a method to the relevant client. See
+[Adding a BFF Endpoint](/reference/adding-a-bff-endpoint).
+
+## Aggregation vs proxy at a glance
+
+| Concern | Aggregation (`/bff/*`) | Proxy (`/api/v1/*`, `/graphql`) |
+| --- | --- | --- |
+| **When** | During SSR, before HTML is sent | After hydration, on interaction |
+| **Data shape** | Reshaped per-view | Passed through verbatim |
+| **Caching** | Handler-level in-memory cache | None (upstream cache headers apply) |
+| **Errors** | Partial — page renders with gaps | Pass-through — client gets upstream status |
+| **Protocol** | Handler picks REST or GraphQL | Client chooses; proxy forwards |

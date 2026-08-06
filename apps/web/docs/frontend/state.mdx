@@ -1,0 +1,94 @@
+---
+title: State & Contexts
+description: The provider stack — theme, auth, collection, and deck contexts — and how each is backed by TanStack Query or local storage.
+---
+
+# State & Contexts
+
+App-wide state lives in a small stack of React contexts, composed in `App.tsx` inside the data
+layer. Server state (cards, decks, sets) belongs to TanStack Query; the contexts hold session and
+UI concerns and re-expose query-backed data with domain methods.
+
+## The provider stack
+
+```tsx
+<DataLayer ...>
+  <ThemeProvider>
+    <AuthProvider>
+      <CollectionProvider>
+        <DeckProvider>
+          <AppContent routes={props.routes} />
+        </DeckProvider>
+      </CollectionProvider>
+    </AuthProvider>
+  </ThemeProvider>
+</DataLayer>
+```
+
+Order matters: `DataLayer` (the query client) is outermost so every context below can use
+TanStack Query. `ThemeProvider` is high so theme is available everywhere. `Deck` is innermost
+because it depends on auth and the query client.
+
+| Context | File | Holds | Backed by |
+| --- | --- | --- | --- |
+| `ThemeProvider` | `web/themes` | Active theme; swaps the Catppuccin stylesheet on the client. | Local state + `<link>` swap |
+| `AuthProvider` | `contexts/Auth.tsx` | Current user, sign-in/out, admin flag. | Session / API |
+| `CollectionProvider` | `contexts/Collection.tsx` | The user's owned cards. | Query + local storage |
+| `DeckProvider` | `contexts/Deck.tsx` | Decks, current deck, card mutations. | `useDecksQuery` + mutations |
+| `ToastProvider` | `contexts/Toast.tsx` | Transient toast notifications. | Local state |
+
+## Pattern: query-backed context
+
+Contexts don't re-implement fetching — they wrap query hooks and expose intent-revealing methods.
+`DeckProvider` is the canonical example:
+
+```tsx
+export function DeckProvider({ children }: DeckProviderProps) {
+  const queryClient = useQueryClient();
+  const { data: decks = [], isLoading } = useDecksQuery();
+  const { createMutation, updateMutation, deleteMutation } = useDeckMutations();
+
+  const [currentDeckId, setCurrentDeckId] = React.useState<string | null>(null);
+
+  // ...exposes createDeck, updateDeck, deleteDeck, addCardToDeck, etc.
+}
+```
+
+Consumers call `addCardToDeck(deckId, card)` and never touch query keys or mutation objects. The
+context owns cache invalidation through the `queryClient`.
+
+The `DeckContextValue` interface is the public surface:
+
+```typescript
+export interface DeckContextValue {
+  decks: Deck[];
+  currentDeck: Deck | null;
+  isLoading: boolean;
+  createDeck: (deck: Omit<Deck, 'id' | 'createdAt' | 'updatedAt'>) => Promise<Deck>;
+  updateDeck: (id: string, updates: Partial<Omit<Deck, 'id' | 'createdAt'>>) => Promise<void>;
+  deleteDeck: (id: string) => Promise<void>;
+  addCardToDeck: (deckId: string, card: DeckCard['card'], quantity?: number) => Promise<void>;
+  removeCardFromDeck: (deckId: string, cardId: string, quantity?: number) => Promise<void>;
+  setCardQuantityInDeck: (deckId: string, cardId: string, quantity: number) => Promise<void>;
+  // ...
+}
+```
+
+## Local storage & migration
+
+Some state (decks, collection) is mirrored to `localStorage` under keys from
+`src/types/collection.ts` (`STORAGE_KEYS`). Providers guard every access with a
+`typeof window === 'undefined'` check so SSR never touches `localStorage`, and run a one-time
+migration on first client mount to lift legacy local data into the query-backed store.
+
+<Callout variant="tip">
+  When reading from `localStorage` in a provider, always branch on the runtime first. Touching
+  `window` during render breaks SSR — the same hydration discipline the
+  [data layer](/architecture/ssr#the-isomorphic-data-layer) enforces.
+</Callout>
+
+## Theme
+
+`ThemeProvider` swaps the active stylesheet at runtime. The server ships a default Catppuccin
+Mocha `<link id="catppuccin-theme">` in the document head; on the client the provider replaces its
+`href` to match the user's chosen theme without a flash of the wrong palette.

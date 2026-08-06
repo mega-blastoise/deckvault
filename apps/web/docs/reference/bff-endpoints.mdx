@@ -1,0 +1,85 @@
+---
+title: BFF Endpoints
+description: The registered /bff/* aggregation routes, their methods, cache behaviour, and response envelope.
+---
+
+# BFF Endpoints
+
+These are the aggregation endpoints registered in `src/server/bff/router.ts`. They are distinct
+from the [proxy](/architecture/bff#proxy-path-api-v1-graphql) — `/api/v1/*` and `/graphql` are
+forwarded verbatim and are owned by the downstream REST and GraphQL services
+(`@pokemon/rest-api`, `@pokemon/graphql-api`), not listed here.
+
+## Registered routes
+
+| Method | Path | Handler | Cache | Notes |
+| --- | --- | --- | --- | --- |
+| `GET` | `/bff/health` | `getBffHealth` | none | Probes both downstream services independently. |
+| `GET` | `/bff/dashboard` | `getDashboard` | `bff:dashboard`, 60s | Aggregates dashboard data. |
+| `GET` | `/bff/browse` | `getBrowse` | `bff:browse:filters`, 300s | Filters are cached; results are not. |
+| `GET` | `/bff/card/:id` | `getCardDetail` | `bff:card:<id>`, 120s | Primary card + related cards. |
+| `GET` | `/bff/sim/set-abbreviations` | `getSimSetAbbreviations` | — | Gated by `FEATURE_SIMULATE`. |
+| `GET` | `/bff/sim/meta-decks` | `getSimMetaDecks` | — | Gated by `FEATURE_SIMULATE`. |
+| `POST` | `/bff/sim/card-definitions` | `postSimCardDefinitions` | — | Gated by `FEATURE_SIMULATE`. |
+
+<Callout variant="info">
+  All `/bff/sim/*` routes return `404 FEATURE_DISABLED` unless `FEATURE_SIMULATE=true`, regardless
+  of method. See [Configuration](/reference/configuration#client-app).
+</Callout>
+
+## Response envelope
+
+Aggregation handlers return a consistent JSON envelope:
+
+```json
+{
+  "data": { /* the reshaped, view-specific payload */ },
+  "warnings": ["Failed to fetch related cards"]
+}
+```
+
+- **`data`** — always present on success. The handler owns this shape; it's tailored to the view,
+  not the upstream schema.
+- **`warnings`** — present only when a **non-critical** sub-fetch failed. The page still renders;
+  the missing dataset is set to a safe default (e.g. `relatedCards: []`).
+
+Errors use an `error` envelope instead:
+
+```json
+{ "error": { "code": "NOT_FOUND", "message": "Card abc not found" } }
+```
+
+| Status | When |
+| --- | --- |
+| `200` | Success (possibly with `warnings`). |
+| `400` | Missing/invalid path or query parameter. |
+| `404` | Resource not found, or a feature-gated route with the flag off. |
+| `405` | Method doesn't match the route's declared method (includes an `Allow` header). |
+| `500` | Unhandled handler error (logged with the request ID). |
+| `503` | Primary fetch failed or the circuit is open. |
+
+## Response headers
+
+| Header | Meaning |
+| --- | --- |
+| `X-Request-ID` | Per-request trace ID. Echoed from the client or generated. |
+| `X-Cache` | `HIT` (served from the handler cache) or `MISS` (freshly assembled). |
+| `X-Circuit-State` | On proxied responses — the downstream circuit's current state. |
+
+## Health endpoint
+
+`GET /bff/health` probes both services independently and reports a combined status:
+
+```json
+{
+  "status": "degraded",
+  "checks": {
+    "restApi":    { "status": "healthy",   "latency": 12 },
+    "graphqlApi": { "status": "unhealthy",  "latency": 10023, "error": "GraphQL API timeout after 10000ms" }
+  }
+}
+```
+
+`healthy` (both up), `degraded` (one up), or unhealthy (both down). The health check is a
+read-only probe — it uses the same clients and `BFF_TIMEOUT_MS` but does **not** read or update
+the circuit breakers.

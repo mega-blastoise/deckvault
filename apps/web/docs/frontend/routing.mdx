@@ -1,0 +1,125 @@
+---
+title: Routing
+description: The shared react-router route table, the app shell layout, and the guard components for protected, admin, and feature-flagged routes.
+---
+
+# Routing
+
+The app uses `react-router` 7 with a single route table — `REACT_ROUTER_ROUTES` in
+`src/web/routes/routes.tsx` — that both runtimes consume. The server builds a static router from
+it (`createStaticRouter`); the browser builds a browser router from it
+(`createBrowserRouter`). Because the table is shared, SSR and hydration resolve identical trees.
+
+## The route table
+
+Routes fall into two tiers:
+
+- **Standalone** — `/` (landing) and `/sign-in`. No `AppLayout`, no navbar.
+- **App shell** — everything else renders inside `<AppLayout>` via an `<Outlet />`.
+
+```tsx
+export const REACT_ROUTER_ROUTES: RouteObject[] = [
+  { path: '/', element: <LandingPage /> },
+  { path: '/sign-in', Component: SignInPage },
+
+  {
+    element: <AppLayout><Outlet /></AppLayout>,
+    children: [
+      { path: '/browse', Component: BrowsePage },
+      { path: '/meta-decks', element: <MetaDeckBrowserPage /> },
+      { path: '/decks', element: <ProtectedRoute><DecksPage /></ProtectedRoute> },
+      { path: '/decks/new', element: <ProtectedRoute><DeckBuilderPage /></ProtectedRoute> },
+      { path: '/decks/:deckId/edit', element: <ProtectedRoute><DeckBuilderPage /></ProtectedRoute> },
+      { path: '/decks/:deckId', Component: DeckDetailPage },
+      { path: '/cards/:cardId', Component: CardPage },
+      { path: '/simulate', element: <FeatureRoute feature="SIMULATE"><SimulatePage /></FeatureRoute> },
+      { path: '/admin', element: <AdminRoute><AdminPage /></AdminRoute> },
+      // ...
+      { path: '*', Component: NotFoundPage }
+    ]
+  }
+];
+```
+
+## Route map
+
+| Path | Page | Guard |
+| --- | --- | --- |
+| `/` | `LandingPage` | — |
+| `/sign-in` | `SignInPage` | — |
+| `/browse` | `BrowsePage` | — |
+| `/meta-decks` | `MetaDeckBrowserPage` | — |
+| `/local-meta` | `LocalMetaPage` | — |
+| `/dashboard` | `DashboardPage` | `ProtectedRoute` |
+| `/decks` | `DecksPage` | `ProtectedRoute` |
+| `/decks/browse` | `DeckBrowsePage` | — |
+| `/decks/new` | `DeckBuilderPage` | `ProtectedRoute` |
+| `/decks/:deckId` | `DeckDetailPage` | — |
+| `/decks/:deckId/edit` | `DeckBuilderPage` | `ProtectedRoute` |
+| `/decks/:deckId/analytics` | `DeckAnalyticsPage` | — |
+| `/cards/:cardId` | `CardPage` | — |
+| `/sets`, `/sets/:setId` | `SetBrowserPage`, `SetDetailPage` | — |
+| `/rotation` | `RotationPage` | — |
+| `/cp` | `CpTrackerPage` | `ProtectedRoute` |
+| `/collection`, `/collection/:cardId` | `CollectionPage` | `ProtectedRoute` |
+| `/scaffold` | `ScaffolderPage` | `AdminRoute` |
+| `/admin` | `AdminPage` | `AdminRoute` |
+| `/simulate` | `SimulatePage` | `FeatureRoute feature="SIMULATE"` |
+| `*` | `NotFoundPage` | — |
+
+## Guards
+
+Guards are wrapper components that gate a subtree. They render their children only when a
+condition holds, otherwise redirect or render nothing.
+
+| Guard | Gate |
+| --- | --- |
+| `ProtectedRoute` | Requires an authenticated user (from the `Auth` context). |
+| `AdminRoute` | Requires an authenticated **admin** user. |
+| `FeatureRoute` | Requires a runtime feature flag to be on. |
+
+`FeatureRoute` reads a `window.FEATURE_*` flag — the same flag the server injects in the bootstrap
+script during SSR (see [SSR & Hydration](/architecture/ssr#server-render)):
+
+```tsx
+export function FeatureRoute({ feature, children }: FeatureRouteProps) {
+  const enabled =
+    typeof window !== 'undefined'
+      ? (window as unknown as Record<string, unknown>)[`FEATURE_${feature}`] === true
+      : false;
+
+  const navigate = useNavigate();
+  const { showToast } = useToast();
+
+  useEffect(() => {
+    if (!enabled) {
+      showToast('This feature is not publicly available yet.', 'info');
+      navigate('/', { replace: true });
+    }
+  }, [enabled, navigate, showToast]);
+
+  if (!enabled) return null;
+  return <>{children}</>;
+}
+```
+
+<Callout variant="warning">
+  Guards are a UX affordance, not a security boundary. The `/simulate` page is feature-flagged in
+  the client *and* its `/bff/sim/*` data endpoints return `404` server-side unless
+  `FEATURE_SIMULATE=true`. Never rely on a client guard alone to protect data.
+</Callout>
+
+## Adding a route
+
+<Steps>
+  <Step title="Create the page">
+    Add a directory under `src/web/pages/` with the component and its barrel `index.ts`.
+  </Step>
+  <Step title="Register it">
+    Add an entry to `REACT_ROUTER_ROUTES` in `routes.tsx`, wrapping in a guard if needed.
+  </Step>
+  <Step title="Prefetch (optional)">
+    If the page needs above-the-fold data on first paint, add a branch to `prefetchForRoute` in
+    `src/server/lib/prefetch.ts`. See [Data Fetching](/frontend/data-fetching#server-prefetch).
+  </Step>
+</Steps>

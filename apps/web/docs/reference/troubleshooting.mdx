@@ -1,0 +1,134 @@
+---
+title: Troubleshooting
+description: Common failure modes — stuck circuit breakers, stale cache, timeouts, degraded health, and BFF routing surprises.
+---
+
+# Troubleshooting
+
+## Circuit breaker stuck in OPEN
+
+**Symptom:** every request to a service returns `503` with `circuitState: "OPEN"`, but the service
+is healthy when called directly.
+
+**Cause:** the breaker's timeout hasn't elapsed since the last failure (default 30s). During that
+window nothing is allowed through — not even a health probe.
+
+**Fix:**
+
+1. Find the transition in the logs; its timestamp tells you when the circuit opened:
+   ```
+   [CircuitBreaker:rest-api] Failure threshold reached (5/5), opening circuit
+   ```
+   It moves to `HALF_OPEN` 30s after that.
+2. To recover faster in development, lower the timeout:
+   ```bash
+   CIRCUIT_BREAKER_TIMEOUT_MS=5000 bun run dev
+   ```
+3. Once it half-opens, the next request is a probe. Success closes the circuit; failure reopens it.
+
+<Callout variant="warning">
+  There is no manual reset — that's intentional, so operators can't override the breaker while a
+  service is still unhealthy. To force a reset in development, restart the Bun process; the
+  breakers are in-memory singletons and reset on startup.
+</Callout>
+
+## Stale data returned
+
+**Symptom:** a page shows outdated data after the upstream changed.
+
+**Cause:** the handler cached the response. `getCardDetail` caches per card ID for 120s; browse
+filters for 300s; dashboard for 60s.
+
+**Fix:** wait out the TTL, or restart the process (the cache is in-memory and doesn't persist).
+Check the `X-Cache` header — `HIT` means it came from cache, `MISS` means it was freshly fetched.
+For lasting changes, lower the TTL constants in the handler (at the cost of more downstream calls).
+
+## Requests timing out
+
+**Symptom:** a BFF request hangs ~10s then errors.
+
+**Cause:** the typed clients abort after `BFF_TIMEOUT_MS` (default 10s) via `AbortController`.
+
+**Fix:**
+
+1. Confirm the downstream is responding:
+   ```bash
+   curl http://localhost:3001/health
+   curl http://localhost:3002/graphql -d '{"query":"{ health { status } }"}'
+   ```
+2. If it's slow but alive, raise the timeout:
+   ```bash
+   BFF_TIMEOUT_MS=30000 bun run dev
+   ```
+3. A handler making sequential calls has worst-case latency `2 × BFF_TIMEOUT_MS` — consider making
+   them concurrent. Keep `BFF_TIMEOUT_MS` **below** any upstream/LB timeout or the connection dies
+   before the BFF can respond.
+
+## Health reports `degraded`
+
+**Symptom:** `GET /bff/health` returns `status: "degraded"`.
+
+**Cause:** the health handler probes both services independently. `degraded` means one is up and
+one is down.
+
+**Fix:** inspect the `checks` object to see which service failed and why. The health check uses the
+same clients and timeout as live traffic, so a timeout there means the service isn't answering
+within `BFF_TIMEOUT_MS`. Note the endpoint does **not** read or update the circuit breakers — it's
+a read-only probe.
+
+## 405 Method Not Allowed on `/bff/*`
+
+**Symptom:** a request to a `/bff/*` route returns `405` with an `Allow` header.
+
+**Cause:** the route is registered for a different method than you sent. Each route declares its
+method (default `GET`); `POST /bff/sim/card-definitions` is the only non-GET route today.
+
+**Fix:** send the method the route expects, or — if you're adding a new endpoint — pass the method
+as the third argument to `route(...)`. See
+[Adding a BFF Endpoint](/reference/adding-a-bff-endpoint#1-register-the-route).
+
+## `/bff/sim/*` returns 404
+
+**Symptom:** simulation endpoints return `404 FEATURE_DISABLED`.
+
+**Cause:** the Simulate feature is off. `/bff/sim/*` is gated behind `FEATURE_SIMULATE`.
+
+**Fix:** run with `FEATURE_SIMULATE=true`. This also enables the `/simulate` route client-side via
+`FeatureRoute`.
+
+## BFF route returns an HTML page instead of JSON
+
+**Symptom:** a request to a `/bff/*` path returns an HTML page (or 404 page) instead of JSON.
+
+**Cause:** `routeBffRequest()` returns `null` when no pattern matches. The router treats that as
+"not handled" and falls through to the SSR renderer, which serves whatever page matches the path.
+
+**Fix:**
+
+1. Verify the route is in the `routes` array in `router.ts`.
+2. Check the path exactly — trailing slashes, typos, and missing params all break the regex match.
+3. The router logs handler errors with the request ID but does **not** log a no-match. Add a temporary
+   log before `return null` to debug route matching.
+
+## Hydration mismatch / SSR data not used
+
+**Symptom:** the page flashes empty then fetches on the client, or React warns about a hydration
+mismatch.
+
+**Cause:** usually a query-key mismatch. An isomorphic hook reads server-prefetched data by an
+exact key; if `prefetchForRoute` stored it under a different key, the server render misses the
+cache and the browser re-fetches.
+
+**Fix:** make the prefetch build the key identically to the hook. See
+[Data Fetching](/frontend/data-fetching#isomorphic-hooks). Also confirm both runtimes consume the
+same `REACT_ROUTER_ROUTES` — a divergent tree is the other common cause of mismatches.
+
+## Missing browser bundle (500 on every page)
+
+**Symptom:** every page returns a 500 rendering a server-error page.
+
+**Cause:** the SSR renderer can't find the hashed browser bundle in `out/` — the app can't hydrate
+without it.
+
+**Fix:** build the bundle: `bun run build`. The dev server expects the build output to exist; if
+you cleared `out/` (the `prebuild` step does), rebuild before serving.

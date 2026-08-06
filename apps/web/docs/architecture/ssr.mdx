@@ -1,0 +1,150 @@
+---
+title: SSR & Hydration
+description: How the app streams server-rendered HTML, dehydrates the TanStack Query cache, and hydrates the same tree in the browser.
+---
+
+# SSR & Hydration
+
+The app renders on the server and resumes on the client without re-fetching. The key idea: one
+`App` component, two runtimes. A `DataLayer` swaps the query client and router implementation
+based on where it runs, and TanStack Query state is serialized into the HTML so the browser picks
+up exactly where the server left off.
+
+## Server render
+
+`src/server/lib/web/utils/render.tsx` produces the streamed response. The shape of it:
+
+```typescript
+export async function renderReactApplication(request: Request) {
+  const [bundle, cssPath] = await Promise.all([
+    getBrowserJavascriptBundle(),
+    getBrowserCssSheet()
+  ]);
+
+  // React Router: resolve the matched route for this request on the server
+  const context = await query(request);
+  if (context instanceof Response) return context;   // redirects, etc.
+  const router = createStaticRouter(dataRoutes, context);
+
+  // Warm the query cache for this route before rendering
+  const serverQueryClient = createQueryClient();
+  await prefetchForRoute(serverQueryClient, new URL(request.url).pathname, request);
+
+  const SSRApp = withDocument<AppProps>(App);
+
+  const stream = await renderToReadableStream(
+    <SSRApp
+      cssPath={cssPath ?? undefined}
+      routes={{ javascriptRuntime: 'server', server: { context, router } }}
+      queryClient={serverQueryClient}
+    />,
+    {
+      bootstrapScriptContent: `
+        window.FEATURE_SIMULATE = ${process.env.FEATURE_SIMULATE === 'true'};
+        window.__REACT_QUERY_STATE__ = ${JSON.stringify(dehydrate(serverQueryClient))};
+      `,
+      bootstrapModules: [bundle]
+    }
+  );
+
+  return new Response(stream, {
+    headers: {
+      'Content-Type': 'text/html; charset=utf-8',
+      'Cache-Control': 'no-store',
+      'X-Accel-Buffering': 'no'
+    }
+  });
+}
+```
+
+Five things happen here:
+
+<Steps>
+  <Step title="Locate assets">
+    The hashed browser bundle and CSS sheet are read from `out/`. If the bundle is missing the
+    server returns a rendered `ServerErrorPage` with a 500 — the app cannot hydrate without it.
+  </Step>
+  <Step title="Resolve the route server-side">
+    `createStaticHandler(REACT_ROUTER_ROUTES).query(request)` matches the URL. A `Response`
+    result (e.g. a redirect) is returned as-is.
+  </Step>
+  <Step title="Prefetch route data">
+    `prefetchForRoute` populates the server `QueryClient` for routes that need above-the-fold
+    data (meta decks, sets, deck browse, local meta).
+  </Step>
+  <Step title="Stream HTML">
+    `renderToReadableStream` (from `react-dom/server.bun`) streams the document. `X-Accel-Buffering:
+    no` keeps the stream un-buffered through reverse proxies.
+  </Step>
+  <Step title="Serialize state">
+    `dehydrate(serverQueryClient)` is injected as `window.__REACT_QUERY_STATE__` so the browser
+    rehydrates without re-fetching. Feature flags ride along on the same bootstrap script.
+  </Step>
+</Steps>
+
+<Callout variant="warning">
+  SSR responses are sent `Cache-Control: no-store`. Pages are rendered per-request — caching
+  happens at the data layer (BFF cache, query `staleTime`), not on the HTML.
+</Callout>
+
+## The browser entry
+
+`src/web/browser/browser.tsx` is the bundle injected as `bootstrapModules`. It rebuilds the same
+tree against a browser router and the dehydrated state:
+
+```typescript
+const queryClient = createQueryClient();
+const dehydratedState = getDehydratedState();      // reads window.__REACT_QUERY_STATE__
+
+hydrateRoot(
+  document,
+  <main>
+    <App
+      routes={{
+        javascriptRuntime: 'browser',
+        browser: { router: createBrowserRouter(REACT_ROUTER_ROUTES) }
+      }}
+      queryClient={queryClient}
+      dehydratedState={dehydratedState}
+    />
+  </main>
+);
+```
+
+Because the route table (`REACT_ROUTER_ROUTES`) is shared, the server's static router and the
+browser's browser router resolve identical trees — that's what makes hydration match.
+
+## The isomorphic data layer
+
+`App.tsx` wraps everything in `DataLayer`, passing the runtime tag through:
+
+```typescript
+<DataLayer
+  javascriptRuntime={props.routes.javascriptRuntime ?? 'server'}
+  server={{ client: props.queryClient }}
+  browser={{ client: props.queryClient, state: props.dehydratedState }}
+>
+  {/* ThemeProvider → AuthProvider → CollectionProvider → DeckProvider → routes */}
+</DataLayer>
+```
+
+The data layer decides how the query cache is provided: on the server it's a fresh client warmed
+by `prefetchForRoute`; in the browser it's a client rehydrated from the dehydrated state. The
+runtime is detectable anywhere via `getJavascriptEnvironment()`:
+
+```typescript
+export function getJavascriptEnvironment(): 'server' | 'browser' {
+  if (typeof window === 'undefined') return 'server';
+  return 'browser';
+}
+```
+
+Hooks use this to behave differently per runtime — see
+[Data Fetching](/frontend/data-fetching#isomorphic-hooks).
+
+## The document shell
+
+`withDocument` wraps `App` in `Document`, which renders the full `<html>`: meta tags, fonts
+(DM Sans + JetBrains Mono), the base stylesheets, and the default Catppuccin theme link that the
+`ThemeProvider` swaps on the client. The CSS bundle path discovered at render time is appended as
+a final `<link>`.

@@ -1,0 +1,99 @@
+---
+title: Configuration
+description: Environment variables for the BFF, downstream service URLs, timeouts, the circuit breaker, and feature flags.
+---
+
+# Configuration
+
+Configuration is read from environment variables at startup. Every value has a default, so the
+app runs out of the box in local development without a `.env` file. BFF config is loaded once in
+`src/server/bff/config.ts`.
+
+## BFF & downstream services
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `REST_API_URL` | `http://localhost:3001` | Base URL of the REST service. No trailing slash. |
+| `GRAPHQL_API_URL` | `http://localhost:3002` | Base URL of the GraphQL service. The client appends `/graphql`. |
+| `BFF_TIMEOUT_MS` | `10000` | Per-request timeout (ms) for the typed clients via `AbortController`. |
+| `CIRCUIT_BREAKER_THRESHOLD` | `5` | Consecutive failures before a circuit opens. |
+| `CIRCUIT_BREAKER_TIMEOUT_MS` | `30000` | How long a circuit stays open before half-open. |
+| `BFF_CACHE_TTL_SECONDS` | `300` | Default in-memory cache TTL. Handlers may override per-key. |
+| `BFF_CACHE_MAX_SIZE` | `1000` | Max cache entries before eviction. |
+
+```typescript
+export function loadBffConfig(): BffConfig {
+  return {
+    restApiUrl: process.env.REST_API_URL || 'http://localhost:3001',
+    graphqlApiUrl: process.env.GRAPHQL_API_URL || 'http://localhost:3002',
+    cache: {
+      ttlSeconds: parseInt(process.env.BFF_CACHE_TTL_SECONDS || '300', 10),
+      maxSize: parseInt(process.env.BFF_CACHE_MAX_SIZE || '1000', 10)
+    },
+    circuitBreaker: {
+      threshold: parseInt(process.env.CIRCUIT_BREAKER_THRESHOLD || '5', 10),
+      timeoutMs: parseInt(process.env.CIRCUIT_BREAKER_TIMEOUT_MS || '30000', 10)
+    },
+    timeout: parseInt(process.env.BFF_TIMEOUT_MS || '10000', 10)
+  };
+}
+```
+
+## Client / app
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `API_URL` | — | Overrides the base API URL for services (`getBaseAPIURL`). Wins when set. |
+| `INTERNAL_API_URL` | `http://localhost:3000/api/v1` | Server-side base URL when `API_URL` is unset. |
+| `FEATURE_SIMULATE` | `false` | Enables the Simulate page and `/bff/sim/*` endpoints. Injected into the client as `window.FEATURE_SIMULATE`. |
+
+Feature flags are double-gated: the server only enables `/bff/sim/*` when `FEATURE_SIMULATE=true`,
+and `FeatureRoute` reads the same flag client-side. See [Routing](/frontend/routing#guards).
+
+## Tuning guidelines
+
+### `BFF_TIMEOUT_MS`
+
+Must be **less than** any upstream load-balancer or reverse-proxy timeout in front of the BFF.
+If the LB kills the connection at 15s, a 30s BFF timeout is useless — the client never sees the
+response. A safe default is roughly half the upstream timeout. The clients apply this per request,
+so a handler making two sequential calls can take up to `2 × BFF_TIMEOUT_MS` worst case.
+
+### `CIRCUIT_BREAKER_THRESHOLD`
+
+Lower is more sensitive. `1` means any single failure trips the breaker — aggressive, and prone to
+unnecessary outages on transient errors. The default `5` tolerates a few blips. The counter is
+**consecutive** failures and resets to 0 on any success — it's not a time window.
+
+### `CIRCUIT_BREAKER_TIMEOUT_MS`
+
+How long the BFF stops trying a downed service. `30s` is conservative. High-traffic environments
+might drop to 10–15s to probe more often; low-traffic ones can leave it — a shorter timeout risks
+reopening before the service has actually recovered.
+
+### Cache TTLs
+
+Per-handler TTLs are currently hardcoded in the handlers, not read from config:
+
+| Handler | Cache key prefix | TTL |
+| --- | --- | --- |
+| `getCardDetail` | `bff:card:` | 120s (2 min) |
+| `getBrowse` (filters) | `bff:browse:filters` | 300s (5 min) |
+
+Card detail is shorter because card data (prices) changes; browse filters change only on data
+sync.
+
+## Docker environment
+
+Under Docker Compose, downstream URLs point at container hostnames instead of `localhost`. The
+REST and GraphQL services are two separate Bun/TypeScript containers (`rest-api`, `graphql-api`),
+each with its own hostname — taken from `apps/web/docker-compose.yml`:
+
+```yaml
+environment:
+  - REST_API_URL=http://rest-api:3001
+  - GRAPHQL_API_URL=http://graphql-api:3002
+```
+
+In production (`docker-compose.prod.yml`) these run as the `ghcr.io/mega-blastoise/deckvault-rest-api`
+and `deckvault-graphql-api` images.

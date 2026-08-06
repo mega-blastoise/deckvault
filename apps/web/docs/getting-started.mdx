@@ -1,0 +1,112 @@
+---
+title: Running Locally
+description: Install, run the hot-reloading SSR dev server, build the browser bundle, and point the app at the REST and GraphQL services.
+---
+
+# Running Locally
+
+The web app runs as a single Bun process. In development it renders React server-side with hot
+reload; in production the same entry serves a pre-built browser bundle.
+
+## Prerequisites
+
+- **Bun 1.3.5** — pinned in `package.json` (`engines.bun` / `packageManager`).
+- The **REST and GraphQL services** running (or reachable) if you want live card data —
+  `@pokemon/rest-api` on `:3001` and `@pokemon/graphql-api` on `:3002` (both Bun/TypeScript apps
+  in this monorepo). Without them the app still renders; downstream fetches fail gracefully and
+  the circuit breaker trips.
+
+<Callout variant="info">
+  This package lives in the monorepo workspace. Run `bun install` from the repo root once so the
+  `@pokemon/*` workspace dependencies link, then work inside `apps/web`.
+</Callout>
+
+## Install
+
+From the repo root (links all `@pokemon/*` workspace deps):
+
+```bash
+bun install
+```
+
+Or app-only, if the workspace is already installed:
+
+```bash
+cd apps/web
+bun install
+```
+
+## Develop
+
+```bash
+cd apps/web
+bun run dev
+```
+
+`bun run dev` runs `bun run --hot src/dev.ts`, which imports the server entry under Bun's hot
+reloader. The server listens on `http://localhost:3000` and prints:
+
+```
+Listening on http://localhost:3000 🚀 ...
+```
+
+Edits to server or React code reload in place. SSR responses are sent with `Cache-Control:
+no-store` so you always see fresh renders during development.
+
+## Build
+
+The production browser bundle is produced by `build.ts`, which calls `@pokemon/build`:
+
+```bash
+cd apps/web
+bun run build
+```
+
+This builds two entrypoints into `./out/www`:
+
+<FileTree>
+  <Dir name="out">
+    <Dir name="www">
+      <File name="browser.[hash].js" />
+      <Dir name="workers">
+        <File name="simulation.worker.js" />
+      </Dir>
+    </Dir>
+  </Dir>
+</FileTree>
+
+The server discovers the hashed bundle at request time and injects it as a `bootstrapModules`
+entry into the streamed HTML. `prebuild` clears `out/` first.
+
+## Start (production)
+
+```bash
+bun run start          # bun run src/index.tsx
+```
+
+`src/index.tsx` awaits `serve()` and logs the listening port. This is the same entry used inside
+the container (`docker:web:start`).
+
+## Pointing at the downstream services
+
+Downstream URLs come from the environment, with localhost defaults. See
+[Configuration](/reference/configuration) for the full table.
+
+```bash
+REST_API_URL=http://localhost:3001 \
+GRAPHQL_API_URL=http://localhost:3002 \
+bun run dev
+```
+
+Under Docker Compose these point at the container hostnames (`http://rest-api:3001`,
+`http://graphql-api:3002`) instead of `localhost`.
+
+## Other tasks
+
+| Command | What it does |
+| --- | --- |
+| `bun run check-types` | `tsc -p ./tsconfig.json` — type-check without emitting. |
+| `bun run storybook` | Storybook dev server on port 6006. |
+| `bun run build-storybook` | Static Storybook build. |
+| `bun run e2e` | Playwright end-to-end tests (`e2e/`). |
+| `bun run e2e:ui` | Playwright in UI mode. |
