@@ -1,0 +1,118 @@
+---
+title: Data Fetching
+description: Services, isomorphic TanStack Query hooks, and how queries resolve from cache on the server and fetch on the browser.
+---
+
+# Data Fetching
+
+Client-side data flows through three layers: **services** make HTTP calls, **hooks** wrap those
+calls in TanStack Query, and components consume the hooks. The same hooks run during SSR — they
+read from the prefetched cache instead of fetching.
+
+```
+Component → useSets() ─┬─ server: read from dehydrated QueryClient (no fetch)
+                       └─ browser: useQuery → new SetsService().getSets() → /api/v1/sets
+```
+
+## Services
+
+Services are classes extending `APIModel` (`src/web/services/APIModel.ts`), a small typed HTTP
+client with `get/post/put/patch/delete`, query-param building, and an `AbortController` timeout.
+
+```typescript
+export class SetsService extends APIModel implements APIModel {
+  constructor() {
+    super({
+      baseURL: getBaseAPIURL(),
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        'Accept-Encoding': 'gzip, br'
+      }
+    });
+  }
+
+  getSets(page?: number, count?: number) {
+    return this.get<Pokemon.Set[]>('/sets', { params: { page: page || 1, limit: count || 300 } });
+  }
+
+  getSet(id: string) {
+    return this.get<Pokemon.Set>(`/sets/${id}`);
+  }
+}
+```
+
+`getBaseAPIURL()` resolves the right base for the runtime:
+
+- **`API_URL`** env var wins if set.
+- **Server, no env** → `INTERNAL_API_URL` or `http://localhost:3000/api/v1`.
+- **Browser** → `window.location.origin + /api/v1`.
+
+So a service call becomes `/api/v1/*` against the Bun server, which the
+[proxy](/architecture/bff#proxy-path-api-v1-graphql) forwards to the REST service. The browser
+never learns the downstream address.
+
+## Isomorphic hooks
+
+Hooks in `src/web/hooks/` wrap services with `useQuery`, but branch on the runtime so the same
+hook is safe to call during SSR:
+
+```typescript
+export function useSets(page?, count?, options = {}): UseQueryResult<QueryResult, Error> {
+  const keys = ['sets', `page=${page}`, `count=${count}`];
+  const queryClient = useQueryClient();
+
+  if (getJavascriptEnvironment() === 'server') {
+    const data = queryClient.getQueryData<QueryResult>(keys);
+    return { data, promise: Promise.resolve(data), isLoading: false, isError: false, isPending: false }
+      as UseQueryResult<QueryResult, Error>;
+  }
+
+  return useQuery({ ...options, queryKey: keys, queryFn: () => new SetsService().getSets(page, count) });
+}
+```
+
+On the server the hook **reads** whatever `prefetchForRoute` placed in the cache under the same
+key — it never triggers a fetch mid-render. In the browser it's an ordinary `useQuery`, hydrated
+from the dehydrated state. The query keys must match exactly between the prefetch and the hook, or
+the server render misses the cache.
+
+<Callout variant="warning">
+  Keys are constructed by hand (`['sets', 'page=undefined', 'count=undefined']`). When you add a
+  prefetch for a route, build the key the same way the hook does — a mismatch silently falls back
+  to a client fetch and loses the SSR data.
+</Callout>
+
+## Server prefetch
+
+`src/server/lib/prefetch.ts` warms the server `QueryClient` per route before render:
+
+```typescript
+export async function prefetchForRoute(queryClient, pathname, _request): Promise<void> {
+  if (pathname === '/meta-decks') return prefetchMetaDecks(queryClient);
+  if (pathname === '/browse')     return prefetchSets(queryClient);
+  if (pathname === '/sets')       return prefetchSets(queryClient);
+  if (pathname === '/decks/browse') return prefetchBrowseDecks(queryClient);
+  if (pathname === '/local-meta') return prefetchLocalMeta(queryClient);
+}
+```
+
+Each branch calls `queryClient.prefetchQuery({ queryKey, queryFn, staleTime })` and is wrapped in
+a try/catch that logs and swallows failures — a downstream blip degrades the page to a client
+fetch rather than failing the render. After prefetch, `dehydrate(serverQueryClient)` ships the
+cache to the browser.
+
+## GraphQL
+
+`src/web/graphql/` holds a separate GraphQL client, typed documents (`documents.ts`), and query
+hooks (`hooks/`) for views that need nested graph data rather than REST lists. Requests go to
+`/graphql` on the Bun server and are proxied to the GraphQL service (`@pokemon/graphql-api`, an
+Apollo Server 4 app on Bun). See the in-tree `web/graphql/README.md` and `INTEGRATION.md` for the
+document/codegen workflow.
+
+## The QueryClient
+
+`createQueryClient()` (in `src/web/layers/data`) builds the client used in both runtimes. The
+`DataLayer` provides the right instance — a freshly prefetched client on the server, a client
+rehydrated from `window.__REACT_QUERY_STATE__` in the browser. See
+[SSR & Hydration](/architecture/ssr#the-isomorphic-data-layer).

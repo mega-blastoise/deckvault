@@ -1,0 +1,100 @@
+---
+title: Project Structure
+description: How src/server and src/web are organised, and where each concern lives in the web app.
+---
+
+# Project Structure
+
+The app splits cleanly into two halves under `src/`: **`server/`** runs only on the Bun process,
+and **`web/`** is the React tree that runs on both the server (SSR) and the browser (hydration).
+A small `types/`, `utils/`, and `workers/` round it out.
+
+<FileTree>
+  <Dir name="src">
+    <File name="index.tsx" />
+    <File name="dev.ts" />
+    <Dir name="server">
+      <File name="server.ts" />
+      <File name="router.ts" />
+      <Dir name="bff">
+        <File name="router.ts" />
+        <File name="proxy.ts" />
+        <File name="circuitBreaker.ts" />
+        <File name="cache.ts" />
+        <File name="config.ts" />
+        <Dir name="handlers" />
+        <Dir name="clients" />
+      </Dir>
+      <Dir name="lib">
+        <File name="handleRequest.ts" />
+        <File name="prefetch.ts" />
+        <File name="renderStaticFile.ts" />
+        <File name="routes.ts" />
+        <File name="csrf.ts" />
+        <Dir name="middleware" />
+        <Dir name="web" />
+      </Dir>
+    </Dir>
+    <Dir name="web">
+      <File name="App.tsx" />
+      <Dir name="browser" />
+      <Dir name="routes" />
+      <Dir name="pages" />
+      <Dir name="components" />
+      <Dir name="contexts" />
+      <Dir name="providers" />
+      <Dir name="hooks" />
+      <Dir name="services" />
+      <Dir name="layers" />
+      <Dir name="graphql" />
+      <Dir name="themes" />
+    </Dir>
+    <Dir name="workers" />
+    <Dir name="types" />
+  </Dir>
+</FileTree>
+
+## The two halves
+
+### `src/server` — the Bun process
+
+Everything here runs only on the server and never ships to the browser.
+
+| Path | Responsibility |
+| --- | --- |
+| `server.ts` | `Bun.serve()` entry — rate limiting + top-level error handling. |
+| `router.ts` | Dispatches each request: BFF → REST proxy → GraphQL proxy → SSR. |
+| `bff/` | The Backend-for-Frontend: aggregation handlers, proxy, typed clients, circuit breaker, cache. See [The BFF Layer](/architecture/bff). |
+| `lib/handleRequest.ts` | Static-file serving and the SSR entry. |
+| `lib/web/utils/render.tsx` | Streams the React app with `renderToReadableStream` and dehydrates the query cache. |
+| `lib/prefetch.ts` | Per-route server prefetch that warms TanStack Query before render. |
+| `lib/csrf.ts` | CSRF token generation and the `/bff/*` CSRF middleware. |
+
+### `src/web` — the React tree
+
+This runs in both environments. The same `App` component is rendered by the server and hydrated
+by the browser entry.
+
+| Path | Responsibility |
+| --- | --- |
+| `App.tsx` | Composes the provider stack (data layer → theme → auth → collection → deck → routes). |
+| `browser/browser.tsx` | The client entry — `hydrateRoot` with a browser router. Built by `build.ts`. |
+| `routes/` | The shared `react-router` route table and the runtime-aware `RouterLayer`. |
+| `pages/` | One directory per route (`BrowsePage`, `DeckBuilderPage`, …). |
+| `components/` | Reusable presentational + container components, each with its own folder. |
+| `contexts/` | App-wide React contexts: `Auth`, `Deck`, `Collection`, `Theme`, `Toast`. |
+| `hooks/` | Isomorphic TanStack Query hooks (`useSets`, `useCard`, …). |
+| `services/` | HTTP client classes extending `APIModel` that call the proxied API. |
+| `layers/data/` | The `DataLayer` that swaps the query client between server and browser runtimes. |
+| `graphql/` | The GraphQL client, typed documents, and query hooks. |
+
+### `src/workers`
+
+`simulation.worker.ts` runs the headless game engine (`@pokemon/engine`) off the main thread for
+the (feature-flagged) Simulate page. It is built as a separate entrypoint by `build.ts`.
+
+## Path aliases
+
+Imports inside `src/web` and the SSR render path use the `@/` alias (e.g.
+`@/web/services`, `@/web/layers/data`), resolving to `src/`. Server-internal modules use relative
+imports.

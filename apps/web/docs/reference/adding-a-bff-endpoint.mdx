@@ -1,0 +1,183 @@
+---
+title: Adding a BFF Endpoint
+description: Step-by-step guide to adding a /bff/* aggregation endpoint — route, handler, client methods, and types.
+---
+
+# Adding a BFF Endpoint
+
+This covers adding a `/bff/*` **aggregation** endpoint. If you only need to expose an upstream
+path to the browser without reshaping, that already works — the
+[proxy](/architecture/bff#proxy-path-api-v1-graphql) forwards any `/api/v1/*` or `/graphql`
+request. Add a BFF endpoint when you need to fetch, combine, or reshape data.
+
+## Do you need one?
+
+Add a BFF endpoint if any of these hold:
+
+- The view needs data from **more than one** downstream call.
+- You need to **strip or reshape** the upstream response.
+- You want **partial-failure tolerance** — render even if one source is down.
+- You want **server-side caching** for frequently viewed data.
+
+If none apply, have the component fetch `/api/v1/...` or `/graphql` directly through a service.
+
+## Steps
+
+<Steps>
+  <Step title="Register the route">
+    Add an entry to the `routes` array in `src/server/bff/router.ts`. Pass a method as the third
+    argument for anything other than `GET`.
+  </Step>
+  <Step title="Write the handler">
+    Create a file in `src/server/bff/handlers/` named after the resource, exporting `get<Resource>`.
+  </Step>
+  <Step title="Add client methods">
+    If the handler needs an upstream call no client covers, add a method to `RestApiClient` or
+    `GraphQLClient`.
+  </Step>
+  <Step title="Export & type">
+    Re-export from the handlers barrel and define the response shape in `types.ts`.
+  </Step>
+</Steps>
+
+## 1 — Register the route
+
+```typescript
+const routes: BffRoute[] = [
+  route('/bff/health', getBffHealth),
+  route('/bff/dashboard', getDashboard),
+  route('/bff/card/:id', getCardDetail),
+  route('/bff/deck/:deckId', getDeckDetail)          // ← new GET route
+  // route('/bff/trade', postTrade, 'POST')          // ← non-GET: pass the method
+];
+```
+
+Path params (`:deckId`) are extracted by the router and handed to the handler in `params`. The
+pattern is compiled to a regex internally. A request whose method doesn't match the route's
+declared method gets a `405` with an `Allow` header.
+
+## 2 — Write the handler
+
+Handlers receive `(request, params, searchParams, context)` and return a `Response`. The shape:
+
+```typescript
+// src/server/bff/handlers/deck.ts
+import { graphqlClient, restApiClient } from '../clients';
+import { bffCache } from '../cache';
+import type { BffContext, BffResponse } from '../types';
+
+const CACHE_PREFIX = 'bff:deck:';
+const CACHE_TTL = 180000; // 3 minutes
+
+export async function getDeckDetail(
+  request: Request,
+  params: Record<string, string>,
+  searchParams: URLSearchParams,
+  context: BffContext
+): Promise<Response> {
+  const { deckId } = params;
+
+  if (!deckId) {
+    return json({ error: { code: 'BAD_REQUEST', message: 'Deck ID is required' } }, 400, context);
+  }
+
+  const cacheKey = `${CACHE_PREFIX}${deckId}`;
+  const cached = bffCache.get(cacheKey);
+  if (cached) {
+    return json({ data: cached }, 200, context, 'HIT');
+  }
+
+  const data: Record<string, unknown> = {};
+  const warnings: string[] = [];
+
+  // Primary fetch — fatal if it fails
+  try {
+    const { deck } = await graphqlClient.getDeck(deckId);
+    if (!deck) {
+      return json({ error: { code: 'NOT_FOUND', message: `Deck ${deckId} not found` } }, 404, context);
+    }
+    data.deck = deck;
+  } catch {
+    return json({ error: { code: 'FETCH_FAILED', message: 'Failed to fetch deck' } }, 503, context);
+  }
+
+  // Secondary fetch — non-critical
+  try {
+    const stats = await restApiClient.getDeckStats(deckId);
+    data.stats = stats.data;
+  } catch {
+    data.stats = null;
+    warnings.push('Failed to fetch deck stats');
+  }
+
+  bffCache.set(cacheKey, data, CACHE_TTL);
+
+  const response: BffResponse<typeof data> = { data };
+  if (warnings.length > 0) response.warnings = warnings;
+  return json(response, 200, context, 'MISS');
+}
+```
+
+The rules that make the aggregation pattern work:
+
+- **Primary fetch failures return `503`** (or `404` for not-found). The page can't render without
+  the core data.
+- **Secondary fetch failures are caught**, defaulted (`stats: null`), and collected as `warnings`.
+- **Cache key includes every parameter** that affects the response.
+- **Every response carries `X-Request-ID` and `X-Cache`** — fold that into your `json` helper.
+
+## 3 — Add client methods
+
+If no client method covers the upstream call, add one.
+
+**REST** (`src/server/bff/clients/RestApiClient.ts`):
+
+```typescript
+async getDeckStats(deckId: string) {
+  return this.get<{ data: { cardCount: number; typeBreakdown: Record<string, number> } }>(
+    `/api/v1/decks/${deckId}/stats`
+  );
+}
+```
+
+**GraphQL** (`src/server/bff/clients/GraphQLClient.ts`):
+
+```typescript
+async getDeck(id: string) {
+  return this.query<{ deck: Deck | null }>(
+    `query Deck($id: ID!) {
+      deck(id: $id) { id name cards { id name types rarity images { small } } createdAt }
+    }`,
+    { id }
+  );
+}
+```
+
+Keep the GraphQL selection tight — only request what the handler returns.
+
+## 4 — Export and type
+
+```typescript
+// src/server/bff/handlers/index.ts
+export { getDeckDetail } from './deck';
+```
+
+```typescript
+// src/server/bff/types.ts
+export interface DeckDetailData {
+  deck: { id: string; name: string; cards: Array<{ id: string; name: string }> };
+  stats: { cardCount: number; typeBreakdown: Record<string, number> } | null; // null when stats failed
+}
+```
+
+## Checklist
+
+- [ ] Route added to `router.ts` (with a method arg if not `GET`).
+- [ ] Handler created in `handlers/` and exported from the barrel.
+- [ ] Client methods added for any new upstream calls.
+- [ ] Primary failures → `503`/`404`; secondary failures → `warnings`.
+- [ ] Cache key unique and includes all response-affecting params.
+- [ ] Responses include `X-Request-ID` and `X-Cache`.
+- [ ] Response shape typed in `types.ts`.
+- [ ] If the endpoint should consume prefetched SSR data, wire a matching key in
+      [`prefetchForRoute`](/frontend/data-fetching#server-prefetch).

@@ -1,0 +1,73 @@
+---
+title: Overview
+description: The SSR React frontend for deckvault.gg — Bun server, React 19, TanStack Query, and a Backend-for-Frontend layer over the REST and GraphQL services.
+---
+
+# DeckVault Web
+
+`@pokemon/web` is the web application surface for [deckvault.gg](https://deckvault.gg) — the
+competitive Pokémon TCG deck builder. It is a server-rendered React 19 application running on
+the Bun runtime. The same Bun process serves three things: streamed SSR HTML, a
+Backend-for-Frontend (BFF) that aggregates data for first paint, and a transparent proxy to the
+REST and GraphQL services for everything the client fetches after hydration. Both downstream
+services are Bun/TypeScript apps in this monorepo — `@pokemon/rest-api` and `@pokemon/graphql-api`.
+
+<CardGrid>
+  <Card title="Running Locally" icon="terminal" href="/getting-started">
+    Install, run the dev server with hot reload, and build the browser bundle.
+  </Card>
+  <Card title="Project Structure" icon="folder-open" href="/project-structure">
+    How `src/server` and `src/web` are laid out, and where each concern lives.
+  </Card>
+  <Card title="Request Lifecycle" icon="map" href="/architecture/request-lifecycle">
+    From `Bun.serve()` through rate limiting, the BFF, the proxy, and SSR.
+  </Card>
+  <Card title="SSR & Hydration" icon="layers" href="/architecture/ssr">
+    `renderToReadableStream`, the isomorphic data layer, and TanStack Query dehydration.
+  </Card>
+  <Card title="The BFF Layer" icon="server" href="/architecture/bff">
+    Aggregation handlers for SSR and a thin proxy for client-side fetches.
+  </Card>
+  <Card title="Data Fetching" icon="database" href="/frontend/data-fetching">
+    Services, isomorphic hooks, and how queries resolve on the server vs the browser.
+  </Card>
+</CardGrid>
+
+## Quick start
+
+```bash
+cd apps/web
+bun install
+bun run dev          # hot-reloading server on http://localhost:3000
+```
+
+The dev server renders the app server-side and proxies API traffic to the REST and GraphQL
+services at `REST_API_URL` and `GRAPHQL_API_URL` (defaults: `http://localhost:3001` / `:3002`). No `.env`
+file is required for local development — every config value has a default.
+
+## What this app is responsible for
+
+| Concern | How it is handled |
+| --- | --- |
+| **Single origin** | The browser only ever talks to the Bun server on port 3000. Downstream service URLs are internal and never exposed. |
+| **Server-side rendering** | React 19 `renderToReadableStream` streams HTML; the browser bundle hydrates the same tree with `hydrateRoot`. |
+| **First-paint data** | The `/bff/*` aggregation layer and a per-route `prefetchForRoute` step warm the TanStack Query cache, which is dehydrated into the HTML. |
+| **Client-side fetching** | After hydration, services fetch `/api/v1/*` and `/graphql`; the server proxies these to the REST and GraphQL services. |
+| **Resilience** | A per-service circuit breaker stops cascading failures when a downstream service is unhealthy. |
+| **Routing** | `react-router` 7 with a shared static route table used by both the server and the browser. |
+
+## Stack
+
+- **Runtime** — Bun 1.3.5 (`Bun.serve()`, native TypeScript, bundler)
+- **UI** — React 19 with the React Compiler (Babel), `react-router` 7
+- **Server state** — TanStack Query 5 with SSR dehydration/rehydration
+- **API clients** — `APIModel`-based REST services and `@urql/core` / `graphql-request` for GraphQL, all over the BFF + proxy
+- **Downstream services** — `@pokemon/rest-api` (Bun, functional router on `@pokemon/framework`) and `@pokemon/graphql-api` (Bun, Apollo Server 4)
+- **Build** — `@pokemon/build` (Bun.build) for the browser bundle and the simulation worker
+- **Tooling** — Storybook 10 for components, Playwright for e2e
+
+<Callout variant="info">
+  The REST and GraphQL services (`@pokemon/rest-api`, `@pokemon/graphql-api`) are documented
+  separately. This site covers the web app only — its server entry, the BFF, SSR, and the React
+  frontend.
+</Callout>

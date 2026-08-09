@@ -1,0 +1,81 @@
+---
+title: Components & Storybook
+description: Component folder conventions, the pages-vs-components split, and developing components in isolation with Storybook.
+---
+
+# Components & Storybook
+
+The React tree is functional components only, organised by feature. Two top-level buckets:
+`pages/` (route-level screens) and `components/` (everything reusable).
+
+## Folder convention
+
+Each component lives in its own directory with a barrel export, following the project standard:
+
+<FileTree>
+  <Dir name="components">
+    <Dir name="DeckCard">
+      <File name="index.ts" />
+      <File name="DeckCard.tsx" />
+      <File name="DeckCard.css" />
+      <File name="types.ts" />
+    </Dir>
+  </Dir>
+</FileTree>
+
+- **`index.ts`** — barrel re-export (`export { DeckCard } from './DeckCard'`). Imports reference
+  the directory, never the file.
+- **`DeckCard.tsx`** — the component. Functional, hooks only.
+- **`DeckCard.css`** — component-scoped vanilla CSS.
+- **`types.ts`** — props and local types when they're non-trivial.
+
+Pages follow the same shape under `pages/` — one directory per route, named `<Name>Page`.
+
+## Pages vs components
+
+| | `pages/` | `components/` |
+| --- | --- | --- |
+| **Role** | Route-level screens mounted by the router. | Reusable building blocks. |
+| **Data** | Use hooks/contexts; often own a query. | Mostly presentational; data via props. |
+| **Examples** | `DeckBuilderPage`, `BrowsePage`, `CardPage` | `DeckCard`, `CardGrid`, `Modal`, `SearchBar` |
+
+Container/presentational separation appears where a component needs data: the container reads a
+hook or context, the view renders props. Keep the view free of fetching so it stays trivial to
+story and test.
+
+## Styling
+
+Vanilla CSS only, co-located per component, with design tokens from the active theme exposed as
+CSS custom properties. No CSS-in-JS, no inline styles except genuinely dynamic values. Theme
+palettes are swapped at the document level by the [`ThemeProvider`](/frontend/state#theme), so a
+component just references token variables and inherits the right palette.
+
+## Storybook
+
+Components are developed in isolation with Storybook 10 (Webpack 5 + the SWC compiler).
+
+```bash
+bun run storybook          # dev server on :6006
+bun run build-storybook    # static build
+```
+
+Co-locate stories with their component and exercise the meaningful states — loading, empty,
+error, populated — so the story doubles as a visual contract. Because components are
+presentational, a story usually just passes props; container data concerns stay in the page.
+
+<Callout variant="tip">
+  Build the view to render from props alone. If a component needs a context to story, you're
+  probably storying a container — split it, and story the presentational half.
+</Callout>
+
+## End-to-end tests
+
+Full user flows are covered by Playwright in `apps/web/e2e/`:
+
+```bash
+bun run e2e        # headless
+bun run e2e:ui     # interactive UI mode
+```
+
+Config is in `playwright.config.ts`. These drive the real SSR app, so they exercise routing,
+hydration, and the proxy path together rather than any single component in isolation.

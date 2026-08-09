@@ -1,0 +1,122 @@
+---
+title: Request Lifecycle
+description: How every request flows from Bun.serve() through rate limiting, the BFF, the API proxies, and finally SSR.
+---
+
+# Request Lifecycle
+
+Every request hits one Bun server on port 3000. That server decides — by URL prefix — whether the
+request is a BFF aggregation call, a proxied API call, or a page that needs server-side rendering.
+
+## The entry point
+
+`src/server/server.ts` is the whole HTTP surface. It wraps the router in rate limiting and a
+catch-all 500:
+
+```typescript
+export const serve = async () =>
+  Bun.serve({
+    port: 3000,
+    async fetch(req) {
+      try {
+        await checkRateLimit(req);
+        return await router(req);
+      } catch (error: unknown) {
+        if (error instanceof HttpRateLimitError) {
+          return error.response;
+        }
+        return new Response('', { status: 500 });
+      }
+    }
+  });
+```
+
+Rate limiting runs first and short-circuits with the limiter's own `Response` when a client
+exceeds its budget. Any other thrown error becomes a bare 500 so an unexpected failure never
+leaks a stack trace to the browser.
+
+## Dispatch order
+
+`src/server/router.ts` checks the pathname against four cases in order. The first match wins.
+
+```typescript
+export async function router(request: Request) {
+  const url = new URL(request.url);
+
+  if (isBffRoute(url.pathname)) {
+    const response = await routeBffRequest(request);
+    if (response) return response;          // falls through on null (no match)
+  }
+
+  if (isRestApiRoute(url.pathname)) {
+    return await proxyToRestApi(request);
+  }
+
+  if (isGraphQLRoute(url.pathname)) {
+    return await proxyToGraphqlApi(request);
+  }
+
+  middleware(request);
+  return handleRequest(request);            // static files + SSR
+}
+```
+
+```
+GET /any/path
+      │
+      ▼
+server.ts ── checkRateLimit() ── throws HttpRateLimitError → 429
+      │
+      ▼
+router.ts
+      │
+      ├─ /bff/*          → routeBffRequest()   ── aggregation handlers (may return null)
+      ├─ /api/v1/*, /auth/* → proxyToRestApi()  ── forward to REST service
+      ├─ /graphql, /graphiql → proxyToGraphqlApi() ── forward to GraphQL service
+      └─ everything else → handleRequest()      ── static file OR React SSR
+```
+
+<Callout variant="tip">
+  `routeBffRequest` returns `null` when no `/bff/*` pattern matches. The router treats that as
+  "not handled" and continues to the next case, so an unmatched `/bff/*` path ultimately falls
+  through to SSR (and usually a 404 page). See
+  [Troubleshooting](/reference/troubleshooting).
+</Callout>
+
+## Which prefix routes where
+
+| Prefix | Matcher | Destination |
+| --- | --- | --- |
+| `/bff/*` | `isBffRoute` | Aggregation handlers — JSON assembled for one view. |
+| `/api/v1/*`, `/auth/*` | `isRestApiRoute` | Transparent proxy to the REST service (`@pokemon/rest-api`). |
+| `/graphql`, `/graphiql` | `isGraphQLRoute` | Transparent proxy to the GraphQL service (`@pokemon/graphql-api`). |
+| anything else | `handleRequest` | Static asset if it exists, otherwise React SSR. |
+
+The route matchers live in `src/server/lib/routes.ts`. Web route regexes there describe which
+paths the React app owns, but note the SSR handler renders the app for any non-API path — the
+explicit patterns document intent and are used by helpers, not as a hard SSR gate.
+
+## The SSR fallthrough
+
+When nothing API-shaped matches, `handleRequest` decides between a static file and the app:
+
+```typescript
+export async function handleRequest(request: Request) {
+  if (await isRequestForStaticFile(request)) {
+    return handleStaticFileRequest(request);
+  }
+  return renderReactApplication(request);
+}
+```
+
+Static assets (the hashed browser bundle, CSS, fonts, images) are served directly from disk.
+Everything else streams the React tree — covered in [SSR & Hydration](/architecture/ssr).
+
+## Cross-cutting concerns
+
+- **Rate limiting** — `checkRateLimit` (backed by `rate-limiter-flexible`) runs before routing
+  for every request.
+- **CSRF** — `/bff/*` requests pass through `csrfMiddleware` inside the BFF router; the SSR
+  response sets a `csrf_token` cookie when one isn't present.
+- **Request IDs** — the BFF stamps every response with `X-Request-ID`, generating one if the
+  client didn't supply it, so a single page's fan-out can be traced.

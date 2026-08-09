@@ -1,49 +1,23 @@
-import { handleRequest } from './lib/handleRequest';
-import { middleware, checkRateLimit } from './lib/middleware/middleware';
-import {
-  isBffRoute,
-  routeBffRequest,
-  proxyToRestApi,
-  proxyToGraphqlApi
-} from './bff';
+import { checkRateLimit } from './lib/middleware/middleware';
+import { HttpRateLimitError } from './lib/errors';
+import { router } from './router';
 
-export const serve = async () => {
-  return Bun.serve({
+export const serve = async () =>
+  Bun.serve({
     port: 3000,
     async fetch(req) {
-      const rateLimitResponse = await checkRateLimit(req);
-      if (rateLimitResponse) return rateLimitResponse;
-
-      const url = new URL(req.url);
-
-      // Handle BFF routes (aggregated data for frontend)
-      if (isBffRoute(url.pathname)) {
-        const bffResponse = await routeBffRequest(req);
-        if (bffResponse) {
-          return bffResponse;
+      try {
+        await checkRateLimit(req);
+        return await router(req);
+      } catch (error: unknown) {
+        if (error instanceof HttpRateLimitError) {
+          return error.response;
         }
-      }
 
-      // Proxy REST API requests to REST API microservice
-      if (url.pathname.startsWith('/api/v1/')) {
-        return proxyToRestApi(req);
+        /**
+         * Determine what we want to send as a response in the event of a dynamic unknown error
+         */
+        return new Response('', { status: 500 });
       }
-
-      // Proxy auth requests to REST API microservice
-      if (url.pathname.startsWith('/auth/')) {
-        return proxyToRestApi(req);
-      }
-
-      // Proxy GraphQL requests to GraphQL API microservice
-      if (
-        url.pathname.startsWith('/graphql') ||
-        url.pathname.startsWith('/graphiql')
-      ) {
-        return proxyToGraphqlApi(req);
-      }
-
-      middleware(req);
-      return handleRequest(req);
     }
   });
-};

@@ -1,0 +1,153 @@
+---
+title: Circuit Breaker
+description: The resilience layer that stops a failing downstream service from exhausting the Bun server's concurrency.
+---
+
+# Circuit Breaker
+
+The circuit breaker prevents a failing downstream service from consuming all available resources.
+Without it, every incoming request would try to connect to the unhealthy service, accumulate
+timeouts, and eventually exhaust the Bun server's concurrency.
+
+## The pattern
+
+It's an electrical metaphor. In normal operation the circuit is **closed** and current flows.
+When failures accumulate, the circuit **opens** and blocks all current. After a cooldown it moves
+to **half-open** and allows a single probe through. If the probe succeeds the circuit closes; if
+it fails the circuit reopens.
+
+```
+                     failures >= threshold
+        ┌─────────────────────────────────────────┐
+        │                                         ▼
+   ┌────┴─────┐                             ┌──────────┐
+   │  CLOSED  │ ◄── success in HALF_OPEN ── │   OPEN   │
+   └──────────┘                             └────┬─────┘
+                                                 │ timeout elapsed
+                                                 ▼
+                                          ┌───────────┐
+                                          │ HALF_OPEN │  one probe allowed
+                                          └─────┬─────┘
+                                                │ failure in HALF_OPEN
+                                                ▼
+                                          ┌──────────┐
+                                          │   OPEN   │  (reopened)
+                                          └──────────┘
+```
+
+## Transition rules
+
+| Current state | Event | Next state |
+| --- | --- | --- |
+| `CLOSED` | failure count reaches threshold | `OPEN` |
+| `CLOSED` | any success | stays `CLOSED`, failure count resets to 0 |
+| `OPEN` | a request arrives | if `timeout` elapsed → `HALF_OPEN`; else reject with 503 |
+| `HALF_OPEN` | upstream success | `CLOSED` (count reset) |
+| `HALF_OPEN` | upstream failure | `OPEN` (timestamp refreshed) |
+
+The timeout check happens **lazily** inside `isOpen()`. There is no background timer — state only
+advances when the next request arrives and checks the circuit.
+
+## Per-service instances
+
+Two singleton breakers are created at module load, one per downstream service:
+
+```typescript
+// src/server/bff/circuitBreaker.ts
+export const restApiCircuit = new CircuitBreaker('rest-api');
+export const graphqlApiCircuit = new CircuitBreaker('graphql-api');
+```
+
+REST can trip independently of GraphQL. If only REST is unhealthy, browse requests (REST)
+short-circuit while card-detail requests (GraphQL) keep working.
+
+## Two ways to use it
+
+### Inline — inside proxy functions
+
+The proxy checks and records state manually around the raw `fetch`, so it can decide what counts
+as a failure (only 5xx and network errors — a `404` is a valid response):
+
+```typescript
+// src/server/bff/proxy.ts (simplified)
+if (restApiCircuit.isOpen()) {
+  return new Response(/* 503 */);
+}
+
+try {
+  const response = await fetch(targetUrl, { /* ... */ });
+  if (response.ok)            restApiCircuit.recordSuccess();
+  if (response.status >= 500) restApiCircuit.recordFailure();
+  return response;
+} catch (error) {
+  restApiCircuit.recordFailure();   // network failure counts too
+  return new Response(/* 503 */);
+}
+```
+
+### Wrapper — `withCircuitBreaker()`
+
+For wrapping an arbitrary async function without wiring transitions by hand:
+
+```typescript
+export async function withCircuitBreaker<T>(
+  circuit: CircuitBreaker,
+  fn: () => Promise<T>,
+  fallback?: () => T
+): Promise<T>;
+```
+
+If a `fallback` is provided it runs when the circuit is open **or** when `fn` throws — handy in
+aggregation handlers where a missing dataset should resolve to a default rather than propagate.
+
+<Callout variant="info">
+  The current handlers use the typed clients directly and catch errors at the handler level
+  rather than calling `withCircuitBreaker`. The wrapper exists for cases where the fallback
+  pattern is cleaner than a try/catch.
+</Callout>
+
+## What the 503s look like
+
+The error shape differs by protocol so clients can parse them without special-casing.
+
+**REST** — a JSON `error` object:
+
+```json
+{
+  "error": {
+    "code": "SERVICE_UNAVAILABLE",
+    "message": "REST API is temporarily unavailable",
+    "circuitState": "OPEN"
+  }
+}
+```
+
+**GraphQL** — an `errors` array per the spec:
+
+```json
+{
+  "errors": [
+    {
+      "message": "GraphQL API is temporarily unavailable",
+      "extensions": { "code": "SERVICE_UNAVAILABLE", "circuitState": "OPEN" }
+    }
+  ]
+}
+```
+
+Both include a `Retry-After: 30` header matching the default timeout, so clients and load
+balancers can back off.
+
+## Observability
+
+Every transition is logged with the circuit name:
+
+```
+[CircuitBreaker:rest-api] Failure threshold reached (5/5), opening circuit
+[CircuitBreaker:rest-api] Transitioning to HALF_OPEN
+[CircuitBreaker:rest-api] Call succeeded, closing circuit
+```
+
+The current state is also stamped on every proxied response as `X-Circuit-State`, visible in
+DevTools and reverse-proxy access logs without reading server logs. Tuning thresholds and timeouts
+is covered in [Configuration](/reference/configuration).
