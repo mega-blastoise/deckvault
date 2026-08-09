@@ -1,4 +1,3 @@
-import Anthropic from '@anthropic-ai/sdk';
 import { existsSync } from 'node:fs';
 import * as readline from 'node:readline/promises';
 
@@ -8,7 +7,10 @@ import { McpClient } from '../mcp/client';
 import { buildSystemPrompt } from '../agent/prompt';
 import { runAgentTurn } from '../agent/loop';
 import { formatProbabilityReport } from '../probability/format';
-import { resolveApiKey, resolveDbPath } from '../config/loader';
+import { loadConfig, resolveDbPath } from '../config/loader';
+import { resolveProvider, resolveProviderName, ProviderConfigError } from '../providers/resolve';
+import { ProviderUnreachableError } from '../providers/types';
+import type { AgentMessage } from '../providers/types';
 import type { ProbabilityReport } from '../probability/types';
 import type { McpToolResult } from '../mcp/types';
 
@@ -35,6 +37,10 @@ function preflightCardData(dbPath: string | undefined): void {
 export interface RunOptions {
   readonly deck?: string | string[];
   readonly provider?: string;
+  readonly model?: string;
+  readonly baseUrl?: string;
+  readonly showReasoning?: boolean;
+  readonly browser?: boolean;
   readonly dryRun?: boolean;
   readonly stats?: boolean;
   readonly spotlight?: string | string[];
@@ -42,51 +48,68 @@ export interface RunOptions {
   readonly browserPort?: number;
 }
 
+function fail(message: string): never {
+  console.error(`Error: ${message}`);
+  process.exit(1);
+}
+
 export async function runCommand(options: RunOptions): Promise<void> {
-  const provider = options.provider ?? 'anthropic';
+  const browser = options.browser === true;
 
-  if (provider !== 'anthropic' && provider !== 'chrome') {
-    console.error(`Error: Unknown provider "${provider}". Valid options: anthropic, chrome`);
-    process.exit(1);
+  // Validate the provider name up front even on paths that never call a model,
+  // so `--provider chrome` gets the migration message rather than being ignored.
+  const config = await loadConfig();
+  try {
+    resolveProviderName(options.provider, config);
+  } catch (err) {
+    if (err instanceof ProviderConfigError) fail(err.message);
+    throw err;
   }
 
-  if (options.dryRun && provider === 'chrome') {
-    console.error('Error: --dry-run is not applicable in browser mode (--provider chrome)');
-    process.exit(1);
-  }
-
-  if (options.stats && provider === 'chrome') {
-    console.error('Error: --stats is not applicable in browser mode (--provider chrome)');
-    process.exit(1);
+  if (browser && options.dryRun) fail('--dry-run is not applicable with --browser');
+  if (browser && options.stats) fail('--stats is not applicable with --browser');
+  if (browser && options.provider) {
+    fail(
+      'Browser mode runs Gemini Nano on-device and takes no --provider.\n' +
+        '  → drop --provider to use the browser builder, or drop --browser to use the REPL'
+    );
   }
 
   const rawDeck = options.deck;
-  const deckPaths: string[] = rawDeck
-    ? Array.isArray(rawDeck) ? rawDeck : [rawDeck]
-    : [];
+  const deckPaths: string[] = rawDeck ? (Array.isArray(rawDeck) ? rawDeck : [rawDeck]) : [];
 
-  if (deckPaths.length === 0 && provider !== 'chrome') {
-    console.error('Error: --deck is required for --provider anthropic');
-    process.exit(1);
+  if (deckPaths.length === 0 && !browser) {
+    fail('--deck is required (or pass --browser to open the deck builder)');
   }
 
   const rawSpotlight = options.spotlight;
   const spotlightIds: string[] = rawSpotlight
-    ? Array.isArray(rawSpotlight) ? rawSpotlight : [rawSpotlight]
+    ? Array.isArray(rawSpotlight)
+      ? rawSpotlight
+      : [rawSpotlight]
     : [];
 
-  let apiKey: string | undefined;
-  if (provider === 'anthropic' && !options.dryRun) {
-    apiKey = await resolveApiKey();
-    if (!apiKey) {
-      console.error(
-        'Error: ANTHROPIC_API_KEY environment variable or config file key is required for --provider anthropic'
-      );
-      process.exit(1);
+  // Resolving the provider can hit the network (model auto-detection), so skip
+  // it entirely on paths that never send a request.
+  const needsProvider = !browser && !options.dryRun;
+  let provider = null as Awaited<ReturnType<typeof resolveProvider>> | null;
+  if (needsProvider) {
+    try {
+      provider = await resolveProvider({
+        provider: options.provider,
+        model: options.model,
+        baseUrl: options.baseUrl
+      });
+    } catch (err) {
+      if (err instanceof ProviderConfigError || err instanceof ProviderUnreachableError) {
+        console.error(`Error: ${err.message}`);
+        process.exit(1);
+      }
+      throw err;
     }
   }
 
-  const mcpServerPath = options.mcpServer ?? await resolveDefaultMcpPath();
+  const mcpServerPath = options.mcpServer ?? (await resolveDefaultMcpPath());
   const dbPath = await resolveDbPath();
   preflightCardData(dbPath);
 
@@ -116,21 +139,21 @@ export async function runCommand(options: RunOptions): Promise<void> {
         const text = rawResult.content.find((c) => c.type === 'text')?.text;
         if (text) {
           const report = JSON.parse(text) as ProbabilityReport;
-          const deckName = decks.find((_, i) => deckPaths[i] === deckPath)?.name ?? deckPath;
+          const deckName = decks[deckPaths.indexOf(deckPath)]?.name ?? deckPath;
           console.log('\n' + formatProbabilityReport(deckName, report));
         }
       }
 
       if (options.dryRun) {
+        mcp.destroy();
         process.exit(0);
       }
     }
 
-    if (provider === 'chrome') {
+    if (browser) {
       if (decks.length > 1) {
         console.warn(
-          'Warning: browser mode supports one deck at a time. Using first deck: ' +
-            decks[0]!.name
+          'Warning: browser mode supports one deck at a time. Using first deck: ' + decks[0]!.name
         );
       }
 
@@ -162,17 +185,19 @@ export async function runCommand(options: RunOptions): Promise<void> {
     if (options.dryRun) {
       console.log('\n--- SYSTEM PROMPT (dry run) ---\n');
       console.log(systemPrompt);
+      mcp.destroy();
       process.exit(0);
     }
 
-    const anthropic = new Anthropic({ apiKey });
+    const active = provider!;
     const rl = readline.createInterface({
       input: process.stdin,
       output: process.stdout,
     });
-    const messages: Anthropic.MessageParam[] = [];
+    let messages: AgentMessage[] = [];
 
-    console.log('\nSession ready. Type your question or "quit" to exit.\n');
+    console.log(`\nProvider: ${active.name} · model: ${active.model}`);
+    console.log('Session ready. Type your question or "quit" to exit.\n');
 
     while (true) {
       let input: string;
@@ -189,8 +214,23 @@ export async function runCommand(options: RunOptions): Promise<void> {
       if (trimmed === 'quit' || trimmed === 'exit') break;
 
       messages.push({ role: 'user', content: trimmed });
-      const updated = await runAgentTurn(anthropic, messages, systemPrompt, mcp);
-      messages.splice(0, messages.length, ...updated);
+      try {
+        messages = await runAgentTurn(active, messages, systemPrompt, mcp, {
+          showReasoning: options.showReasoning === true
+        });
+      } catch (err) {
+        if (err instanceof ProviderUnreachableError) {
+          console.error(`\nError: ${err.message}`);
+          break;
+        }
+        // Keep the session alive on API-level failures (rate limits, quota,
+        // transient 5xx) — the conversation so far is still usable, and the
+        // user can retry or quit. Only transport failures end the session.
+        console.error(
+          `\nRequest failed (${active.name}): ${err instanceof Error ? err.message : String(err)}`
+        );
+        messages.pop();
+      }
     }
 
     rl.close();

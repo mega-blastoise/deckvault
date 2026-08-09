@@ -55,7 +55,7 @@ docker run --rm -it \
   -p 7777:7777 \
   -v "$PWD/decks:/decks" \
   ghcr.io/nicholasgalante1997/johto:latest \
-  run --provider chrome --deck /decks/my-deck.toml --browser-port 7777
+  run --browser --deck /decks/my-deck.toml --browser-port 7777
 ```
 
 Then open `http://localhost:7777` in your browser.
