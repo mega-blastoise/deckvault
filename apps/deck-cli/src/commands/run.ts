@@ -175,7 +175,14 @@ export async function runCommand(options: RunOptions): Promise<void> {
     console.log('\nSession ready. Type your question or "quit" to exit.\n');
 
     while (true) {
-      const input = await rl.question('You: ');
+      let input: string;
+      try {
+        input = await rl.question('You: ');
+      } catch {
+        // stdin hit EOF (piped input or Ctrl-D) — readline is closed and any
+        // further question() rejects. End the session instead of crashing.
+        break;
+      }
       const trimmed = input.trim();
 
       if (!trimmed) continue;
