@@ -17,8 +17,20 @@ bun run local:setup
 
 This builds the Rust MCP server, compiles the CLI for your platform, writes
 `~/.config/johto/config.toml`, symlinks `johto` into `~/.local/bin`, and then verifies the
-install — a keyless `--dry-run`, a `--stats` run, and one real agent turn if
-`ANTHROPIC_API_KEY` is set.
+install — a keyless `--dry-run`, a `--stats` run, and one real agent turn.
+
+The end-to-end turn runs against the **configured default provider** (currently OpenAI,
+`gpt-5.6-terra`) with no `--provider` flag, so it exercises the real resolution path — including
+falling back to Anthropic if OpenAI is unavailable. It reports which provider actually served the
+turn.
+
+This costs a small amount of real API credit per run. It is deliberate: a local model cannot
+catch provider API contract breaks. The OpenAI path was silently broken for a while
+(`gpt-5.6-terra` rejects function tools on `/v1/chat/completions` when reasoning is active) and no
+amount of local-model testing would have surfaced it.
+
+The gate skips only when neither `OPENAI_API_KEY` nor `ANTHROPIC_API_KEY` is set. Use
+`--skip-e2e` to skip just that step.
 
 The symlink points at the in-repo build output, so after editing CLI source you only need:
 
@@ -35,7 +47,7 @@ and `johto` picks it up immediately — no reinstall.
 | `bun run local:uninstall` | Remove the symlink, config, and standalone tree; leaves the repo untouched |
 
 Add `--force` to overwrite an existing `config.toml` (required when switching between the two
-modes, since their paths differ), or `--skip-e2e` to skip the live API call.
+modes, since their paths differ), or `--skip-e2e` to skip the live agent turn.
 
 The bootstrap **never rebuilds the card database** — it only verifies that
 `database/pokemon-data.sqlite3.db` exists and is populated. To rebuild it:

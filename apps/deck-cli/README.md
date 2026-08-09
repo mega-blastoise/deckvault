@@ -47,8 +47,8 @@ default in `~/.config/johto/config.toml`.
 
 | `--provider` | Backend | Default model | Credential |
 |---|---|---|---|
-| `anthropic` *(default)* | Anthropic API | `claude-sonnet-5` | `ANTHROPIC_API_KEY` |
-| `openai` | OpenAI API | `gpt-5.6-terra` | `OPENAI_API_KEY` |
+| `openai` *(default)* | OpenAI API | `gpt-5.6-terra` | `OPENAI_API_KEY` |
+| `anthropic` *(backup)* | Anthropic API | `claude-sonnet-5` | `ANTHROPIC_API_KEY` |
 | `ollama` | Ollama at `localhost:11434` | none — must be set | not required |
 | `llamacpp` | llama-server at `localhost:9123` | auto-detected | not required |
 
@@ -57,6 +57,11 @@ johto run --deck ./decks/my-deck.toml --provider ollama --model qwen3-coder:30b
 johto run --deck ./decks/my-deck.toml --provider llamacpp    # model auto-detected
 johto run --deck ./decks/my-deck.toml --show-reasoning       # stream the reasoning trace
 ```
+
+`openai` is the default and `anthropic` is the automatic backup: if the primary has no
+credential, is unreachable, or fails a turn with an auth/quota/rate-limit status, johto switches
+to the backup and says so. An explicit `--provider` never falls back — it's an instruction, not a
+preference. Set `[defaults] fallback = "none"` to disable, or name a different backup.
 
 `ollama` ships no default model because tool-calling support varies per model and the installed
 library is machine-specific. Run it without `--model` and the error lists the tool-capable models

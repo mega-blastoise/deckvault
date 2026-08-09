@@ -8,7 +8,13 @@ import { buildSystemPrompt } from '../agent/prompt';
 import { runAgentTurn } from '../agent/loop';
 import { formatProbabilityReport } from '../probability/format';
 import { loadConfig, resolveDbPath } from '../config/loader';
-import { resolveProvider, resolveProviderName, ProviderConfigError } from '../providers/resolve';
+import {
+  resolveFallbackName,
+  resolveProvider,
+  resolveProviderChain,
+  resolveProviderName,
+  ProviderConfigError
+} from '../providers/resolve';
 import { ProviderUnreachableError } from '../providers/types';
 import type { AgentMessage } from '../providers/types';
 import type { ProbabilityReport } from '../probability/types';
@@ -34,6 +40,17 @@ function formatProbabilityNarrow(report: ProbabilityReport): string {
     for (const card of risky) lines.push(row(card.copies, card.name, card.pPrized));
   }
   return lines.join('\n');
+}
+
+/** Credit exhausted, unauthorised, or rate limited — the backup can help. */
+function isExhausted(err: unknown): boolean {
+  const status = (err as { status?: number } | null)?.status;
+  return status === 401 || status === 402 || status === 403 || status === 429;
+}
+
+function describeError(err: unknown): string {
+  const status = (err as { status?: number } | null)?.status;
+  return status ? `HTTP ${status}` : err instanceof Error ? err.message : String(err);
 }
 
 function preflightCardData(dbPath: string | undefined): void {
@@ -117,13 +134,16 @@ export async function runCommand(options: RunOptions): Promise<void> {
   // it entirely on paths that never send a request.
   const needsProvider = !browser && !options.dryRun;
   let provider = null as Awaited<ReturnType<typeof resolveProvider>> | null;
+  let providerNotice: string | null = null;
   if (needsProvider) {
     try {
-      provider = await resolveProvider({
+      const resolved = await resolveProviderChain({
         provider: options.provider,
         model: options.model,
         baseUrl: options.baseUrl
       });
+      provider = resolved.provider;
+      providerNotice = resolved.notice;
     } catch (err) {
       if (err instanceof ProviderConfigError || err instanceof ProviderUnreachableError) {
         console.error(`Error: ${err.message}`);
@@ -217,7 +237,8 @@ export async function runCommand(options: RunOptions): Promise<void> {
       process.exit(0);
     }
 
-    const active = provider!;
+    let active = provider!;
+    if (providerNotice) console.warn(`Note: ${providerNotice}`);
     const { renderer } = await createRenderer({
       tui: options.tui,
       showReasoning: options.showReasoning === true
@@ -225,6 +246,7 @@ export async function runCommand(options: RunOptions): Promise<void> {
     if (rendererMode.reason) console.warn(`Note: ${rendererMode.reason}`);
 
     let messages: AgentMessage[] = [];
+    let swappedProvider = false;
     await renderer.start({
       providerName: active.name,
       model: active.model,
@@ -257,6 +279,28 @@ export async function runCommand(options: RunOptions): Promise<void> {
       try {
         messages = await runAgentTurn(active, messages, systemPrompt, mcp, renderer);
       } catch (err) {
+        // Prepaid credit can run out mid-session, so swap to the backup once
+        // and retry rather than ending the conversation. Safe because each
+        // assistant turn records which provider produced it and the adapters
+        // rebuild foreign-shaped history from the canonical fields.
+        if (isExhausted(err) && !swappedProvider && options.provider === undefined) {
+          const fallback = resolveFallbackName(active.name, await loadConfig());
+          if (fallback) {
+            try {
+              const next = await resolveProvider({ provider: fallback });
+              renderer.emit({
+                type: 'notice',
+                text: `${active.name} failed (${describeError(err)}) — switching to ${fallback} (${next.model})`
+              });
+              active = next;
+              swappedProvider = true;
+              messages = await runAgentTurn(active, messages, systemPrompt, mcp, renderer);
+              continue;
+            } catch {
+              // Fall through to the generic handler below.
+            }
+          }
+        }
         if (err instanceof ProviderUnreachableError) {
           renderer.emit({ type: 'error', text: `Error: ${err.message}` });
           break;

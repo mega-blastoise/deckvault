@@ -22,10 +22,22 @@ function toApiMessages(messages: readonly AgentMessage[]): Anthropic.MessagePara
     if (message.role === 'user') {
       out.push({ role: 'user', content: message.content });
     } else if (message.role === 'assistant') {
-      // Echo the original content blocks verbatim: thinking blocks carry
-      // signatures the API rejects if modified, and every tool_result must
-      // reference a tool_use id that actually appears here.
-      out.push({ role: 'assistant', content: message.raw as Anthropic.ContentBlockParam[] });
+      if (message.producedBy === 'anthropic') {
+        // Echo the original content blocks verbatim: thinking blocks carry
+        // signatures the API rejects if modified, and every tool_result must
+        // reference a tool_use id that actually appears here.
+        out.push({ role: 'assistant', content: message.raw as Anthropic.ContentBlockParam[] });
+      } else {
+        // History from another provider — rebuild from canonical fields.
+        // Reasoning is dropped: thinking blocks are only valid when produced by
+        // this model, and tool_use ids are preserved so tool_results still pair.
+        const blocks: Anthropic.ContentBlockParam[] = [];
+        if (message.text) blocks.push({ type: 'text', text: message.text });
+        for (const call of message.toolCalls) {
+          blocks.push({ type: 'tool_use', id: call.id, name: call.name, input: call.input });
+        }
+        if (blocks.length > 0) out.push({ role: 'assistant', content: blocks });
+      }
     } else {
       out.push({
         role: 'user',
@@ -125,7 +137,8 @@ export function createAnthropicProvider(options: AnthropicProviderOptions): Prov
         reasoning: reasoning || null,
         toolCalls,
         stopReason: final.stop_reason === 'tool_use' ? 'tool_use' : 'end',
-        raw: final.content
+        raw: final.content,
+        producedBy: 'anthropic'
       };
     }
   };

@@ -36,6 +36,12 @@ export interface AssistantTurn {
   readonly toolCalls: readonly AgentToolCall[];
   readonly stopReason: 'end' | 'tool_use';
   readonly raw: unknown;
+  /**
+   * Which adapter produced `raw`. Falling back to a different provider
+   * mid-session would otherwise replay foreign-shaped history; adapters check
+   * this and rebuild from the canonical fields when it isn't theirs.
+   */
+  readonly producedBy: ProviderName;
 }
 
 export type AgentMessage =

@@ -46,7 +46,9 @@ export type PathsConfiguration = z.infer<typeof PathsConfigurationSchema>;
 
 export const ProviderDefaultsConfigurationSchema = z.readonly(
   z.object({
-    provider: z.optional(z.enum(PROVIDERS))
+    provider: z.optional(z.enum(PROVIDERS)),
+    /** Used when the primary provider has no credential or is unreachable. Set to "none" to disable. */
+    fallback: z.optional(z.union([z.enum(PROVIDERS), z.literal('none')]))
   })
 );
 

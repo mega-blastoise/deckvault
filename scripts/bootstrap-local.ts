@@ -70,6 +70,19 @@ async function capture(
   return { code, stdout, stderr };
 }
 
+/**
+ * The e2e gate runs against the *configured default* provider — currently
+ * openai — rather than a pinned one, so it exercises the real resolution path
+ * including the automatic Anthropic fallback.
+ */
+function smokeCredential(): { ok: boolean; detail: string } {
+  const openai = Boolean(process.env['OPENAI_API_KEY']);
+  const anthropic = Boolean(process.env['ANTHROPIC_API_KEY']);
+  if (openai) return { ok: true, detail: 'OPENAI_API_KEY set' };
+  if (anthropic) return { ok: true, detail: 'ANTHROPIC_API_KEY set (openai will fall back)' };
+  return { ok: false, detail: 'neither OPENAI_API_KEY nor ANTHROPIC_API_KEY is set' };
+}
+
 function platform(): { suffix: string; triple: string } {
   const key = `${process.platform}:${process.arch}`;
   const entry = PLATFORM_MAP[key];
@@ -273,19 +286,30 @@ step('Verify (keyless): --stats runs the probability tool');
 }
 
 if (!skipE2e) {
-  step('Verify (end-to-end): one real agent turn');
-  if (!process.env['ANTHROPIC_API_KEY']) {
-    console.warn('    ⚠ ANTHROPIC_API_KEY not set — skipping. Re-run with the key exported, or pass --skip-e2e.');
+  step('Verify (end-to-end): one real agent turn (default provider)');
+  const credential = smokeCredential();
+  if (!credential.ok) {
+    console.warn(
+      `    ⚠ ${credential.detail} — skipping.\n` +
+        '      Export a key, or pass --skip-e2e.'
+    );
   } else {
+    // No --provider: use the configured default so the gate covers the real
+    // resolution path, including falling back to Anthropic if OpenAI is down.
     const prompt = 'In one short sentence: how many Basic Pokemon does this deck run?\nquit\n';
-    const r = await capture([SYMLINK, 'run', '--deck', EXAMPLE_DECK], prompt, 180_000);
+    const r = await capture([SYMLINK, 'run', '--deck', EXAMPLE_DECK], prompt, 300_000);
     if (r.code !== 0) {
       console.error(r.stdout);
       console.error(r.stderr);
       fail(`agent turn exited ${r.code}`);
     }
     if (!r.stdout.includes('Session ended.')) fail('session did not terminate cleanly');
-    ok('Anthropic API reached, agent turn completed, session closed');
+    const provider = /Provider: (\S+) · model: (\S+)/.exec(r.stdout);
+    ok(
+      provider
+        ? `${provider[1]} (${provider[2]}) reached, agent turn completed, session closed`
+        : 'agent turn completed, session closed'
+    );
   }
 }
 

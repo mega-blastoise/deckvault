@@ -36,6 +36,9 @@ function readReasoningDelta(delta: Record<string, unknown>): string | undefined 
   return typeof value === 'string' && value.length > 0 ? value : undefined;
 }
 
+/** The OpenAI-shaped adapters share a wire format, so history is portable between them. */
+const OPENAI_SHAPED = new Set<ProviderName>(['openai', 'ollama', 'llamacpp']);
+
 function toApiMessages(
   system: string,
   messages: readonly AgentMessage[]
@@ -45,7 +48,25 @@ function toApiMessages(
     if (message.role === 'user') {
       out.push({ role: 'user', content: message.content });
     } else if (message.role === 'assistant') {
-      out.push(message.raw as ChatCompletionMessageParam);
+      if (OPENAI_SHAPED.has(message.producedBy)) {
+        out.push(message.raw as ChatCompletionMessageParam);
+      } else {
+        // History from Anthropic — rebuild from canonical fields, preserving
+        // tool-call ids so the tool messages that follow still pair up.
+        out.push({
+          role: 'assistant',
+          content: message.text || null,
+          ...(message.toolCalls.length > 0
+            ? {
+                tool_calls: message.toolCalls.map((c) => ({
+                  id: c.id,
+                  type: 'function' as const,
+                  function: { name: c.name, arguments: JSON.stringify(c.input) }
+                }))
+              }
+            : {})
+        });
+      }
     } else {
       for (const result of message.results) {
         out.push({ role: 'tool', tool_call_id: result.id, content: result.output });
@@ -185,7 +206,8 @@ export function createOpenAiCompatProvider(options: OpenAiCompatOptions): Provid
         reasoning: reasoning || null,
         toolCalls,
         stopReason: toolCalls.length > 0 || finishReason === 'tool_calls' ? 'tool_use' : 'end',
-        raw
+        raw,
+        producedBy: options.provider
       };
     }
   };

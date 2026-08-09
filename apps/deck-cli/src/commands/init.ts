@@ -5,7 +5,7 @@ import { mkdir } from 'node:fs/promises';
 
 import { loadConfig, saveConfig, getConfigPath } from '../config/loader';
 import { PROVIDER_DEFAULTS } from '../providers/defaults';
-import { resolveBaseUrl } from '../providers/resolve';
+import { DEFAULT_PROVIDER, resolveBaseUrl } from '../providers/resolve';
 import { isProviderName, PROVIDERS } from '../providers/types';
 import type { ProviderName } from '../providers/types';
 import type { JohtoConfig } from '../config/types';
@@ -54,7 +54,7 @@ export async function initCommand(): Promise<void> {
     console.log('\nJohto CLI — First-run setup\n');
 
     const existing = await loadConfig();
-    const currentProvider: ProviderName = existing.defaults?.provider ?? 'anthropic';
+    const currentProvider: ProviderName = existing.defaults?.provider ?? DEFAULT_PROVIDER;
 
     console.log('Providers:');
     for (const p of PROVIDERS) {

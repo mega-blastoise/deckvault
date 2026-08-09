@@ -3,6 +3,7 @@ import type { JohtoConfig } from '../config/types';
 import { PROVIDER_DEFAULTS } from './defaults';
 import { createAnthropicProvider } from './anthropic';
 import { createOpenAiCompatProvider } from './openai-compat';
+import { createOpenAiResponsesProvider } from './openai-responses';
 import type { Provider, ProviderName } from './types';
 import { isProviderName, PROVIDERS, ProviderUnreachableError } from './types';
 
@@ -40,7 +41,23 @@ export function resolveProviderName(flag: string | undefined, config: JohtoConfi
     }
     return flag;
   }
-  return config.defaults?.provider ?? 'anthropic';
+  return config.defaults?.provider ?? DEFAULT_PROVIDER;
+}
+
+/** OpenAI leads; Anthropic is the standing backup. */
+export const DEFAULT_PROVIDER: ProviderName = 'openai';
+export const DEFAULT_FALLBACK: ProviderName = 'anthropic';
+
+export function resolveFallbackName(
+  primary: ProviderName,
+  config: JohtoConfig
+): ProviderName | null {
+  const configured = config.defaults?.fallback;
+  if (configured === 'none') return null;
+  const fallback = configured ?? DEFAULT_FALLBACK;
+  // A provider cannot back itself up, and local endpoints are not a sensible
+  // automatic substitute for a frontier model — only opt into those explicitly.
+  return fallback === primary ? null : fallback;
 }
 
 export function resolveApiKey(provider: ProviderName, config: JohtoConfig): string | undefined {
@@ -163,6 +180,43 @@ export interface ResolveProviderOptions {
   readonly baseUrl?: string;
 }
 
+export interface ResolvedProvider {
+  readonly provider: Provider;
+  /** Set when the primary failed and the backup was used instead. */
+  readonly notice: string | null;
+}
+
+/**
+ * Resolves the primary provider, falling back to the configured backup when it
+ * has no credential or its endpoint is unreachable. Only applies when the
+ * provider wasn't named explicitly — an explicit `--provider` is an instruction,
+ * not a preference, so it fails loudly instead of silently using something else.
+ */
+export async function resolveProviderChain(
+  options: ResolveProviderOptions
+): Promise<ResolvedProvider> {
+  try {
+    return { provider: await resolveProvider(options), notice: null };
+  } catch (err) {
+    const explicit = options.provider !== undefined;
+    const recoverable =
+      err instanceof ProviderConfigError || err instanceof ProviderUnreachableError;
+    if (explicit || !recoverable) throw err;
+
+    const config = await loadConfig();
+    const primary = resolveProviderName(undefined, config);
+    const fallback = resolveFallbackName(primary, config);
+    if (!fallback) throw err;
+
+    const provider = await resolveProvider({ ...options, provider: fallback });
+    const why = err instanceof ProviderUnreachableError ? 'unreachable' : 'unavailable';
+    return {
+      provider,
+      notice: `${primary} is ${why} — falling back to ${fallback} (${provider.model})`
+    };
+  }
+}
+
 export async function resolveProvider(options: ResolveProviderOptions): Promise<Provider> {
   const config = await loadConfig();
   const name = resolveProviderName(options.provider, config);
@@ -190,13 +244,24 @@ export async function resolveProvider(options: ResolveProviderOptions): Promise<
   const baseUrl = resolveBaseUrl(name, config, options.baseUrl);
   const model = await resolveModel(name, config, baseUrl, options.model);
 
-  let apiKey = resolveApiKey(name, config) ?? defaults.placeholderKey ?? '';
-  if (name === 'openai' && !apiKey) {
-    throw new ProviderConfigError(
-      'No OpenAI API key found.\n' +
-        '  → export OPENAI_API_KEY=sk-...\n' +
-        '  → or run `johto auth set openai <key>`'
-    );
+  const apiKey = resolveApiKey(name, config) ?? defaults.placeholderKey ?? '';
+  if (name === 'openai') {
+    if (!apiKey) {
+      throw new ProviderConfigError(
+        'No OpenAI API key found.\n' +
+          '  → export OPENAI_API_KEY=sk-...\n' +
+          '  → or run `johto auth set openai <key>`'
+      );
+    }
+    // OpenAI goes through the Responses API: it is the only surface where
+    // function tools and reasoning work together.
+    return createOpenAiResponsesProvider({
+      apiKey,
+      baseUrl,
+      model,
+      effort: conf.effort ?? 'medium',
+      maxTokens
+    });
   }
 
   return createOpenAiCompatProvider({
