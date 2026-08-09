@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
-import * as readline from 'node:readline/promises';
 
 import { resolveDefaultMcpPath } from '../args';
+import { createRenderer, selectRendererMode } from '../render';
 import { loadAndEnrichDeck } from '../deck/loader';
 import { McpClient } from '../mcp/client';
 import { buildSystemPrompt } from '../agent/prompt';
@@ -13,6 +13,28 @@ import { ProviderUnreachableError } from '../providers/types';
 import type { AgentMessage } from '../providers/types';
 import type { ProbabilityReport } from '../probability/types';
 import type { McpToolResult } from '../mcp/types';
+
+/**
+ * The full probability table is ~60 columns; the sidebar is 26. Render a
+ * column-constrained view rather than letting the wide table wrap into noise.
+ */
+function formatProbabilityNarrow(report: ProbabilityReport): string {
+  const pct = (n: number) => `${(n * 100).toFixed(0)}%`.padStart(4);
+  const row = (qty: number, name: string, p: number) =>
+    `${String(qty).padStart(2)} ${name.slice(0, 15).padEnd(15)}${pct(p)}`;
+
+  const lines = [`Opening hand (7/${report.deckSize})`, '─'.repeat(22)];
+  for (const card of report.openingHand.slice(0, 14)) {
+    lines.push(row(card.copies, card.name, card.pOpen));
+  }
+
+  const risky = report.prizedRisk.filter((p) => p.copies <= 2).slice(0, 6);
+  if (risky.length > 0) {
+    lines.push('', 'Prize risk', '─'.repeat(22));
+    for (const card of risky) lines.push(row(card.copies, card.name, card.pPrized));
+  }
+  return lines.join('\n');
+}
 
 function preflightCardData(dbPath: string | undefined): void {
   // Only fail loudly when the user has *configured* a DB path that doesn't
@@ -40,6 +62,8 @@ export interface RunOptions {
   readonly model?: string;
   readonly baseUrl?: string;
   readonly showReasoning?: boolean;
+  /** cac maps `--no-tui` to false; undefined means auto-detect. */
+  readonly tui?: boolean;
   readonly browser?: boolean;
   readonly dryRun?: boolean;
   readonly stats?: boolean;
@@ -113,8 +137,12 @@ export async function runCommand(options: RunOptions): Promise<void> {
   const dbPath = await resolveDbPath();
   preflightCardData(dbPath);
 
+  // Decided before the spawn so the MCP server's stderr is captured rather than
+  // inherited when the full-screen TUI is about to take over the terminal.
+  const rendererMode = browser ? { mode: 'plain' as const, reason: null } : selectRendererMode(options.tui);
+
   console.log('Starting MCP server...');
-  const mcp = new McpClient(mcpServerPath, dbPath);
+  const mcp = new McpClient(mcpServerPath, dbPath, rendererMode.mode === 'tui');
   await mcp.initialize();
   console.log('MCP server ready.');
 
@@ -190,51 +218,61 @@ export async function runCommand(options: RunOptions): Promise<void> {
     }
 
     const active = provider!;
-    const rl = readline.createInterface({
-      input: process.stdin,
-      output: process.stdout,
+    const { renderer } = await createRenderer({
+      tui: options.tui,
+      showReasoning: options.showReasoning === true
     });
-    let messages: AgentMessage[] = [];
+    if (rendererMode.reason) console.warn(`Note: ${rendererMode.reason}`);
 
-    console.log(`\nProvider: ${active.name} · model: ${active.model}`);
-    console.log('Session ready. Type your question or "quit" to exit.\n');
+    let messages: AgentMessage[] = [];
+    await renderer.start({
+      providerName: active.name,
+      model: active.model,
+      decks,
+      loadStats:
+        deckPaths.length > 0
+          ? async () => {
+              const reports: string[] = [];
+              for (const deckPath of deckPaths) {
+                const raw = (await mcp.callTool('analyze_deck_probability', {
+                  path: deckPath,
+                  spotlight: spotlightIds.length > 0 ? spotlightIds : undefined
+                })) as McpToolResult;
+                const text = raw.content.find((c) => c.type === 'text')?.text;
+                if (!text) continue;
+                const report = JSON.parse(text) as ProbabilityReport;
+                reports.push(formatProbabilityNarrow(report));
+              }
+              return reports.join('\n\n');
+            }
+          : undefined
+    });
 
     while (true) {
-      let input: string;
-      try {
-        input = await rl.question('You: ');
-      } catch {
-        // stdin hit EOF (piped input or Ctrl-D) — readline is closed and any
-        // further question() rejects. End the session instead of crashing.
-        break;
-      }
-      const trimmed = input.trim();
+      const input = await renderer.prompt();
+      if (input === null) break;
+      if (!input) continue;
 
-      if (!trimmed) continue;
-      if (trimmed === 'quit' || trimmed === 'exit') break;
-
-      messages.push({ role: 'user', content: trimmed });
+      messages.push({ role: 'user', content: input });
       try {
-        messages = await runAgentTurn(active, messages, systemPrompt, mcp, {
-          showReasoning: options.showReasoning === true
-        });
+        messages = await runAgentTurn(active, messages, systemPrompt, mcp, renderer);
       } catch (err) {
         if (err instanceof ProviderUnreachableError) {
-          console.error(`\nError: ${err.message}`);
+          renderer.emit({ type: 'error', text: `Error: ${err.message}` });
           break;
         }
         // Keep the session alive on API-level failures (rate limits, quota,
         // transient 5xx) — the conversation so far is still usable, and the
         // user can retry or quit. Only transport failures end the session.
-        console.error(
-          `\nRequest failed (${active.name}): ${err instanceof Error ? err.message : String(err)}`
-        );
+        renderer.emit({
+          type: 'error',
+          text: `Request failed (${active.name}): ${err instanceof Error ? err.message : String(err)}`
+        });
         messages.pop();
       }
     }
 
-    rl.close();
-    console.log('\nSession ended.');
+    await renderer.stop(messages);
   } finally {
     mcp.destroy();
   }

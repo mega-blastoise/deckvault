@@ -1,45 +1,17 @@
 import type { McpClient } from '../mcp/client';
 import type { AgentMessage, AgentToolResult, Provider, StreamHandlers } from '../providers/types';
+import type { Renderer } from '../render/types';
 import { AGENT_TOOLS, dispatchTool } from './tools';
 
 const MAX_TURNS = 50;
 
-const DIM = '\x1b[2m';
-const RESET = '\x1b[0m';
-
-export interface AgentTurnOptions {
-  readonly showReasoning: boolean;
-}
-
-function createHandlers(options: AgentTurnOptions): StreamHandlers {
-  let indicatorShown = false;
+function createHandlers(renderer: Renderer): StreamHandlers {
   return {
-    onReasoningStart() {
-      if (options.showReasoning) {
-        process.stdout.write(`\n${DIM}[reasoning]${RESET}\n${DIM}`);
-      } else if (!indicatorShown) {
-        process.stdout.write(`${DIM}thinking…${RESET}`);
-        indicatorShown = true;
-      }
-    },
-    onReasoning(delta) {
-      if (options.showReasoning) process.stdout.write(delta);
-    },
-    onReasoningEnd() {
-      if (options.showReasoning) {
-        process.stdout.write(`${RESET}\n`);
-      } else if (indicatorShown) {
-        // Erase the placeholder so the answer starts on a clean line.
-        process.stdout.write('\r' + ' '.repeat(10) + '\r');
-        indicatorShown = false;
-      }
-    },
-    onText(delta) {
-      process.stdout.write(delta);
-    },
-    onToolCall(name) {
-      process.stdout.write(`\n${DIM}[tool: ${name}]${RESET}\n`);
-    }
+    onReasoningStart: () => renderer.emit({ type: 'reasoning-start' }),
+    onReasoning: (text) => renderer.emit({ type: 'reasoning-delta', text }),
+    onReasoningEnd: () => renderer.emit({ type: 'reasoning-end' }),
+    onText: (text) => renderer.emit({ type: 'text-delta', text }),
+    onToolCall: (name) => renderer.emit({ type: 'tool-call', name })
   };
 }
 
@@ -48,39 +20,42 @@ export async function runAgentTurn(
   messages: readonly AgentMessage[],
   systemPrompt: string,
   mcp: McpClient,
-  options: AgentTurnOptions
+  renderer: Renderer
 ): Promise<AgentMessage[]> {
   const updated: AgentMessage[] = [...messages];
+  const handlers = createHandlers(renderer);
   let turns = 0;
 
   while (true) {
     if (turns >= MAX_TURNS) {
-      process.stderr.write(
-        `Warning: agent reached maximum turn limit (${MAX_TURNS}). Ending session.\n`
-      );
+      renderer.emit({
+        type: 'notice',
+        text: `Warning: agent reached maximum turn limit (${MAX_TURNS}). Ending session.`
+      });
       break;
     }
     turns++;
 
-    process.stdout.write('\n');
+    renderer.emit({ type: 'turn-start' });
 
     const turn = await provider.send({
       system: systemPrompt,
       messages: updated,
       tools: AGENT_TOOLS,
-      handlers: createHandlers(options)
+      handlers
     });
 
     updated.push({ role: 'assistant', ...turn });
 
     if (turn.stopReason !== 'tool_use') {
-      process.stdout.write('\n');
+      renderer.emit({ type: 'turn-end' });
       break;
     }
 
     const results: AgentToolResult[] = [];
     for (const call of turn.toolCalls) {
       const { output, isError } = await dispatchTool(call.name, call.input, mcp);
+      renderer.emit({ type: 'tool-result', name: call.name, isError });
       results.push({ id: call.id, name: call.name, output, isError });
     }
 

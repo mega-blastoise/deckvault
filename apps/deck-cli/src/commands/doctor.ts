@@ -1,4 +1,5 @@
 import { existsSync, statSync } from 'node:fs';
+import pc from 'picocolors';
 import { Database } from 'bun:sqlite';
 
 import { resolveDefaultMcpPath } from '../args';
@@ -22,12 +23,12 @@ function formatBytes(bytes: number): string {
 }
 
 function check(ok: boolean, label: string, detail: string, results: boolean[]): void {
-  console.log(`${ok ? '✓' : '✗'} ${label}  ${detail}`);
+  console.log(`${ok ? pc.green('✓') : pc.red('✗')} ${label}  ${pc.dim(detail)}`);
   results.push(ok);
 }
 
 function warn(label: string, detail: string): void {
-  console.log(`⚠ ${label}  ${detail}`);
+  console.log(`${pc.yellow('⚠')} ${label}  ${pc.dim(detail)}`);
 }
 
 async function ping(url: string): Promise<{ ok: boolean; detail: string }> {
@@ -68,7 +69,7 @@ async function checkProvider(
       );
     }
   } else {
-    console.log('✓ Credential  not required for this provider');
+    console.log(`${pc.green('✓')} Credential  ${pc.dim('not required for this provider')}`);
   }
 
   const endpoint =

@@ -24,15 +24,27 @@ export class McpClient {
   private idCounter = 1;
   private initialized = false;
 
-  constructor(serverPath: string, dbPath?: string) {
+  /** Server stderr collected when captured, so it can be shown after teardown. */
+  readonly stderrLog: string[] = [];
+
+  constructor(serverPath: string, dbPath?: string, captureStderr = false) {
     const env = dbPath
       ? { ...process.env, DATABASE_PATH: dbPath }
       : process.env;
 
+    // fd 2 is normally inherited so the server's tracing output reaches the
+    // terminal directly. Under the full-screen TUI that would draw straight
+    // over the alternate screen, so capture it instead.
     this.proc = spawn(serverPath, [], {
-      stdio: ['pipe', 'pipe', 'inherit'],
+      stdio: ['pipe', 'pipe', captureStderr ? 'pipe' : 'inherit'],
       env,
     });
+
+    if (captureStderr && this.proc.stderr) {
+      this.proc.stderr.on('data', (chunk: Buffer) => {
+        this.stderrLog.push(chunk.toString());
+      });
+    }
 
     if (!this.proc.stdout || !this.proc.stdin) {
       throw new Error('Failed to open MCP server stdio');

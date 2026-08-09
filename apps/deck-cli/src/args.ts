@@ -26,6 +26,7 @@ export function cli() {
     .option('--model <name>', 'Model to use (overrides config)')
     .option('--base-url <url>', 'Provider endpoint (overrides config)')
     .option('--show-reasoning', 'Stream the model\'s reasoning trace')
+    .option('--no-tui', 'Force plain streaming output instead of the full-screen TUI')
     .option('--browser', 'Serve the browser deck builder instead of the REPL')
     .option('--dry-run', 'Print system prompt and exit')
     .option('--stats', 'Print probability table before REPL')

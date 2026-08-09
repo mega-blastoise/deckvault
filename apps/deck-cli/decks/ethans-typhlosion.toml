@@ -1,0 +1,131 @@
+name = "Ethan's Typhlosion"
+format = "standard"
+regulation_marks = ["H", "I", "J"]
+
+# Pokémon — 19
+[[cards]]
+id = "me2pt5-16"       # Budew (ASC 16) [H]
+quantity = 1
+
+[[cards]]
+id = "sv10-190"        # Ethan's Typhlosion (DRI 190) [I]
+quantity = 1
+
+[[cards]]
+id = "sv5-129"         # Dudunsparce (TEF 129) [H]
+quantity = 2
+
+[[cards]]
+id = "sv9-120"         # Dunsparce (JTG 120) [I]
+quantity = 2
+
+[[cards]]
+id = "sv10-32"         # Ethan's Cyndaquil (DRI 32) [I]
+quantity = 4
+
+[[cards]]
+id = "sv10-33"         # Ethan's Quilava (DRI 33) [I]
+quantity = 3
+
+[[cards]]
+id = "sv10-34"         # Ethan's Typhlosion (DRI 34) [I]
+quantity = 2
+
+[[cards]]
+id = "sv8-21"          # Victini (SSP 21) [H]
+quantity = 2
+
+[[cards]]
+id = "sv10-10"         # Shaymin (DRI 10) [I]
+quantity = 1
+
+[[cards]]
+id = "me2pt5-39"       # Psyduck (ASC 39) [I]
+quantity = 1
+
+# Trainer — 35
+[[cards]]
+id = "sv6-165"         # Unfair Stamp (TWM 165) [H]
+quantity = 1
+
+[[cards]]
+id = "me1-169"         # Lillie's Determination (MEG 169) [I]
+quantity = 1
+
+[[cards]]
+id = "me3-81"          # Poké Pad (POR 81) [J]
+quantity = 3
+
+[[cards]]
+id = "sv10-176"        # Team Rocket's Petrel (DRI 176) [I]
+quantity = 3
+
+[[cards]]
+id = "me1-167"         # Buddy-Buddy Poffin (MEG 167) [H]
+quantity = 1
+
+[[cards]]
+id = "me3-108"         # Energy Recycler (POR 108) [I]
+quantity = 1
+
+[[cards]]
+id = "me2-85"          # Battle Cage (PFL 85) [I]
+quantity = 2
+
+[[cards]]
+id = "sv6pt5-61"       # Night Stretcher (SFA 61) [H]
+quantity = 2
+
+[[cards]]
+id = "me1-125"         # Rare Candy (MEG 125) [I]
+quantity = 3
+
+[[cards]]
+id = "me2pt5-192"      # Lillie's Determination (ASC 192) [I]
+quantity = 1
+
+[[cards]]
+id = "me1-114"         # Boss's Orders (MEG 114) [I]
+quantity = 2
+
+[[cards]]
+id = "sv10-168"        # Sacred Ash (DRI 168) [I]
+quantity = 1
+
+[[cards]]
+id = "sv6-155"         # Lana's Aid (TWM 155) [H]
+quantity = 1
+
+[[cards]]
+id = "me4-113"         # Special Red Card (CRI 113) [J]
+quantity = 1
+
+[[cards]]
+id = "sv5-144"         # Buddy-Buddy Poffin (TEF 144) [H]
+quantity = 3
+
+[[cards]]
+id = "rsv10pt5-80"     # Brave Bangle (WHT 80) [I]
+quantity = 2
+
+[[cards]]
+id = "me1-119"         # Lillie's Determination (MEG 119) [I]
+quantity = 1
+
+[[cards]]
+id = "sv10-165"        # Ethan's Adventure (DRI 165) [I]
+quantity = 4
+
+[[cards]]
+id = "me1-131"         # Ultra Ball (MEG 131) [I]
+quantity = 2
+
+# Energy — 6
+[[cards]]
+id = "sve-2"           # Basic Fire Energy
+quantity = 6
+
+[meta]
+archetype = "ethans-typhlosion"
+version = "1.0"
+notes = "Ethan's Typhlosion DRI 34 attacker with Rare Candy into Cyndaquil. Boss's Orders and Ultra Ball use the mark-I Mega Evolution reprints; the PAL/SVI printings in the source list are mark G and rotated."
