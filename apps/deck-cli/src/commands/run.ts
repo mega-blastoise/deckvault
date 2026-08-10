@@ -109,18 +109,12 @@ export async function runCommand(options: RunOptions): Promise<void> {
 
   if (browser && options.dryRun) fail('--dry-run is not applicable with --browser');
   if (browser && options.stats) fail('--stats is not applicable with --browser');
-  if (browser && options.provider) {
-    fail(
-      'Browser mode runs Gemini Nano on-device and takes no --provider.\n' +
-        '  → drop --provider to use the browser builder, or drop --browser to use the REPL'
-    );
-  }
 
   const rawDeck = options.deck;
   const deckPaths: string[] = rawDeck ? (Array.isArray(rawDeck) ? rawDeck : [rawDeck]) : [];
 
   if (deckPaths.length === 0 && !browser) {
-    fail('--deck is required (or pass --browser to open the deck builder)');
+    fail('--deck is required (or run `johto decks` to open the deck manager)');
   }
 
   const rawSpotlight = options.spotlight;
@@ -192,44 +186,27 @@ export async function runCommand(options: RunOptions): Promise<void> {
         }
       }
 
-      if (options.dryRun) {
-        mcp.destroy();
-        process.exit(0);
-      }
     }
 
     if (browser) {
-      if (decks.length > 1) {
-        console.warn(
-          'Warning: browser mode supports one deck at a time. Using first deck: ' + decks[0]!.name
-        );
-      }
-
-      const { startBrowserServer } = await import('../browser/server');
-      const { openInBrowser } = await import('../browser/open');
-
-      const deck = decks[0] ?? null;
-      const port = options.browserPort ?? 0;
-      const server = startBrowserServer(deck, mcp, port);
-      const url = `http://localhost:${server.port}`;
-
-      console.log(`Serving deck at: ${url}`);
-      if (!deck) console.log('No deck loaded — browser will open the deck builder.');
-      console.log('Press Ctrl+C to stop.\n');
-      openInBrowser(url);
-
-      const shutdown = (): never => {
-        server.close();
-        mcp.destroy();
-        process.exit(0);
-      };
-      process.on('SIGINT', shutdown);
-      process.on('SIGTERM', shutdown);
-      await new Promise<never>(() => {});
+      // `--browser` is retained as an alias so existing docs and muscle memory
+      // keep working; the deck manager is the real command.
+      mcp.destroy();
+      const { decksCommand } = await import('./decks');
+      await decksCommand({
+        deck: deckPaths[0],
+        port: options.browserPort,
+        mcpServer: options.mcpServer
+      });
+      return;
     }
 
     const systemPrompt = buildSystemPrompt(decks);
 
+    // `--dry-run` is documented as "print system prompt and exit", so it prints
+    // the prompt even alongside `--stats`. Exiting inside the stats block above
+    // made the two flags mutually exclusive in practice: you got the table and
+    // silently lost the prompt.
     if (options.dryRun) {
       console.log('\n--- SYSTEM PROMPT (dry run) ---\n');
       console.log(systemPrompt);

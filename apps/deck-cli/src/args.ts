@@ -27,7 +27,7 @@ export function cli() {
     .option('--base-url <url>', 'Provider endpoint (overrides config)')
     .option('--show-reasoning', 'Stream the model\'s reasoning trace')
     .option('--no-tui', 'Force plain streaming output instead of the full-screen TUI')
-    .option('--browser', 'Serve the browser deck builder instead of the REPL')
+    .option('--browser', 'Alias for `johto decks`')
     .option('--dry-run', 'Print system prompt and exit')
     .option('--stats', 'Print probability table before REPL')
     .option('--spotlight <id>', 'Highlight card in stats. Repeatable.')
@@ -37,6 +37,21 @@ export function cli() {
       try {
         const { runCommand } = await import('./commands/run');
         await runCommand(options);
+      } catch (err) {
+        console.error('Fatal error:', err instanceof Error ? err.message : String(err));
+        process.exit(1);
+      }
+    });
+
+  cli.command('decks', 'Open the deck manager in your browser')
+    .option('-d, --deck <path>', 'Open straight to this deck')
+    .option('--port <port>', 'Port to serve on (default: random)')
+    .option('--mcp-server <path>', 'Path to pokemon-mcp-server binary')
+    .option('--no-open', 'Print the URL instead of launching a browser')
+    .action(async (options) => {
+      try {
+        const { decksCommand } = await import('./commands/decks');
+        await decksCommand(options);
       } catch (err) {
         console.error('Fatal error:', err instanceof Error ? err.message : String(err));
         process.exit(1);

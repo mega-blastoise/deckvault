@@ -127,15 +127,36 @@ bun scripts/changes.ts add
 
 This writes a `.changes/yyyy-mm-dd-slug.md` file. Commit it with your feature branch.
 
+Pick the cohort by what actually ships:
+
+| Cohort | Covers | On release |
+|---|---|---|
+| `cli` | the CLI and its four platform binaries | bumps all five in lockstep |
+| `mcpServer` | the four MCP server platform packages | bumps all four in lockstep |
+| `cardData` | `@johto-ai/card-data` | versions independently |
+| `internal` | build scripts, turbo/CI config, docs, tooling | changelog only — bumps and publishes nothing |
+
+Use `internal` for anything that ships in no package. Filing repo-only work under
+`cli` bumps five published packages for a change none of them contain.
+
 When cutting a release:
 
 ```bash
 bun scripts/changes.ts release
 # → bumps package.json versions, appends CHANGELOG.md, removes .changes/*.md
-# Commit the result, PR to main, then tag: git tag v0.2.0 && git push origin v0.2.0
 ```
 
-The GitHub Actions release workflow fires on the tag and publishes all packages.
+Commit the result and PR to main, then tag. The release workflow triggers on
+`johto/v*.*.*` — a bare `v0.2.0` tag fires nothing:
+
+```bash
+git tag johto/v0.2.0
+git push mega-blastoise johto/v0.2.0
+```
+
+Push the tag to the **publish remote**, which is `mega-blastoise`, not `origin`
+— check with `git remote -v` before tagging. `@johto-ai/card-data` versions
+independently on its own `johto/card-data-v*` tags.
 
 ## Adding a new subcommand
 

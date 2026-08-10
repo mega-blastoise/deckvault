@@ -174,3 +174,116 @@ fn notification_without_id_produces_no_response_then_next_request_works() {
     assert_eq!(json["id"], 99, "expected ping response, got: {json}");
     assert_eq!(json["result"], serde_json::json!({}));
 }
+
+// ── Standard legality ────────────────────────────────────────────────────────
+//
+// Regulation marks only exist from Sword & Shield onward, so a blank mark means
+// "printed before marks existed", not "exempt". Both the search filter and the
+// deck validator used to read a blank mark as legal, which let the entire
+// 1999-2019 back catalogue through. Basic Energy is the one genuine exemption
+// and is identified by supertype/subtype rather than by its blank mark.
+
+/// `ex2-88` Rare Candy (2003, no mark) vs `me1-125` Rare Candy (mark I).
+#[test]
+fn search_cards_standard_only_excludes_cards_printed_before_regulation_marks() {
+    let mut proc = McpProcess::spawn();
+    let response = proc.send(
+        r#"{"jsonrpc":"2.0","method":"tools/call","id":10,"params":{"name":"search_cards","arguments":{"query":"Rare Candy","limit":50,"standard_only":true,"format":"json"}}}"#,
+    );
+    let json: serde_json::Value = serde_json::from_str(&response).unwrap();
+    let text = json["result"]["content"][0]["text"].as_str().unwrap();
+    let cards: Vec<serde_json::Value> = serde_json::from_str(text).unwrap();
+
+    assert!(!cards.is_empty(), "expected at least one Standard Rare Candy");
+    for card in &cards {
+        let mark = card["regulationMark"].as_str().unwrap_or("");
+        assert!(
+            matches!(mark, "H" | "I" | "J"),
+            "{} leaked past standard_only with mark {mark:?}",
+            card["id"]
+        );
+    }
+}
+
+#[test]
+fn search_cards_without_standard_only_still_returns_old_printings() {
+    let mut proc = McpProcess::spawn();
+    let response = proc.send(
+        r#"{"jsonrpc":"2.0","method":"tools/call","id":11,"params":{"name":"search_cards","arguments":{"query":"Rare Candy","limit":50,"format":"json"}}}"#,
+    );
+    let json: serde_json::Value = serde_json::from_str(&response).unwrap();
+    let text = json["result"]["content"][0]["text"].as_str().unwrap();
+    let cards: Vec<serde_json::Value> = serde_json::from_str(text).unwrap();
+    assert!(
+        cards.iter().any(|c| c["id"] == "ex2-88"),
+        "unfiltered search should still reach the back catalogue"
+    );
+}
+
+#[test]
+fn search_cards_standard_only_keeps_basic_energy() {
+    let mut proc = McpProcess::spawn();
+    let response = proc.send(
+        r#"{"jsonrpc":"2.0","method":"tools/call","id":12,"params":{"name":"search_cards","arguments":{"query":"Basic Fire Energy","limit":50,"standard_only":true,"format":"json"}}}"#,
+    );
+    let json: serde_json::Value = serde_json::from_str(&response).unwrap();
+    let text = json["result"]["content"][0]["text"].as_str().unwrap();
+    let cards: Vec<serde_json::Value> = serde_json::from_str(text).unwrap();
+    assert!(
+        cards.iter().any(|c| c["id"] == "sve-2"),
+        "Basic Energy has no regulation mark but is always legal"
+    );
+}
+
+#[test]
+fn validate_deck_flags_unmarked_cards_but_not_basic_energy() {
+    let path = std::env::temp_dir().join(format!("johto-legality-{}.toml", std::process::id()));
+    std::fs::write(
+        &path,
+        r#"name = "legality fixture"
+format = "standard"
+regulation_marks = ["H", "I", "J"]
+
+[[cards]]
+id = "ex2-88"
+quantity = 4
+
+[[cards]]
+id = "me1-125"
+quantity = 4
+
+[[cards]]
+id = "sve-2"
+quantity = 52
+"#,
+    )
+    .unwrap();
+
+    let mut proc = McpProcess::spawn();
+    let response = proc.send(&format!(
+        r#"{{"jsonrpc":"2.0","method":"tools/call","id":13,"params":{{"name":"validate_deck","arguments":{{"path":"{}"}}}}}}"#,
+        path.display()
+    ));
+    let _ = std::fs::remove_file(&path);
+
+    let json: serde_json::Value = serde_json::from_str(&response).unwrap();
+    let text = json["result"]["content"][0]["text"].as_str().unwrap();
+    let report: serde_json::Value = serde_json::from_str(text).unwrap();
+    let flagged: Vec<&str> = report["violations"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|v| v["rule"] == "LEGALITY")
+        .filter_map(|v| v["cardId"].as_str())
+        .collect();
+
+    assert!(
+        flagged.contains(&"ex2-88"),
+        "a 2003 printing with no mark is not Standard legal: {flagged:?}"
+    );
+    assert!(!flagged.contains(&"me1-125"), "mark I is legal: {flagged:?}");
+    assert!(
+        !flagged.contains(&"sve-2"),
+        "Basic Energy is always legal: {flagged:?}"
+    );
+}

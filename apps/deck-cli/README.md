@@ -17,7 +17,7 @@ Or via Docker:
 docker run --rm -it \
   -v "$PWD/decks:/decks" \
   -e ANTHROPIC_API_KEY \
-  ghcr.io/nicholasgalante1997/johto:latest \
+  ghcr.io/mega-blastoise/johto:latest \
   run --deck /decks/my-deck.toml
 ```
 

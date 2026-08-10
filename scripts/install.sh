@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-REPO="nicholasgalante1997/deckvault"
+REPO="mega-blastoise/deckvault"
 INSTALL_DIR="${JOHTO_INSTALL_DIR:-$HOME/.local/share/johto}"
 BIN_DIR="${JOHTO_BIN_DIR:-$HOME/.local/bin}"
 

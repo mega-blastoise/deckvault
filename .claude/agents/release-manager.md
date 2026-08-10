@@ -254,7 +254,7 @@ also updating the workflows and the resolver.
 
 | Tag pattern | Triggers | Publishes |
 |---|---|---|
-| `vX.Y.Z` | `.github/workflows/release.yml` | `@johto-ai/cli`, all four `cli-*` and all four `mcp-server-*` platform packages; multi-arch Docker image `ghcr.io/nicholasgalante1997/johto:vX.Y.Z` + `:latest`; GH Release with four per-platform tarballs |
+| `vX.Y.Z` | `.github/workflows/release.yml` | `@johto-ai/cli`, all four `cli-*` and all four `mcp-server-*` platform packages; multi-arch Docker image `ghcr.io/mega-blastoise/johto:vX.Y.Z` + `:latest`; GH Release with four per-platform tarballs |
 | `card-data-vX.Y.Z` | `.github/workflows/release-card-data.yml` | `@johto-ai/card-data` only |
 | `vX.Y.Z` (deckvault platform — Part I above) | manual `docker build` | `ghcr.io/mega-blastoise/deckvault-*` |
 
@@ -369,7 +369,7 @@ docker run --rm -it \
   -v "$PWD/decks:/decks" \
   -v "$HOME/.config/johto:/root/.config/johto" \
   -e ANTHROPIC_API_KEY \
-  ghcr.io/nicholasgalante1997/johto:latest \
+  ghcr.io/mega-blastoise/johto:latest \
   run --deck /decks/my-deck.toml
 
 # curl installer — tertiary, fetches GH Release tarball + @johto-ai/card-data from npm
@@ -424,6 +424,6 @@ git restore dist-packages/
   `workspace:*`.
 - Never push a `vX.Y.Z` tag without first running `changes:release` and reviewing the
   generated `CHANGELOG.md` entries.
-- Never confuse `ghcr.io/nicholasgalante1997/johto:*` (deck-cli, this stack) with
+- Never confuse `ghcr.io/mega-blastoise/johto:*` (deck-cli, this stack) with
   `ghcr.io/mega-blastoise/deckvault-*` (platform, Part I). They are different namespaces
   pushed by different workflows.

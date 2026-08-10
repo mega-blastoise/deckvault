@@ -11,7 +11,7 @@
 - **Observable** — Metrics, logging, Slack alerts
 
 [Get Started](quickstart.md)
-[View Source](https://github.com/nicholasgalante1997/Pokemon)
+[View Source](https://github.com/mega-blastoise/deckvault)
 
 <!-- background is set via CSS -->
 

@@ -43,8 +43,8 @@
     "local:uninstall": "bun scripts/bootstrap-local.ts --uninstall",
     "changes:add": "bun scripts/changes.ts add",
     "changes:list": "bun scripts/changes.ts list",
-    "changes:release": "bun scripts/changes.ts release",
-    "pack:all": "turbo run pack:cli-shim pack:cli-platform pack:mcp-platform pack:card-data"
+    "release": "bun scripts/release.ts",
+    "release:card-data": "bun scripts/release.ts --stream card-data"
   },
   "engines": {
     "bun": "1.3.5"
