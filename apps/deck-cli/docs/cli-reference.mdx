@@ -18,7 +18,7 @@ Start a deck refinement session.
 ```bash
 johto run --deck ./decks/my-deck.toml
 johto run --deck ./decks/deck-a.toml --deck ./decks/deck-b.toml
-johto run --provider chrome
+johto run --browser
 ```
 
 **Options:**
@@ -33,9 +33,9 @@ johto run --provider chrome
 | `--mcp-server <path>` | Override MCP server binary path. | env / auto-resolve |
 | `--browser-port <port>` | Port for browser mode (required for Docker). | random |
 
-`--deck` is required for `--provider anthropic`. Optional for `--provider chrome`.
+`--deck` is required for REPL mode. Optional with `--browser`.
 
-`--dry-run` and `--stats` are incompatible with `--provider chrome`.
+`--dry-run` and `--stats` are incompatible with `--browser`.
 
 **Backward compatibility:** `johto --deck <path>` (no subcommand) is an alias for `johto run --deck <path>`.
 
@@ -133,6 +133,7 @@ The default path is a no-op for npm installs — the prebuilt database ships wit
 | Variable | Description |
 |---|---|
 | `ANTHROPIC_API_KEY` | API key for `--provider anthropic`. Takes precedence over config file. |
+| `OPENAI_API_KEY` | API key for `--provider openai`. Takes precedence over config file. |
 | `JOHTO_MCP_SERVER_PATH` | Override MCP server binary path (set by the JS shim for npm installs). |
 | `JOHTO_DB_PATH` | Override card database path (set by the JS shim for npm installs). |
 | `XDG_CONFIG_HOME` | Override config directory. Default: `~/.config`. |

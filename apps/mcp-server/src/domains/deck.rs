@@ -53,6 +53,7 @@ pub struct DeckValidationReport {
 }
 
 #[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ValidationViolation {
     pub rule: String,
     pub message: String,
@@ -172,17 +173,26 @@ pub fn validate_deck(deck: &DeckFile, db: &Database) -> DeckValidationReport {
                     });
                 }
 
-                // Legality: regulation mark
-                if let Some(ref reg_mark) = card.regulation_mark {
-                    if !reg_mark.is_empty()
-                        && !STANDARD_LEGAL_MARKS.contains(&reg_mark.as_str())
-                    {
+                // Legality: regulation mark. Basic Energy is legal in every
+                // format regardless of mark. Everything else must carry a
+                // current mark — a blank one means the card predates marks
+                // entirely (pre Sword & Shield) and so rotated out long ago.
+                if !is_basic_energy {
+                    let mark = card.regulation_mark.as_deref().unwrap_or("");
+                    if !STANDARD_LEGAL_MARKS.contains(&mark) {
                         violations.push(ValidationViolation {
                             rule: "LEGALITY".to_string(),
-                            message: format!(
-                                "\"{}\" ({}) has regulation mark {}; not legal in current Standard (H/I/J)",
-                                card.name, entry.id, reg_mark
-                            ),
+                            message: if mark.is_empty() {
+                                format!(
+                                    "\"{}\" ({}) has no regulation mark; not legal in current Standard (H/I/J)",
+                                    card.name, entry.id
+                                )
+                            } else {
+                                format!(
+                                    "\"{}\" ({}) has regulation mark {}; not legal in current Standard (H/I/J)",
+                                    card.name, entry.id, mark
+                                )
+                            },
                             card_id: Some(entry.id.clone()),
                         });
                     }

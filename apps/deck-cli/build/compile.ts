@@ -23,6 +23,17 @@ const MONO_ROOT = join(ROOT, '../..');
 const OUT_BASE = join(MONO_ROOT, 'dist-packages/cli-platforms');
 const TMPL_DIR = join(OUT_BASE, '_template');
 
+// The client bundle is a build input for the binary (template.ts inlines it as
+// a text import), so it has to exist and be current before compiling.
+const pageBuild = Bun.spawnSync(['bun', join(import.meta.dir, 'page.ts')], {
+  stdout: 'inherit',
+  stderr: 'inherit'
+});
+if (pageBuild.exitCode !== 0) {
+  console.error('page build failed');
+  process.exit(1);
+}
+
 const requestedSuffix = Bun.argv[2];
 const targets = requestedSuffix
   ? TARGETS.filter((t) => t.suffix === requestedSuffix)

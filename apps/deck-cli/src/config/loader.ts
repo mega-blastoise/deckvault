@@ -42,14 +42,6 @@ export async function saveConfig(config: JohtoConfig): Promise<void> {
   await writeFile(path, toml, 'utf-8');
 }
 
-export async function resolveApiKey(): Promise<string | undefined> {
-  const envKey = process.env['ANTHROPIC_API_KEY'];
-  if (envKey) return envKey;
-
-  const config = await loadConfig();
-  return config.anthropic?.api_key;
-}
-
 export async function resolveDbPath(): Promise<string | undefined> {
   const envPath = process.env['JOHTO_DB_PATH'];
   if (envPath) return envPath;

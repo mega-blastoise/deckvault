@@ -1,85 +1,65 @@
-import Anthropic from '@anthropic-ai/sdk';
-
 import type { McpClient } from '../mcp/client';
+import type { AgentMessage, AgentToolResult, Provider, StreamHandlers } from '../providers/types';
+import type { Renderer } from '../render/types';
 import { AGENT_TOOLS, dispatchTool } from './tools';
 
-const MODEL = 'claude-sonnet-4-6';
 const MAX_TURNS = 50;
 
+function createHandlers(renderer: Renderer): StreamHandlers {
+  return {
+    onReasoningStart: () => renderer.emit({ type: 'reasoning-start' }),
+    onReasoning: (text) => renderer.emit({ type: 'reasoning-delta', text }),
+    onReasoningEnd: () => renderer.emit({ type: 'reasoning-end' }),
+    onText: (text) => renderer.emit({ type: 'text-delta', text }),
+    onToolCall: (name) => renderer.emit({ type: 'tool-call', name })
+  };
+}
+
 export async function runAgentTurn(
-  client: Anthropic,
-  messages: Anthropic.MessageParam[],
+  provider: Provider,
+  messages: readonly AgentMessage[],
   systemPrompt: string,
-  mcp: McpClient
-): Promise<Anthropic.MessageParam[]> {
-  const updated = [...messages];
+  mcp: McpClient,
+  renderer: Renderer
+): Promise<AgentMessage[]> {
+  const updated: AgentMessage[] = [...messages];
+  const handlers = createHandlers(renderer);
   let turns = 0;
 
   while (true) {
     if (turns >= MAX_TURNS) {
-      process.stderr.write(`Warning: agent reached maximum turn limit (${MAX_TURNS}). Ending session.\n`);
+      renderer.emit({
+        type: 'notice',
+        text: `Warning: agent reached maximum turn limit (${MAX_TURNS}). Ending session.`
+      });
       break;
     }
     turns++;
 
-    const stream = client.messages.stream({
-      model: MODEL,
-      max_tokens: 4096,
+    renderer.emit({ type: 'turn-start' });
+
+    const turn = await provider.send({
       system: systemPrompt,
-      tools: AGENT_TOOLS as Anthropic.Tool[],
       messages: updated,
+      tools: AGENT_TOOLS,
+      handlers
     });
 
-    process.stdout.write('\n');
+    updated.push({ role: 'assistant', ...turn });
 
-    let final: Anthropic.Message;
-    try {
-      for await (const event of stream) {
-        if (
-          event.type === 'content_block_delta' &&
-          event.delta.type === 'text_delta'
-        ) {
-          process.stdout.write(event.delta.text);
-        }
-      }
-      final = await stream.finalMessage();
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      process.stderr.write(`Stream error: ${message}. Session may be incomplete.\n`);
-      throw err;
-    }
-    updated.push({ role: 'assistant', content: final.content });
-
-    if (final.stop_reason !== 'tool_use') {
-      process.stdout.write('\n');
+    if (turn.stopReason !== 'tool_use') {
+      renderer.emit({ type: 'turn-end' });
       break;
     }
 
-    const toolResults: Anthropic.ToolResultBlockParam[] = [];
-    for (const block of final.content) {
-      if (block.type !== 'tool_use') continue;
-      process.stdout.write(`\n[tool: ${block.name}]\n`);
-      if (typeof block.input !== 'object' || block.input === null) {
-        toolResults.push({
-          type: 'tool_result',
-          tool_use_id: block.id,
-          content: `Tool error: invalid input shape from model (expected object, got ${block.input === null ? 'null' : typeof block.input})`,
-        });
-        continue;
-      }
-      const output = await dispatchTool(
-        block.name,
-        block.input as Record<string, unknown>,
-        mcp
-      );
-      toolResults.push({
-        type: 'tool_result',
-        tool_use_id: block.id,
-        content: output,
-      });
+    const results: AgentToolResult[] = [];
+    for (const call of turn.toolCalls) {
+      const { output, isError } = await dispatchTool(call.name, call.input, mcp);
+      renderer.emit({ type: 'tool-result', name: call.name, isError });
+      results.push({ id: call.id, name: call.name, output, isError });
     }
 
-    updated.push({ role: 'user', content: toolResults });
+    updated.push({ role: 'tool', results });
   }
 
   return updated;

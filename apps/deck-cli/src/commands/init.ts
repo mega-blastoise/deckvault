@@ -4,9 +4,13 @@ import { join } from 'node:path';
 import { mkdir } from 'node:fs/promises';
 
 import { loadConfig, saveConfig, getConfigPath } from '../config/loader';
+import { PROVIDER_DEFAULTS } from '../providers/defaults';
+import { DEFAULT_PROVIDER, resolveBaseUrl } from '../providers/resolve';
+import { isProviderName, PROVIDERS } from '../providers/types';
+import type { ProviderName } from '../providers/types';
 import type { JohtoConfig } from '../config/types';
 
-async function validateApiKey(key: string): Promise<boolean> {
+async function validateAnthropicKey(key: string, model: string): Promise<boolean> {
   try {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -15,11 +19,7 @@ async function validateApiKey(key: string): Promise<boolean> {
         'x-api-key': key,
         'anthropic-version': '2023-06-01',
       },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 1,
-        messages: [{ role: 'user', content: 'hi' }],
-      }),
+      body: JSON.stringify({ model, max_tokens: 1, messages: [{ role: 'user', content: 'hi' }] }),
     });
     return res.ok;
   } catch {
@@ -27,70 +27,118 @@ async function validateApiKey(key: string): Promise<boolean> {
   }
 }
 
+async function validateOpenAiKey(key: string, baseUrl: string): Promise<boolean> {
+  try {
+    const res = await fetch(`${baseUrl}/models`, { headers: { Authorization: `Bearer ${key}` } });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+async function probeLocalEndpoint(baseUrl: string): Promise<string[] | null> {
+  try {
+    const res = await fetch(`${baseUrl}/models`, { signal: AbortSignal.timeout(8000) });
+    if (!res.ok) return null;
+    const body = (await res.json()) as { data?: { id: string }[] };
+    return (body.data ?? []).map((m) => m.id);
+  } catch {
+    return null;
+  }
+}
+
 export async function initCommand(): Promise<void> {
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout,
-  });
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
 
   try {
     console.log('\nJohto CLI — First-run setup\n');
 
     const existing = await loadConfig();
+    const currentProvider: ProviderName = existing.defaults?.provider ?? DEFAULT_PROVIDER;
 
-    const keyPrompt = existing.anthropic?.api_key
-      ? 'Anthropic API key (leave blank to keep existing): '
-      : 'Anthropic API key (leave blank to skip): ';
-    const apiKeyInput = (await rl.question(keyPrompt)).trim();
+    console.log('Providers:');
+    for (const p of PROVIDERS) {
+      console.log(`  ${p.padEnd(10)} ${PROVIDER_DEFAULTS[p].label}`);
+    }
+    const providerInput = (
+      await rl.question(`\nDefault provider [${currentProvider}]: `)
+    ).trim();
+    const provider: ProviderName =
+      providerInput && isProviderName(providerInput) ? providerInput : currentProvider;
 
-    let apiKey = existing.anthropic?.api_key;
-    if (apiKeyInput) {
-      process.stdout.write('Validating API key... ');
-      const valid = await validateApiKey(apiKeyInput);
-      if (valid) {
-        console.log('OK');
-        apiKey = apiKeyInput;
+    const defaults = PROVIDER_DEFAULTS[provider];
+    const existingSection = (existing[provider] ?? {}) as {
+      api_key?: string;
+      model?: string;
+      base_url?: string;
+    };
+
+    // Only ask for what this provider actually needs.
+    let apiKey = existingSection.api_key;
+    let baseUrl = existingSection.base_url;
+    let model = existingSection.model ?? defaults.model ?? undefined;
+
+    if (defaults.apiKeyEnv) {
+      if (process.env[defaults.apiKeyEnv]) {
+        console.log(`\n${defaults.apiKeyEnv} is set in your environment — using it.`);
       } else {
-        console.log('FAILED — key will not be saved.');
+        const prompt = apiKey
+          ? `${provider} API key (blank to keep existing): `
+          : `${provider} API key (blank to skip): `;
+        const entered = (await rl.question(prompt)).trim();
+        if (entered) {
+          process.stdout.write('Validating... ');
+          const valid =
+            provider === 'anthropic'
+              ? await validateAnthropicKey(entered, model ?? defaults.model!)
+              : await validateOpenAiKey(entered, resolveBaseUrl(provider, existing));
+          console.log(valid ? 'OK' : 'FAILED — key will not be saved.');
+          if (valid) apiKey = entered;
+        }
+      }
+    } else {
+      const current = baseUrl ?? defaults.baseUrl!;
+      const entered = (await rl.question(`${provider} base URL [${current}]: `)).trim();
+      baseUrl = entered || current;
+
+      process.stdout.write('Probing endpoint... ');
+      const models = await probeLocalEndpoint(baseUrl);
+      if (models === null) {
+        console.log('unreachable.');
+        console.log(`  → ${defaults.unreachableHint}`);
+      } else {
+        console.log(`OK (${models.length} model(s))`);
+        if (models.length > 0) {
+          console.log(`  available: ${models.slice(0, 8).join(', ')}${models.length > 8 ? ' …' : ''}`);
+        }
+        const entered2 = (await rl.question(`  model [${model ?? models[0] ?? ''}]: `)).trim();
+        model = entered2 || model || models[0];
       }
     }
 
     const defaultDecksDir = join(homedir(), 'johto', 'decks');
     const currentDecksDir = existing.paths?.decks_dir ?? defaultDecksDir;
     const decksDirInput = (
-      await rl.question(`Default decks directory [${currentDecksDir}]: `)
+      await rl.question(`\nDefault decks directory [${currentDecksDir}]: `)
     ).trim();
     const decksDir = decksDirInput || currentDecksDir;
     await mkdir(decksDir, { recursive: true });
 
-    const currentProvider = existing.defaults?.provider ?? 'anthropic';
-    const providerInput = (
-      await rl.question(`Default provider (anthropic | chrome) [${currentProvider}]: `)
-    ).trim();
-    const provider =
-      providerInput === 'anthropic' || providerInput === 'chrome'
-        ? providerInput
-        : currentProvider;
-
     const config: JohtoConfig = {
-      anthropic: {
-        api_key: apiKey,
-        model: existing.anthropic?.model,
+      ...existing,
+      [provider]: {
+        ...existingSection,
+        ...(apiKey ? { api_key: apiKey } : {}),
+        ...(model ? { model } : {}),
+        ...(baseUrl ? { base_url: baseUrl } : {})
       },
-      paths: {
-        decks_dir: decksDir,
-        card_data: existing.paths?.card_data,
-        mcp_server: existing.paths?.mcp_server,
-      },
-      defaults: {
-        provider,
-      },
+      paths: { ...existing.paths, decks_dir: decksDir },
+      defaults: { provider }
     };
 
     await saveConfig(config);
 
-    const configPath = getConfigPath();
-    console.log(`\nConfig written to: ${configPath}`);
+    console.log(`\nConfig written to: ${getConfigPath()}`);
     console.log('\nNext steps:');
     console.log(`  1. Place .toml or .json deck files in ${decksDir}`);
     console.log('  2. Run: johto run --deck <path>');

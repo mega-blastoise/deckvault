@@ -30,6 +30,10 @@ impl Tool for ListSetsTool {
                 "series": {
                     "type": "string",
                     "description": "Filter sets by series name (e.g., 'Sun & Moon', 'Sword & Shield')"
+                },
+                "format": {
+                    "type": "string",
+                    "description": "Response format: \"text\" (default, markdown) or \"json\" (set objects including ptcgoCode)"
                 }
             }
         })
@@ -47,6 +51,30 @@ impl Tool for ListSetsTool {
                     .unwrap_or(true)
             })
             .collect();
+
+        // JSON callers need ptcgoCode to map decklist set abbreviations
+        // (DRI, PAL, MEG) onto set ids; the markdown form omits it.
+        if arguments.get("format").and_then(|v| v.as_str()) == Some("json") {
+            let payload: Vec<Value> = filtered
+                .iter()
+                .map(|s| {
+                    json!({
+                        "id": s.id,
+                        "name": s.name,
+                        "series": s.series,
+                        "ptcgoCode": s.ptcgo_code,
+                        "total": s.total,
+                        "releaseDate": s.release_date,
+                    })
+                })
+                .collect();
+            return Ok(CallToolResult {
+                content: vec![Content::Text {
+                    text: serde_json::to_string(&payload).map_err(ToolError::Serialization)?,
+                }],
+                is_error: None,
+            });
+        }
 
         let summary = filtered
             .iter()

@@ -4,18 +4,18 @@ import { join, resolve } from 'node:path';
 import { createInterface } from 'node:readline';
 import { COHORTS } from './changes-config';
 
-type BumpLevel = 'patch' | 'minor' | 'major';
-type CohortName = keyof typeof COHORTS;
+export type BumpLevel = 'patch' | 'minor' | 'major';
+export type CohortName = keyof typeof COHORTS;
 
-interface ChangeEntry {
+export interface ChangeEntry {
   cohort: CohortName;
   bump: BumpLevel;
   message: string;
   file: string;
 }
 
-const CHANGES_DIR = resolve(import.meta.dir, '..', '.changes');
-const BUMP_ORDER: BumpLevel[] = ['patch', 'minor', 'major'];
+export const CHANGES_DIR = resolve(import.meta.dir, '..', '.changes');
+export const BUMP_ORDER: BumpLevel[] = ['patch', 'minor', 'major'];
 
 function parseFrontmatter(content: string): { cohort: CohortName; bump: BumpLevel; message: string } | null {
   const match = content.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
@@ -39,7 +39,7 @@ function parseFrontmatter(content: string): { cohort: CohortName; bump: BumpLeve
   return { cohort, bump, message };
 }
 
-function loadPending(): ChangeEntry[] {
+export function loadPending(): ChangeEntry[] {
   if (!existsSync(CHANGES_DIR)) return [];
 
   const files = readdirSync(CHANGES_DIR).filter(f => f.endsWith('.md'));
@@ -56,7 +56,7 @@ function loadPending(): ChangeEntry[] {
   return entries;
 }
 
-function rollUpBumps(entries: ChangeEntry[]): Map<CohortName, BumpLevel> {
+export function rollUpBumps(entries: ChangeEntry[]): Map<CohortName, BumpLevel> {
   const result = new Map<CohortName, BumpLevel>();
 
   for (const entry of entries) {
@@ -69,7 +69,7 @@ function rollUpBumps(entries: ChangeEntry[]): Map<CohortName, BumpLevel> {
   return result;
 }
 
-function nextVersion(current: string, bump: BumpLevel): string {
+export function nextVersion(current: string, bump: BumpLevel): string {
   const parts = current.replace(/^v/, '').split('.').map(Number);
   const [major = 0, minor = 0, patch = 0] = parts;
 
@@ -80,40 +80,11 @@ function nextVersion(current: string, bump: BumpLevel): string {
   }
 }
 
-function resolvePackageJson(pkgName: string): string {
-  const root = resolve(import.meta.dir, '..', 'dist-packages');
-
-  if (pkgName === '@johto-ai/cli') {
-    return join(root, 'cli', 'package.json');
-  }
-  if (pkgName === '@johto-ai/card-data') {
-    return join(root, 'card-data', 'package.json');
-  }
-  if (pkgName.startsWith('@johto-ai/cli-')) {
-    const suffix = pkgName.replace('@johto-ai/cli-', '');
-    return join(root, 'cli-platforms', suffix, 'package.json');
-  }
-  if (pkgName.startsWith('@johto-ai/mcp-server-')) {
-    const suffix = pkgName.replace('@johto-ai/mcp-server-', '');
-    return join(root, 'mcp-server-platforms', suffix, 'package.json');
-  }
-
-  throw new Error(`Unknown package: ${pkgName}`);
-}
-
-function readPackageVersion(pkgJsonPath: string): string {
-  try {
-    const pkg = JSON.parse(readFileSync(pkgJsonPath, 'utf-8'));
-    return pkg.version ?? '0.0.0';
-  } catch {
-    return '0.0.0';
-  }
-}
-
-function appendChangelog(cohort: CohortName, version: string, changes: ChangeEntry[]): void {
+/** `version` is null for cohorts that publish nothing; the entry is dated instead. */
+export function appendChangelog(cohort: CohortName, version: string | null, changes: ChangeEntry[]): void {
   const changelogPath = resolve(import.meta.dir, '..', 'CHANGELOG.md');
   const date = new Date().toISOString().split('T')[0];
-  const header = `## ${cohort} v${version} (${date})`;
+  const header = version === null ? `## ${cohort} (${date})` : `## ${cohort} v${version} (${date})`;
   const body = changes.map(c => `- ${c.message}`).join('\n');
   const section = `\n${header}\n\n${body}\n`;
 
@@ -122,46 +93,6 @@ function appendChangelog(cohort: CohortName, version: string, changes: ChangeEnt
     writeFileSync(changelogPath, existing + section);
   } else {
     writeFileSync(changelogPath, `# Changelog\n${section}`);
-  }
-}
-
-function release(filterCohort?: CohortName): void {
-  const entries = loadPending();
-  if (entries.length === 0) {
-    console.log('No pending changes to release.');
-    return;
-  }
-
-  const bumps = rollUpBumps(entries);
-
-  for (const [cohort, bump] of bumps) {
-    if (filterCohort && cohort !== filterCohort) continue;
-
-    const cohortConfig = COHORTS[cohort];
-    const cohortEntries = entries.filter(e => e.cohort === cohort);
-
-    const firstPkgPath = resolvePackageJson(cohortConfig.packages[0]!);
-    const currentVersion = readPackageVersion(firstPkgPath);
-    const newVersion = nextVersion(currentVersion, bump);
-
-    console.log(`${cohort}: ${currentVersion} -> ${newVersion} (${bump})`);
-
-    for (const pkgName of cohortConfig.packages) {
-      const pkgPath = resolvePackageJson(pkgName);
-      try {
-        const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
-        pkg.version = newVersion;
-        writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n');
-      } catch {
-        console.warn(`  Skipping ${pkgName} (package.json not found)`);
-      }
-    }
-
-    appendChangelog(cohort, newVersion, cohortEntries);
-
-    for (const entry of cohortEntries) {
-      unlinkSync(join(CHANGES_DIR, entry.file));
-    }
   }
 }
 
@@ -240,19 +171,27 @@ function list(): void {
   }
 }
 
-const command = Bun.argv[2];
+// Guarded so `release.ts` can import the primitives above without the CLI
+// firing on import.
+if (import.meta.main) {
+  const command = Bun.argv[2];
 
-switch (command) {
-  case 'add':
-    await add();
-    break;
-  case 'list':
-    list();
-    break;
-  case 'release':
-    release(Bun.argv[3] as CohortName | undefined);
-    break;
-  default:
-    console.log('Usage: bun scripts/changes.ts <add|list|release> [cohort]');
-    process.exit(1);
+  switch (command) {
+    case 'add':
+      await add();
+      break;
+    case 'list':
+      list();
+      break;
+    case 'release':
+      console.error(
+        'Releasing moved to `bun scripts/release.ts` — it derives the version from\n' +
+          'git tags, runs preflight checks, and creates the tag. See RELEASING.md.'
+      );
+      process.exit(1);
+      break;
+    default:
+      console.log('Usage: bun scripts/changes.ts <add|list>');
+      process.exit(1);
+  }
 }

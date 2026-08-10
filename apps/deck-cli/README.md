@@ -17,7 +17,7 @@ Or via Docker:
 docker run --rm -it \
   -v "$PWD/decks:/decks" \
   -e ANTHROPIC_API_KEY \
-  ghcr.io/nicholasgalante1997/johto:latest \
+  ghcr.io/mega-blastoise/johto:latest \
   run --deck /decks/my-deck.toml
 ```
 
@@ -34,13 +34,49 @@ curl -fsSL https://johto.deckvault.gg/install.sh | sh
 ```bash
 johto init                              # first-run setup wizard
 johto run --deck ./decks/my-deck.toml  # REPL session
-johto run --provider chrome            # browser mode
+johto run --browser                    # browser deck builder
 johto doctor                           # verify install
 johto auth set anthropic <key>         # persist API key
 johto --help                           # all subcommands
 ```
 
-### REPL mode (Anthropic)
+### Providers
+
+The REPL runs against any of four backends. Pick one per run with `--provider`, or set a
+default in `~/.config/johto/config.toml`.
+
+| `--provider` | Backend | Default model | Credential |
+|---|---|---|---|
+| `openai` *(default)* | OpenAI API | `gpt-5.6-terra` | `OPENAI_API_KEY` |
+| `anthropic` *(backup)* | Anthropic API | `claude-sonnet-5` | `ANTHROPIC_API_KEY` |
+| `ollama` | Ollama at `localhost:11434` | none — must be set | not required |
+| `llamacpp` | llama-server at `localhost:9123` | auto-detected | not required |
+
+```bash
+johto run --deck ./decks/my-deck.toml --provider ollama --model qwen3-coder:30b
+johto run --deck ./decks/my-deck.toml --provider llamacpp    # model auto-detected
+johto run --deck ./decks/my-deck.toml --show-reasoning       # stream the reasoning trace
+```
+
+`openai` is the default and `anthropic` is the automatic backup: if the primary has no
+credential, is unreachable, or fails a turn with an auth/quota/rate-limit status, johto switches
+to the backup and says so. An explicit `--provider` never falls back — it's an instruction, not a
+preference. Set `[defaults] fallback = "none"` to disable, or name a different backup.
+
+`ollama` ships no default model because tool-calling support varies per model and the installed
+library is machine-specific. Run it without `--model` and the error lists the tool-capable models
+found on your machine. `llamacpp` hosts exactly one model at a time, so it is read from
+`/v1/models` automatically.
+
+All three non-Anthropic backends speak the OpenAI-compatible API, so `--base-url` points johto at
+any compatible endpoint — including Ollama Cloud models such as `deepseek-v4-flash:cloud` after an
+`ollama signin`.
+
+Reasoning traces are captured from every provider that emits them (Anthropic extended thinking,
+`reasoning` on Ollama, `reasoning_content` on llama.cpp). By default you get a `thinking…`
+indicator; `--show-reasoning` prints the full trace.
+
+### REPL mode
 
 Starts an interactive agent session. The agent receives your full decklist — card names, HP, attacks, regulation marks — as the system prompt, and has four MCP tools for live card lookups.
 
@@ -61,10 +97,10 @@ Serves a local three-panel page — card search, deck builder, and on-device cha
 
 ```bash
 # Open deck builder (no deck pre-loaded)
-johto run --provider chrome
+johto run --browser
 
 # Pre-populate builder from an existing deck
-johto run --deck ./decks/mega-gardevoir-ex.toml --provider chrome
+johto run --deck ./decks/mega-gardevoir-ex.toml --browser
 ```
 
 The builder exports decks as `.toml` files in SPEC_01 format, ready to drop into `johto run --deck <file>`.

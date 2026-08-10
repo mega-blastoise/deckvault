@@ -29,7 +29,7 @@ RUN bun card-data/scripts/rebuild.ts --source ./tcg-data --out /build/pokemon-da
 
 # -- Stage 4: Runtime --
 FROM debian:bookworm-slim
-LABEL org.opencontainers.image.source="https://github.com/nicholasgalante1997/deckvault"
+LABEL org.opencontainers.image.source="https://github.com/mega-blastoise/deckvault"
 LABEL org.opencontainers.image.description="Competitive Pokemon TCG deck refinement CLI"
 LABEL org.opencontainers.image.licenses="MIT"
 

@@ -42,7 +42,7 @@ docker run --rm -it \
   -v "$PWD/decks:/decks" \
   -v "$HOME/.config/johto:/root/.config/johto" \
   -e ANTHROPIC_API_KEY \
-  ghcr.io/nicholasgalante1997/johto:latest \
+  ghcr.io/mega-blastoise/johto:latest \
   run --deck /decks/my-deck.toml
 ```
 
@@ -54,8 +54,8 @@ Multi-arch image: `linux/amd64` and `linux/arm64`.
 docker run --rm -it \
   -p 7777:7777 \
   -v "$PWD/decks:/decks" \
-  ghcr.io/nicholasgalante1997/johto:latest \
-  run --provider chrome --deck /decks/my-deck.toml --browser-port 7777
+  ghcr.io/mega-blastoise/johto:latest \
+  run --browser --deck /decks/my-deck.toml --browser-port 7777
 ```
 
 Then open `http://localhost:7777` in your browser.

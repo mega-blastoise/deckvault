@@ -100,12 +100,18 @@ impl Database {
         }
 
         // Build WHERE clause, optionally restricting to current Standard rotation.
-        // Basic Energy has no regulation_mark (NULL / empty) and is always legal.
+        //
+        // Basic Energy is always legal and carries no regulation mark, but so
+        // does every card printed before marks were introduced in Sword &
+        // Shield — admitting a blank mark would let the whole 1999-2019 back
+        // catalogue through. Identify Basic Energy by supertype/subtype instead.
         let mut where_parts: Vec<String> =
             conditions.iter().map(|s| (*s).to_string()).collect();
         if standard_only {
             where_parts.push(
-                "(regulation_mark IN ('H', 'I', 'J') OR regulation_mark IS NULL OR regulation_mark = '')".to_string(),
+                "(regulation_mark IN ('H', 'I', 'J') \
+                 OR (supertype = 'Energy' AND subtypes LIKE '%\"Basic\"%'))"
+                    .to_string(),
             );
         }
 

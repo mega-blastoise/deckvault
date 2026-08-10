@@ -1,9 +1,18 @@
 import { existsSync, statSync } from 'node:fs';
-import { resolve } from 'node:path';
+import pc from 'picocolors';
 import { Database } from 'bun:sqlite';
 
 import { resolveDefaultMcpPath } from '../args';
-import { loadConfig, getConfigPath, resolveApiKey, resolveDbPath } from '../config/loader';
+import { loadConfig, getConfigPath, resolveDbPath } from '../config/loader';
+import { PROVIDER_DEFAULTS } from '../providers/defaults';
+import {
+  resolveApiKey,
+  resolveBaseUrl,
+  resolveProviderName,
+  ProviderConfigError
+} from '../providers/resolve';
+import type { JohtoConfig } from '../config/types';
+import type { ProviderName } from '../providers/types';
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -13,19 +22,66 @@ function formatBytes(bytes: number): string {
   return `${mb.toFixed(1)} MB`;
 }
 
-function check(
-  ok: boolean,
-  label: string,
-  detail: string,
-  results: boolean[]
-): void {
-  const icon = ok ? '✓' : '✗';
-  console.log(`${icon} ${label}  ${detail}`);
+function check(ok: boolean, label: string, detail: string, results: boolean[]): void {
+  console.log(`${ok ? pc.green('✓') : pc.red('✗')} ${label}  ${pc.dim(detail)}`);
   results.push(ok);
 }
 
 function warn(label: string, detail: string): void {
-  console.log(`⚠ ${label}  ${detail}`);
+  console.log(`${pc.yellow('⚠')} ${label}  ${pc.dim(detail)}`);
+}
+
+async function ping(url: string): Promise<{ ok: boolean; detail: string }> {
+  const start = performance.now();
+  try {
+    // Any HTTP response proves the host is reachable; only transport failures
+    // (DNS, TCP refused, timeout) count as unreachable.
+    await fetch(url, { method: 'GET', signal: AbortSignal.timeout(8000) });
+    return { ok: true, detail: `${(performance.now() - start).toFixed(0)}ms` };
+  } catch (err) {
+    return { ok: false, detail: `unreachable (${err instanceof Error ? err.message : err})` };
+  }
+}
+
+async function checkProvider(
+  provider: ProviderName,
+  config: JohtoConfig,
+  results: boolean[]
+): Promise<void> {
+  const defaults = PROVIDER_DEFAULTS[provider];
+  const conf = (config[provider] ?? {}) as { model?: string };
+  const model = conf.model ?? defaults.model;
+
+  console.log(`\nActive provider: ${provider} (${defaults.label})`);
+  console.log(`  model: ${model ?? '(not set — pass --model or set it in config)'}`);
+
+  if (defaults.apiKeyEnv) {
+    const key = resolveApiKey(provider, config);
+    if (key) {
+      const source = process.env[defaults.apiKeyEnv] ? 'env' : 'config';
+      check(true, 'Credential', `${key.slice(0, 7)}*** (source: ${source})`, results);
+    } else {
+      check(
+        false,
+        'Credential',
+        `not set — export ${defaults.apiKeyEnv} or run \`johto auth set ${provider} <key>\``,
+        results
+      );
+    }
+  } else {
+    console.log(`${pc.green('✓')} Credential  ${pc.dim('not required for this provider')}`);
+  }
+
+  const endpoint =
+    provider === 'anthropic' ? 'https://api.anthropic.com' : resolveBaseUrl(provider, config);
+  const probe = provider === 'anthropic' ? endpoint : `${endpoint}/models`;
+  const { ok, detail } = await ping(probe);
+  if (ok) {
+    check(true, 'Endpoint', `${endpoint} (${detail})`, results);
+  } else {
+    check(false, 'Endpoint', `${endpoint} ${detail}`, results);
+    console.log(`      → ${defaults.unreachableHint}`);
+  }
 }
 
 export async function doctorCommand(): Promise<void> {
@@ -33,17 +89,19 @@ export async function doctorCommand(): Promise<void> {
 
   console.log('\nJohto Doctor\n');
 
-  // CLI binary
   const cliBin = process.argv[1] ?? '(unknown)';
-  const cliExists = cliBin ? existsSync(cliBin) : false;
-  if (cliExists) {
-    const st = statSync(cliBin);
-    check(true, 'CLI binary', `${cliBin} (${formatBytes(st.size)})`, results);
+  if (cliBin.startsWith('/$bunfs/')) {
+    // Compiled binaries report a virtual path for argv[1]; execPath is the
+    // real file on disk.
+    const real = process.execPath;
+    const size = existsSync(real) ? ` (${formatBytes(statSync(real).size)})` : '';
+    check(true, 'CLI binary', `${real}${size}`, results);
+  } else if (existsSync(cliBin)) {
+    check(true, 'CLI binary', `${cliBin} (${formatBytes(statSync(cliBin).size)})`, results);
   } else {
     check(true, 'CLI binary', `running via bun: ${cliBin}`, results);
   }
 
-  // MCP server binary
   let mcpPath: string | undefined;
   try {
     mcpPath = await resolveDefaultMcpPath();
@@ -51,17 +109,14 @@ export async function doctorCommand(): Promise<void> {
     // not available
   }
   if (mcpPath) {
-    const mcpExists = existsSync(mcpPath);
-    check(mcpExists, 'MCP server', mcpPath, results);
+    check(existsSync(mcpPath), 'MCP server', mcpPath, results);
   } else {
     check(false, 'MCP server', 'Could not resolve path (set JOHTO_MCP_SERVER_PATH)', results);
   }
 
-  // Card database
   const dbPath = await resolveDbPath();
   if (dbPath) {
-    const dbExists = existsSync(dbPath);
-    if (dbExists) {
+    if (existsSync(dbPath)) {
       try {
         const db = new Database(dbPath, { readonly: true });
         const cardCount = (db.query('SELECT COUNT(*) as c FROM pokemon_cards').get() as { c: number }).c;
@@ -78,40 +133,31 @@ export async function doctorCommand(): Promise<void> {
     warn('Card database', 'JOHTO_DB_PATH not set — MCP server will use its default');
   }
 
-  // Config file
   const configPath = getConfigPath();
-  const configExists = existsSync(configPath);
-  if (configExists) {
-    const st = statSync(configPath);
-    check(true, 'Config file', `${configPath} (modified: ${st.mtime.toISOString()})`, results);
+  if (existsSync(configPath)) {
+    check(
+      true,
+      'Config file',
+      `${configPath} (modified: ${statSync(configPath).mtime.toISOString()})`,
+      results
+    );
   } else {
     warn('Config file', `${configPath} (not found — run johto init)`);
   }
 
-  // API key
-  const apiKey = await resolveApiKey();
-  if (apiKey) {
-    const redacted = apiKey.slice(0, 7) + '***';
-    check(true, 'Anthropic API key', redacted, results);
-  } else {
-    check(false, 'Anthropic API key', 'Not set (env or config)', results);
-  }
-
-  // Network check — any HTTP response means the host is reachable. Only flag
-  // failure when the request itself errors (DNS, TCP, timeout).
+  // Only the *active* provider is diagnosed. Checking every provider would
+  // report a broken install to anyone who has deliberately configured one.
+  const config = await loadConfig();
   try {
-    const start = performance.now();
-    await fetch('https://api.anthropic.com', { method: 'HEAD' });
-    const latency = (performance.now() - start).toFixed(0);
-    check(true, 'Network (api.anthropic.com)', `${latency}ms`, results);
+    await checkProvider(resolveProviderName(undefined, config), config, results);
   } catch (err) {
-    check(false, 'Network (api.anthropic.com)', `unreachable: ${err}`, results);
+    if (err instanceof ProviderConfigError) {
+      check(false, 'Provider', err.message, results);
+    } else {
+      throw err;
+    }
   }
 
   console.log('');
-
-  const hasFailure = results.some((r) => !r);
-  if (hasFailure) {
-    process.exit(1);
-  }
+  if (results.some((r) => !r)) process.exit(1);
 }
